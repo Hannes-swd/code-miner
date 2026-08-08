@@ -25,6 +25,11 @@ struct SkillRule
     bool once   = false;
     int  weight = 1;  // wie oft er im Vergleich zu anderen gezogen wird
 
+    // Wie sich das Gewicht pro Schritt nach aussen aendert. Ueber 1 heisst:
+    // weiter draussen kommt der Punkt oefter. Damit werden die "+1"-Punkte
+    // spaeter zum Normalfall, waehrend neue Befehle seltener werden.
+    float weightGrowth = 1.0f;
+
     // Taucht erst auf, wenn das hier schon GEKAUFT ist. Skill::None = immer.
     Skill needs = Skill::None;
 };

@@ -637,10 +637,19 @@ void World::cancelCraft()
 void World::update(float dt, const OrePlan& ores)
 {
     // ---- Nachwachsen ----------------------------------------------------
-    // Steht die Welt still, waechst nichts nach. Die Effekte darunter laufen
-    // trotzdem aus: sie sind nur Anzeige, und ein eingefrorener Rahmen mitten
-    // im Bild saehe nach Fehler aus.
-    if (!frozen && !blockAlive && respawnTimer > 0.0f)
+    // Steht die Welt still, waechst nichts nach - ausser man darf trotzdem von
+    // Hand abbauen. Sonst waere der erste Block ein Einwegblock: einmal
+    // angeklickt, und bis zum Rundenstart steht da nichts mehr.
+    //
+    // Die Effekte darunter laufen immer aus: sie sind nur Anzeige, und ein
+    // eingefrorener Rahmen mitten im Bild saehe nach Fehler aus.
+    // Kein Block und kein laufender Zaehler: das darf es eigentlich nicht
+    // geben. Falls doch (alter Spielstand, abgebrochene Runde), waere der
+    // Block fuer immer weg - deshalb hier die Notbremse.
+    if (!blockAlive && respawnTimer <= 0.0f)
+        respawnTimer = (respawnSeconds > 0.0f) ? respawnSeconds : 0.01f;
+
+    if ((!frozen || handMine) && !blockAlive && respawnTimer > 0.0f)
     {
         respawnTimer -= dt;
         if (respawnTimer <= 0.0f)

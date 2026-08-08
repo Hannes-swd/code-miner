@@ -307,9 +307,24 @@ void SkillTree::grow(int id)
     auto weightOf = [&](std::size_t i)
     {
         const SkillRule& r = plan.rules[i];
-        if (!r.once)
-            return r.weight;
-        return r.weight * (1 + step - r.minStep);
+
+        // Einmalige Punkte werden nach hinten raus wahrscheinlicher, damit sie
+        // ihren Bereich nicht ungenutzt verstreichen lassen.
+        if (r.once)
+            return r.weight * (1 + step - r.minStep);
+
+        // Alles andere folgt seinem "wachstum": ueber 1 wird es draussen
+        // haeufiger, unter 1 seltener.
+        double w = (double)r.weight;
+        for (int k = r.minStep; k < step; ++k)
+            w *= (double)r.weightGrowth;
+
+        if (w < 1.0)
+            w = 1.0;
+        if (w > 100000.0)
+            w = 100000.0;
+
+        return (int)(w + 0.5);
     };
 
     std::vector<std::size_t> forced;  // letzte Gelegenheit

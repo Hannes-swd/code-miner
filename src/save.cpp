@@ -45,7 +45,7 @@ bool ReadLine(std::istream& in, std::string& line)
 //    Punkt dazugekommen - beides verschiebt Nummern, die in der Datei stehen.
 // 5: Runden. Phase, Restzeit und Rundennummer gehoeren dazu - wer mitten im
 //    Lauf beendet, macht beim naechsten Start dort weiter.
-const int kVersion = 6;  // 6: gelesene Wiki-Seiten
+const int kVersion = 8;  // 8: Ergebnis der Runde (Ziel bezahlt)
 
 }  // namespace
 
@@ -63,6 +63,8 @@ bool SaveGame(const World& world, const SkillTree& tree,
 
     // Die Runde: Phase, Restzeit, Nummer. Wer mitten im Lauf beendet, soll
     // dort weitermachen - und nicht mit einer geschenkten Vorbereitung.
+    out << "runde_ergebnis " << (world.roundWon ? 1 : 0) << " " << world.roundPaid
+        << "\n";
     out << "runde " << world.roundNumber << " " << (int)world.phase << " " << world.roundLeft
         << "\n";
     out << "runde_start " << world.roundMoneyStart << " " << world.roundMinedStart << "\n";
@@ -72,6 +74,7 @@ bool SaveGame(const World& world, const SkillTree& tree,
     // Welcher Block gerade dasteht, gehoert dazu: sonst waere nach dem Laden
     // ploetzlich ein anderes Erz da.
     out << "block " << world.ore << " " << world.oreSeed << " " << (world.blockAlive ? 1 : 0)
+        << " " << world.respawnTimer
         << "\n";
 
     // Die Tasche: was abgebaut, aber noch nicht verkauft ist. Ein laufender
@@ -165,6 +168,12 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
         {
             in >> neueWelt.minedCount;
         }
+        else if (wort == "runde_ergebnis")
+        {
+            int gewonnen = 1;
+            in >> gewonnen >> neueWelt.roundPaid;
+            neueWelt.roundWon = (gewonnen != 0);
+        }
         else if (wort == "runde")
         {
             int phase = 0;
@@ -207,7 +216,7 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
         else if (wort == "block")
         {
             int lebt = 1;
-            in >> neueWelt.ore >> neueWelt.oreSeed >> lebt;
+            in >> neueWelt.ore >> neueWelt.oreSeed >> lebt >> neueWelt.respawnTimer;
             neueWelt.blockAlive = (lebt != 0);
         }
         else if (wort == "wiki")

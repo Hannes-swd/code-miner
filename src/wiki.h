@@ -47,6 +47,11 @@ struct WikiPage
 
     std::vector<WikiStep> steps;
 
+    // Haengt diese Seite unter einer anderen? Dann steht sie in der Liste
+    // links eingerueckt darunter, und der Oberpunkt laesst sich zuklappen.
+    // Leer = eigener Punkt ganz oben.
+    std::string parent;
+
     // Verwandte Seiten, die rechts als kleine Verweise stehen. In der Datei
     // sind das die Titel der anderen Seiten.
     std::vector<std::string> seeAlso;

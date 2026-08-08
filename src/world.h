@@ -44,6 +44,11 @@ struct World
     int roundSoldCount = 0;
     int roundSoldMoney = 0;
 
+    // Wurde das Ziel geschafft? Steht fest, BEVOR das Ziel abgezogen wird -
+    // danach liesse es sich nicht mehr ausrechnen.
+    bool roundWon  = true;
+    int  roundPaid = 0;  // wie viel das Ziel gekostet hat
+
     // Steht die Welt gerade still? Setzt main jedes Bild neu aus Phase und
     // data/runden.json - so muss die Welt selbst nichts von Runden wissen.
     // Gehoert deshalb auch nicht in den Spielstand.

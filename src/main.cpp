@@ -279,17 +279,16 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
     // ---- Testschalter ----------------------------------------------------
     //
-    // Solange das hier an ist, wird das Geld in jedem Bild wieder aufgefuellt:
-    // kaufen kostet damit nichts. Fuer das fertige Spiel auf false.
+    // Beide aus: normales Spiel. kUnendlichGeld fuellt das Geld in jedem Bild
+    // wieder auf - nur zum Ausprobieren gedacht.
     //
     // Achtung: Geld ist ein int, mehr als rund 2 Milliarden passen da nicht
-    // rein. Eine groessere Zahl laeuft ueber und wird negativ - deshalb die
-    // Milliarde und nicht mehr.
-    const bool kUnendlichGeld = true;
-    const int  kVielGeld      = 2000000000;  // knapp unter der int-Grenze
+    // rein. Eine groessere Zahl laeuft ueber und wird negativ.
+    const bool kUnendlichGeld = false;
+    const int  kVielGeld      = 2000000000;
 
     // Startgeld. Beim Zuruecksetzen kommt genau das wieder.
-    const int kStartGeld = kUnendlichGeld ? kVielGeld : 100000;
+    const int kStartGeld = kUnendlichGeld ? kVielGeld : 0;
 
     // Welche Erze es gibt, steht in data/erze.json.
     OrePlan ores = LoadOrePlan();
@@ -539,11 +538,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
             if (PageTab(wikiLabel, page == Page::Wiki))
                 page = Page::Wiki;
 
-            // Die Runde gehoert in die Leiste: so ist sie von jeder Seite aus
-            // zu sehen und zu starten.
-            if (DrawRoundBar(world, rounds))
-                StartRound(world, rounds);
-
             // Diese Knoepfe gehoeren zur Welt-Seite.
             if (page == Page::Welt)
             {
@@ -643,6 +637,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
         // Die Abrechnung liegt ueber allem - sie ist der Weg zur naechsten
         // Runde, egal auf welcher Seite man gerade ist.
+        // Die Runde schwebt ueber jeder Seite - sie gehoert zu allen.
+        if (world.phase != RoundPhase::Report && DrawRoundHud(world, rounds))
+            StartRound(world, rounds);
+
         if (world.phase == RoundPhase::Report && DrawRoundReport(world, rounds))
         {
             // Ziel verfehlt und die Datei sagt "alles auf Anfang": dann ist das

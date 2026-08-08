@@ -39,6 +39,11 @@ struct RoundPlan
     //   false = nur eine Meldung, dieselbe Runde noch einmal (zum Ausprobieren)
     bool resetOnLoss = true;
 
+    // Das Ziel wird am Ende der Runde abgezogen: es ist die Miete, nicht nur
+    // eine Huerde. Dadurch haeuft sich Geld nicht endlos an - nur was ueber dem
+    // Ziel liegt, bleibt dir zum Einkaufen.
+    bool deductTarget = true;
+
     std::vector<std::string> problems;  // was an der Datei nicht stimmte
     std::string              file;
 };
@@ -69,9 +74,11 @@ void NextRound(World& world, const RoundPlan& plan);
 // Restzeit als mm:ss.
 std::string RoundClock(float seconds);
 
-// Gehoert in die Menueleiste: dort ist die Runde von jeder Seite aus zu sehen.
+// Die Runden-Anzeige, oben in der Mitte ueber der Seite. Sie steht bewusst
+// NICHT in der Menueleiste: dort war sie eine Textzeile zwischen Reitern, und
+// gerade die Uhr und der Abstand zum Ziel gehen so unter.
 // Rueckgabe: true = "Runde starten" wurde gedrueckt.
-bool DrawRoundBar(const World& world, const RoundPlan& plan);
+bool DrawRoundHud(const World& world, const RoundPlan& plan);
 
 // Die Abrechnung, mitten im Bild.
 // Rueckgabe: true = weitergeklickt. Bei einer Niederlage mit "alles auf

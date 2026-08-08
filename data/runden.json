@@ -57,15 +57,24 @@
     "",
     "Gezählt wird das GELD, das am Ende dasteht - nicht der Verdienst. Was du in",
     "der Vorbereitung im Skilltree ausgibst, fehlt dir also beim Ziel. Genau da",
-    "liegt die Entscheidung: jetzt investieren oder sicher durchkommen."
+    "liegt die Entscheidung: jetzt investieren oder sicher durchkommen.",
+    "",
+    "Steht handabbau_in_vorbereitung auf false, passiert vor dem Rundenstart gar",
+    "nichts: kein Klick auf den Block, kein Programm. Erst mit \"Runde starten\"",
+    "geht es los - danach darfst du auch von Hand klicken.",
+    "",
+    "ziel_abziehen   true = das Ziel wird am Ende der Runde abgezogen. Es ist",
+    "                dann die Miete für die Runde: nur was darüber liegt, bleibt",
+    "                dir zum Einkaufen. Ohne das häuft sich Geld endlos an."
   ],
-  "dauer": 900,
+  "dauer": 300,
   "ziel": {
-    "start": 500,
+    "start": 120,
     "wachstum": 1.6
   },
+  "ziel_abziehen": true,
   "neustart_bei_niederlage": true,
   "verkauf_am_ende": true,
   "welt_pausiert_in_vorbereitung": true,
-  "handabbau_in_vorbereitung": true
+  "handabbau_in_vorbereitung": false
 }

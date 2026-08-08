@@ -719,6 +719,8 @@ WikiBook LoadWikiBook()
         page.title     = e.text("titel", "");
         page.shortText = e.text("kurz", "");
 
+        page.parent = e.text("unter", "");
+
         // Verwandte Seiten. Ob es sie wirklich gibt, wird erst geprueft, wenn
         // alle Seiten gelesen sind - sonst wuerde die Reihenfolge in der Datei
         // ueber Erfolg oder Meldung entscheiden.
@@ -859,6 +861,22 @@ WikiBook LoadWikiBook()
 
     if (book.pages.empty())
         book.problems.push_back("In \"seiten\" steht keine einzige Seite.");
+
+    // Zeigt "unter" auf eine Seite, die es gibt?
+    for (const WikiPage& p : book.pages)
+    {
+        if (p.parent.empty())
+            continue;
+
+        bool gibtEs = false;
+        for (const WikiPage& q : book.pages)
+            if (q.title == p.parent)
+                gibtEs = true;
+
+        if (!gibtEs)
+            book.problems.push_back(p.title + ": \"unter\" zeigt auf \"" + p.parent +
+                                    "\" - die Seite gibt es nicht.");
+    }
 
     // Jetzt, wo alle Seiten da sind: zeigen die Verweise auch irgendwohin?
     for (const WikiPage& p : book.pages)
@@ -1058,18 +1076,20 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, std::set<std::stri
         {
             // ---- In einer Kategorie: Liste links, Animation rechts --------
             ImGui::BeginChild("##liste", ImVec2(250.0f, 0.0f), ImGuiChildFlags_Borders);
-            for (int i : sichtbar)
-            {
-                const WikiPage& p = book.pages[(std::size_t)i];
-                if (p.category != g_wiki.category)
-                    continue;
 
-                const bool neu = seen.find(p.title) == seen.end();
+            // Ein Eintrag in der Liste. Der Punkt dahinter heisst: noch nicht
+            // gelesen.
+            auto eintrag = [&](int i, bool eingerueckt)
+            {
+                const WikiPage& p   = book.pages[(std::size_t)i];
+                const bool      neu = seen.find(p.title) == seen.end();
+
+                if (eingerueckt)
+                    ImGui::Indent(14.0f);
 
                 if (ImGui::Selectable(p.title.c_str(), i == g_wiki.page))
                     GoTo(i, book, seen);
 
-                // Ein Punkt hinter dem Namen: hier warst du noch nicht.
                 if (neu)
                 {
                     const ImVec2 mitte(ImGui::GetItemRectMax().x - 12.0f,
@@ -1080,6 +1100,65 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, std::set<std::stri
 
                 if (ImGui::IsItemHovered() && !p.shortText.empty())
                     ImGui::SetTooltip("%s", p.shortText.c_str());
+
+                if (eingerueckt)
+                    ImGui::Unindent(14.0f);
+            };
+
+            for (int i : sichtbar)
+            {
+                const WikiPage& p = book.pages[(std::size_t)i];
+                if (p.category != g_wiki.category || !p.parent.empty())
+                    continue;
+
+                // Wer Unterseiten hat, wird zum Oberpunkt zum Auf- und
+                // Zuklappen. Acht Verarbeitungs-Befehle einzeln untereinander
+                // waeren sonst die halbe Liste.
+                std::vector<int> kinder;
+                for (int k : sichtbar)
+                    if (book.pages[(std::size_t)k].parent == p.title)
+                        kinder.push_back(k);
+
+                if (kinder.empty())
+                {
+                    eintrag(i, false);
+                    continue;
+                }
+
+                ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth |
+                                           ImGuiTreeNodeFlags_OpenOnArrow |
+                                           ImGuiTreeNodeFlags_OpenOnDoubleClick;
+                if (i == g_wiki.page)
+                    flags |= ImGuiTreeNodeFlags_Selected;
+
+                const bool offen = ImGui::TreeNodeEx(p.title.c_str(), flags);
+
+                // Klick auf den Namen schlaegt die Uebersicht auf, Klick auf
+                // das Dreieck klappt nur zu - deshalb OpenOnArrow.
+                if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+                    GoTo(i, book, seen);
+
+                // Zugeklappt zeigt der Punkt, dass DARUNTER etwas Neues liegt.
+                bool neuDrin = seen.find(p.title) == seen.end();
+                if (!offen)
+                    for (int k : kinder)
+                        if (seen.find(book.pages[(std::size_t)k].title) == seen.end())
+                            neuDrin = true;
+
+                if (neuDrin)
+                {
+                    const ImVec2 mitte(ImGui::GetItemRectMax().x - 12.0f,
+                                       (ImGui::GetItemRectMin().y + ImGui::GetItemRectMax().y) *
+                                           0.5f);
+                    ImGui::GetWindowDrawList()->AddCircleFilled(mitte, 4.5f, kAccent);
+                }
+
+                if (offen)
+                {
+                    for (int k : kinder)
+                        eintrag(k, true);
+                    ImGui::TreePop();
+                }
             }
             ImGui::EndChild();
 

@@ -299,6 +299,17 @@ SkillPlan LoadSkillPlan()
             continue;
         }
 
+        // Optional: "wachstum 1.15" - wie sich das Gewicht nach aussen aendert.
+        if (next + 1 < words.size() && words[next] == "wachstum")
+        {
+            const double v = std::atof(words[next + 1].c_str());
+            if (v <= 0.0)
+                plan.problems.push_back(Where(lineNo) + "\"wachstum\" braucht eine Zahl > 0.");
+            else
+                rule.weightGrowth = (float)v;
+            next += 2;
+        }
+
         if (next < words.size())
         {
             if (!IsNeeds(words[next]))

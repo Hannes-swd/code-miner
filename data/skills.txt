@@ -20,6 +20,11 @@
 #   preis       Grundpreis in Schritt 1. Weiter draußen wird alles teurer,
 #               siehe "steigerung". Der Grundpreis macht nur noch den
 #               Unterschied INNERHALB eines Schrittes aus.
+#   wachstum N  optional, nur bei "oft": womit das Gewicht pro Schritt nach
+#               außen malgenommen wird. 1.2 heißt, der Punkt wird weiter
+#               draußen immer häufiger - so werden die "+1"-Punkte spät zum
+#               Normalfall, während neue Befehle seltener werden.
+#
 #   wie oft     "einmal"  = gibt es im ganzen Baum nur ein einziges Mal.
 #                           Dahinter darf eine Zahl stehen: wie stark der
 #                           Punkt gezogen wird (ohne Zahl: 2).
@@ -91,7 +96,7 @@ schritte    0
 
 # Je weiter weg, desto teurer: jeder Schritt kostet das 1,5-fache.
 # Deshalb macht man erst alles in der Nähe und arbeitet sich dann nach außen.
-steigerung  1.5
+steigerung  1.7
 
 # So viele neue Punkte macht ein Kauf auf (kleinste und größte Zahl).
 kinder      1 3
@@ -107,7 +112,7 @@ offen       10
 #
 # Punkte mit festem Schritt (z.B. "abbauen 1") halten sich nicht daran: die
 # liegen genau dort, wo sie sollen.
-abstand     6
+abstand     9
 
 
 # ---- die Sprache ------------------------------------------------------
@@ -121,10 +126,10 @@ abstand     6
 abbauen         1        6    einmal 1
 verkaufen       2        6    einmal 1
 while           3        8    einmal 1
-if              5-10    18    einmal 1
+if              4-9     18    einmal 2
 variablen       6-11    16    einmal 1
 print           7-13    12    einmal 1
-tasche          7-13    16    einmal 1   braucht if
+tasche          6-11    16    einmal 2   braucht if
 prüfen          8-14    14    einmal 1
 platzieren      9-15    14    einmal 1
 else           10-16    18    einmal 1   braucht if
@@ -144,36 +149,38 @@ geteilt        15-24    24    einmal 1
 # gießen braucht schmelzen, härten braucht gießen, veredeln braucht polieren.
 # Alles andere darf in beliebiger Reihenfolge kommen.
 
-waschen         4       10    einmal 2
-schmelzen       6-12    20    einmal 1   braucht waschen
-reinigen        8-16    18    einmal 1   braucht waschen
-pressen        10-18    22    einmal 1   braucht waschen
-giessen        11-19    26    einmal 1   braucht schmelzen
-polieren       13-21    28    einmal 1   braucht giessen
-haerten        15-24    32    einmal 1   braucht giessen
-veredeln       18-30    40    einmal 1   braucht polieren
+waschen         8-16    10    einmal 2   braucht tasche
+schmelzen      10-18    20    einmal 1   braucht waschen
+reinigen       12-20    18    einmal 1   braucht waschen
+pressen        13-21    22    einmal 1   braucht waschen
+giessen        14-22    26    einmal 1   braucht schmelzen
+polieren       16-24    28    einmal 1   braucht giessen
+haerten        18-26    32    einmal 1   braucht giessen
+veredeln       20-32    40    einmal 1   braucht polieren
 
 # Die Verarbeitung ist eine Kette: waschen ist der Anfang, alles andere hängt
-# über "braucht" daran. So bekommst du nie einen Schritt angeboten, dessen
+# über "braucht" daran. Und waschen selbst braucht "tasche" - also
+# block.has(...). Denn erst wenn dein Programm nachschauen kann, was in der
+# Tasche liegt, kann es überhaupt entscheiden, WAS es verarbeitet. So bekommst du nie einen Schritt angeboten, dessen
 # Vorgänger dir noch fehlt.
 #
 # Legieren braucht schmelzen: die Zutaten müssen geschmolzen sein, bevor man
 # sie zusammenkippen kann (siehe "von" in data/legierungen.json).
-legieren       14-22    34    einmal 1   braucht schmelzen
+legieren       18-28    34    einmal 1   braucht schmelzen
 
 
 # ---- mehr davon -------------------------------------------------------
 #
 # Diese Punkte tauchen erst auf, wenn das Passende schon gekauft ist.
 
-schleife+       4-      16    oft 2    braucht while
-bedingung+      6-      16    oft 2    braucht if
-variable+       8-      12    oft 2    braucht variablen
-funktion+      14-      16    oft 2    braucht funktionen
-klasse+        16-      18    oft 2    braucht klassen
+schleife+       4-      16    oft 1    wachstum 1.20   braucht while
+bedingung+      6-      16    oft 1    wachstum 1.20   braucht if
+variable+       8-      12    oft 1    wachstum 1.20   braucht variablen
+funktion+      14-      16    oft 1    wachstum 1.22   braucht funktionen
+klasse+        16-      18    oft 1    wachstum 1.22   braucht klassen
 
 # Eine weitere Konsole ist ein großer Schritt - deshalb selten.
-konsole+        7-      22    oft 1
+konsole+        7-      22    oft 1    wachstum 1.10
 
 
 # ---- Werte ------------------------------------------------------------
@@ -181,6 +188,6 @@ konsole+        7-      22    oft 1
 # Das Brot-und-Butter-Zeug. Hohe Gewichte: davon soll das meiste kommen,
 # damit überhaupt Geld reinkommt.
 
-tempo           2-      10    oft 7
-geld            2-      12    oft 7
-nachwachsen     2-      10    oft 5
+tempo           2-      10    oft 6
+geld            2-      12    oft 6
+nachwachsen     2-      10    oft 4

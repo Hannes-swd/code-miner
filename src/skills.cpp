@@ -497,42 +497,6 @@ void DrawStatus(const Limits& limits, const World& world)
         // Klassen ueberhaupt gibt - das soll der Baum machen, nicht diese Ecke.
         const ImVec4 gruen(0.72f, 0.90f, 0.50f, 1.0f);
 
-        // ---- Runde --------------------------------------------------------
-        // Steht ganz oben: in welcher Phase man ist, entscheidet ueber alles
-        // andere in diesem Kasten.
-        ImGui::TextDisabled("%-12s", "Runde");
-        ImGui::SameLine(140.0f);
-        ImGui::TextColored(gruen, "%d", world.roundNumber);
-
-        if (world.phase == RoundPhase::Run)
-        {
-            const bool knapp = world.roundLeft <= 60.0f;
-            ImGui::TextDisabled("%-12s", "Restzeit");
-            ImGui::SameLine(140.0f);
-            ImGui::TextColored(knapp ? ImVec4(1.00f, 0.45f, 0.38f, 1.0f) : gruen, "%s",
-                               RoundClock(world.roundLeft).c_str());
-        }
-        else if (world.phase == RoundPhase::Report)
-        {
-            ImGui::TextDisabled("%-12s", "Phase");
-            ImGui::SameLine(140.0f);
-            ImGui::TextColored(gruen, "Abrechnung");
-        }
-        else
-        {
-            ImGui::TextDisabled("%-12s", "Phase");
-            ImGui::SameLine(140.0f);
-            ImGui::TextColored(ImVec4(0.62f, 0.72f, 0.95f, 1.0f), "Vorbereitung");
-
-            if (world.frozen)
-                ImGui::TextDisabled("Die Welt steht still.");
-            ImGui::TextDisabled("Weiter: oben \"Runde starten\".");
-        }
-
-        ImGui::Spacing();
-        ImGui::Separator();
-        ImGui::Spacing();
-
         ImGui::TextDisabled("Was du kannst");
         ImGui::Spacing();
 

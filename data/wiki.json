@@ -59,7 +59,12 @@
     "",
     "braucht      ein Schlüssel wie \"pruefen\" - oder eine Liste davon. Bei",
     "             einer Liste reicht EINER: die Seite taucht auf, sobald du",
-    "             irgendeinen davon gekauft hast. Ohne braucht ist sie immer da."
+    "             irgendeinen davon gekauft hast. Ohne braucht ist sie immer da.",
+    "",
+    "unter        Titel einer anderen Seite. Diese Seite steht dann in der Liste",
+    "             links eingerückt darunter, und der Oberpunkt lässt sich zu-",
+    "             klappen. So hängen die acht Verarbeitungs-Befehle unter der",
+    "             Übersicht statt die halbe Liste zu füllen."
   ],
   "kategorien": [
     {
@@ -464,7 +469,8 @@
         "Verarbeiten - Überblick",
         "block.clean(...)",
         "block.smelt(...)"
-      ]
+      ],
+      "unter": "Verarbeiten - Überblick"
     },
     {
       "kategorie": "funktionen",
@@ -498,7 +504,8 @@
         "Verarbeiten - Überblick",
         "block.cast(...)",
         "block.alloy(...)"
-      ]
+      ],
+      "unter": "Verarbeiten - Überblick"
     },
     {
       "kategorie": "funktionen",
@@ -532,7 +539,8 @@
         "block.smelt(...)",
         "block.polish(...)",
         "block.harden(...)"
-      ]
+      ],
+      "unter": "Verarbeiten - Überblick"
     },
     {
       "kategorie": "funktionen",
@@ -564,7 +572,8 @@
       "siehe_auch": [
         "block.wash(...)",
         "Zustände und Reinheit"
-      ]
+      ],
+      "unter": "Verarbeiten - Überblick"
     },
     {
       "kategorie": "funktionen",
@@ -597,7 +606,8 @@
         "block.cast(...)",
         "block.refine(...)",
         "block.harden(...)"
-      ]
+      ],
+      "unter": "Verarbeiten - Überblick"
     },
     {
       "kategorie": "funktionen",
@@ -629,7 +639,8 @@
       "siehe_auch": [
         "block.cast(...)",
         "block.polish(...)"
-      ]
+      ],
+      "unter": "Verarbeiten - Überblick"
     },
     {
       "kategorie": "funktionen",
@@ -661,7 +672,8 @@
       "siehe_auch": [
         "block.polish(...)",
         "Zustände und Reinheit"
-      ]
+      ],
+      "unter": "Verarbeiten - Überblick"
     },
     {
       "kategorie": "funktionen",
@@ -693,7 +705,8 @@
       "siehe_auch": [
         "Verarbeiten - Überblick",
         "block.smelt(...)"
-      ]
+      ],
+      "unter": "Verarbeiten - Überblick"
     },
     {
       "kategorie": "funktionen",
