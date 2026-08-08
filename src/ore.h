@@ -17,6 +17,36 @@ struct Color
     unsigned char r = 128, g = 128, b = 128;
 };
 
+// In welchem Zustand ein Block sein kann.
+//
+// Wie man von einem Zustand in den naechsten kommt, steht noch nirgends - das
+// kommt spaeter. Hier gibt es erstmal nur die Zustaende selbst und die Frage,
+// welche bei welchem Erz ueberhaupt erlaubt sind: Diamant schmilzt man nicht.
+enum class OreState
+{
+    Raw,       // direkt aus dem Abbau
+    Washed,    // gewaschen
+    Smelted,   // geschmolzen
+    Cast,      // gegossen
+    Polished,  // poliert
+    Hardened,  // gehaertet
+    Refined,   // veredelt
+    Pressed,   // gepresst
+    Cleaned,   // gereinigt
+    Oxidized,  // oxidiert
+    Alloy,     // legiert
+    Count
+};
+
+// Was in der Anzeige steht ("Roh", "Gewaschen", ...).
+const char* OreStateName(OreState state);
+
+// Wie der Zustand in data/erze.json heisst ("raw", "washed", ...).
+const char* OreStateKey(OreState state);
+
+// Text zum Schluessel, -1 = kenne ich nicht.
+int FindOreState(const std::string& key);
+
 struct Ore
 {
     std::string name = "Stein";
@@ -32,6 +62,19 @@ struct Ore
     Color color1;      // helle Adern
     Color color2;      // dunkler Grund
     float pattern = 5.0f;  // wie fein das Muster ist
+
+    // Welche Zustaende es bei diesem Erz geben darf - ein Bit je Zustand.
+    // Steht in der Datei nichts, sind alle erlaubt.
+    unsigned states = 0xFFFFFFFFu;
+
+    // Womit sich das Erz legieren laesst. Wird eingelesen und mitgeschleppt,
+    // aber noch von nichts benutzt - das Legieren selbst kommt spaeter.
+    std::vector<std::string> alloyWith;
+
+    bool allows(OreState s) const
+    {
+        return (states & (1u << (unsigned)s)) != 0;
+    }
 };
 
 struct OrePlan

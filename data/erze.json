@@ -11,7 +11,9 @@
       "wert": 1,
       "farbe1": "#8A909C",
       "farbe2": "#4A4F59",
-      "muster": 5
+      "muster": 5,
+      "zustaende": ["raw", "washed", "cleaned", "polished", "pressed"],
+      "legierbar_mit": []
     },
     {
       "name": "Kohle",
@@ -21,7 +23,9 @@
       "wert": 3,
       "farbe1": "#4C5058",
       "farbe2": "#15171B",
-      "muster": 7
+      "muster": 7,
+      "zustaende": ["raw", "washed", "cleaned", "pressed"],
+      "legierbar_mit": []
     },
     {
       "name": "Granit",
@@ -31,7 +35,9 @@
       "wert": 5,
       "farbe1": "#C98F86",
       "farbe2": "#5E4744",
-      "muster": 9
+      "muster": 9,
+      "zustaende": ["raw", "washed", "cleaned", "polished", "pressed", "hardened"],
+      "legierbar_mit": []
     },
     {
       "name": "Kupfer",
@@ -41,7 +47,9 @@
       "wert": 8,
       "farbe1": "#E08A4E",
       "farbe2": "#5C3A26",
-      "muster": 6
+      "muster": 6,
+      "zustaende": ["raw", "washed", "smelted", "cast", "polished", "hardened", "refined", "cleaned", "oxidized", "alloy"],
+      "legierbar_mit": ["Eisen", "Silber", "Gold"]
     },
     {
       "name": "Eisen",
@@ -51,7 +59,9 @@
       "wert": 14,
       "farbe1": "#DCD6CC",
       "farbe2": "#6B6259",
-      "muster": 5
+      "muster": 5,
+      "zustaende": ["raw", "washed", "smelted", "cast", "polished", "hardened", "refined", "cleaned", "oxidized", "alloy"],
+      "legierbar_mit": ["Kupfer", "Silber"]
     },
     {
       "name": "Silber",
@@ -61,7 +71,9 @@
       "wert": 30,
       "farbe1": "#EFF3F8",
       "farbe2": "#7C8490",
-      "muster": 4
+      "muster": 4,
+      "zustaende": ["raw", "washed", "smelted", "cast", "polished", "refined", "cleaned", "oxidized", "alloy"],
+      "legierbar_mit": ["Gold", "Kupfer", "Eisen"]
     },
     {
       "name": "Gold",
@@ -71,7 +83,9 @@
       "wert": 70,
       "farbe1": "#F5C542",
       "farbe2": "#6B5320",
-      "muster": 4
+      "muster": 4,
+      "zustaende": ["raw", "washed", "smelted", "cast", "polished", "refined", "cleaned", "alloy"],
+      "legierbar_mit": ["Silber", "Kupfer"]
     },
     {
       "name": "Smaragd",
@@ -81,7 +95,9 @@
       "wert": 160,
       "farbe1": "#4BE38C",
       "farbe2": "#1B4A33",
-      "muster": 3
+      "muster": 3,
+      "zustaende": ["raw", "washed", "cleaned", "polished"],
+      "legierbar_mit": []
     },
     {
       "name": "Diamant",
@@ -92,7 +108,9 @@
       "farbe1": "#8EE8FF",
  
       "farbe2": "#26505E",
-      "muster": 3
+      "muster": 3,
+      "zustaende": ["raw", "washed", "cleaned", "polished", "hardened"],
+      "legierbar_mit": []
     }
   ]
 }

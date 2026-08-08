@@ -32,9 +32,26 @@ struct World
     // weiter, wenn kein Programm laeuft - am Anfang hat man ja noch keins.
     bool byHand = false;
 
-    // Was man abgebaut, aber noch nicht verkauft hat: Erz-Nummer -> Anzahl.
+    // Ein Stapel in der Tasche: dasselbe Erz im selben Zustand.
+    //
+    // Roher Stein und geschmolzener Stein sind zwei verschiedene Stapel -
+    // deshalb gehoert der Zustand mit in den Schluessel.
+    struct Item
+    {
+        int ore   = 0;
+        int state = 0;  // OreState
+
+        bool operator<(const Item& o) const
+        {
+            if (ore != o.ore)
+                return ore < o.ore;
+            return state < o.state;
+        }
+    };
+
+    // Was man abgebaut, aber noch nicht verkauft hat.
     // Abbauen bringt kein Geld, erst das Verkaufen tut das.
-    std::map<int, int> inventory;
+    std::map<Item, int> inventory;
 
     // Steigt mit dem Spielstand. Welche Erze es ueberhaupt geben kann, haengt
     // daran. Ausgerechnet wird es woanders (siehe main), hier steht nur das
@@ -61,13 +78,13 @@ struct World
     bool mineByHand();  // dasselbe, aber per Mausklick - laeuft ohne Programm
     bool place();      // true = jetzt hingesetzt, false = stand schon da
 
-    // Verkaufen. Ohne Erz-Nummer geht alles ueber die Theke.
+    // Verkaufen. Ohne Angabe geht alles ueber die Theke.
     // Rueckgabe: wie viel Geld es gab.
     int sell(const OrePlan& ores);
-    int sell(const OrePlan& ores, int oreIndex);
+    int sell(const OrePlan& ores, Item was, int anzahl);  // genau ein Stapel
 
-    // Fuer block.sell("Stein", 3): nur diese Sorte, hoechstens so viele.
-    // anzahl < 0 heisst alles davon.
+    // Fuer block.sell("Stein", 3): diese Sorte in jedem Zustand, hoechstens so
+    // viele. anzahl < 0 heisst alles davon.
     int sell(const OrePlan& ores, const std::string& name, int anzahl);
 
     int inventoryCount() const;  // wie viele Bloecke insgesamt in der Tasche

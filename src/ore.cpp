@@ -227,6 +227,46 @@ OrePlan LoadOrePlan()
         if (!ParseColor(e.text("farbe2", ""), erz.color2))
             plan.problems.push_back(erz.name + ": farbe2 fehlt oder ist kein #RRGGBB.");
 
+        // Welche Zustaende es bei diesem Erz geben darf. Fehlt die Liste, sind
+        // alle erlaubt - so muss man nicht bei jedem Erz alles hinschreiben.
+        if (const JsonValue* z = e.find("zustaende"))
+        {
+            erz.states = 0;
+            if (z->type != JsonValue::Type::Array)
+            {
+                plan.problems.push_back(erz.name + ": \"zustaende\" muss eine Liste sein.");
+                erz.states = 0xFFFFFFFFu;
+            }
+            else
+            {
+                for (const JsonValue& s : z->items)
+                {
+                    const int nummer = FindOreState(s.str);
+                    if (nummer < 0)
+                        plan.problems.push_back(erz.name + ": Zustand \"" + s.str +
+                                                "\" kenne ich nicht.");
+                    else
+                        erz.states |= (1u << (unsigned)nummer);
+                }
+            }
+
+            // Roh geht immer - so kommt der Block ja aus dem Boden.
+            erz.states |= (1u << (unsigned)OreState::Raw);
+        }
+
+        // Nur einlesen und mitschleppen. Das Legieren selbst gibt es noch
+        // nicht - die Liste steht schon mal da, damit sie nicht spaeter
+        // nachgetragen werden muss.
+        if (const JsonValue* l = e.find("legierbar_mit"))
+        {
+            if (l->type != JsonValue::Type::Array)
+                plan.problems.push_back(erz.name + ": \"legierbar_mit\" muss eine Liste sein.");
+            else
+                for (const JsonValue& s : l->items)
+                    if (s.type == JsonValue::Type::String)
+                        erz.alloyWith.push_back(s.str);
+        }
+
         plan.ores.push_back(erz);
     }
 
@@ -234,6 +274,52 @@ OrePlan LoadOrePlan()
         plan.problems.push_back("In \"erze\" steht kein einziges Erz.");
 
     return plan;
+}
+
+const char* OreStateName(OreState state)
+{
+    switch (state)
+    {
+    case OreState::Raw: return "Roh";
+    case OreState::Washed: return "Gewaschen";
+    case OreState::Smelted: return "Geschmolzen";
+    case OreState::Cast: return "Gegossen";
+    case OreState::Polished: return "Poliert";
+    case OreState::Hardened: return "Gehärtet";
+    case OreState::Refined: return "Veredelt";
+    case OreState::Pressed: return "Gepresst";
+    case OreState::Cleaned: return "Gereinigt";
+    case OreState::Oxidized: return "Oxidiert";
+    case OreState::Alloy: return "Legiert";
+    default: return "?";
+    }
+}
+
+const char* OreStateKey(OreState state)
+{
+    switch (state)
+    {
+    case OreState::Raw: return "raw";
+    case OreState::Washed: return "washed";
+    case OreState::Smelted: return "smelted";
+    case OreState::Cast: return "cast";
+    case OreState::Polished: return "polished";
+    case OreState::Hardened: return "hardened";
+    case OreState::Refined: return "refined";
+    case OreState::Pressed: return "pressed";
+    case OreState::Cleaned: return "cleaned";
+    case OreState::Oxidized: return "oxidized";
+    case OreState::Alloy: return "alloy";
+    default: return "?";
+    }
+}
+
+int FindOreState(const std::string& key)
+{
+    for (int i = 0; i < (int)OreState::Count; ++i)
+        if (key == OreStateKey((OreState)i))
+            return i;
+    return -1;
 }
 
 int FindOre(const OrePlan& plan, const std::string& name)

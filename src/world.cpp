@@ -58,10 +58,11 @@ ImU32 Mix(const Color& a, const Color& b, float t, int alpha)
 // dasselbe wie "alles davon verkaufen".
 struct SellUi
 {
-    std::map<int, int> menge;
-    int                editing   = -1;  // in welcher Karte man gerade tippt
-    bool               focus     = false;
-    int                lastFrame = -10;
+    std::map<World::Item, int> menge;
+    World::Item                editing;      // in welcher Karte man tippt
+    bool                       tippt = false;
+    bool                       focus = false;
+    int                        lastFrame = -10;
 };
 
 SellUi g_sell;
@@ -108,15 +109,24 @@ int World::inventoryCount() const
     return summe;
 }
 
-int World::sell(const OrePlan& ores, int oreIndex)
+int World::sell(const OrePlan& ores, Item was, int anzahl)
 {
-    const auto it = inventory.find(oreIndex);
+    const auto it = inventory.find(was);
     if (it == inventory.end() || it->second <= 0)
         return 0;
 
-    const int geld = it->second * OreOf(ores, oreIndex).value * moneyPerBlock;
+    int wie = (anzahl < 0) ? it->second : anzahl;
+    if (wie > it->second)
+        wie = it->second;
+    if (wie <= 0)
+        return 0;
+
+    const int geld = wie * OreOf(ores, was.ore).value * moneyPerBlock;
     money += geld;
-    inventory.erase(it);
+
+    it->second -= wie;
+    if (it->second <= 0)
+        inventory.erase(it);
 
     lastSold = geld;
     sellFx   = 1.0f;
@@ -129,8 +139,13 @@ int World::inventoryOf(const OrePlan& ores, const std::string& name) const
     if (nummer < 0)
         return 0;
 
-    const auto it = inventory.find(nummer);
-    return (it != inventory.end()) ? it->second : 0;
+    // Ueber alle Zustaende: block.has("Stein") fragt nach dem Erz, nicht
+    // danach, ob es gewaschen oder geschmolzen ist.
+    int summe = 0;
+    for (const auto& e : inventory)
+        if (e.first.ore == nummer)
+            summe += e.second;
+    return summe;
 }
 
 int World::sell(const OrePlan& ores, const std::string& name, int anzahl)
@@ -139,26 +154,40 @@ int World::sell(const OrePlan& ores, const std::string& name, int anzahl)
     if (nummer < 0)
         return 0;  // Erz gibt es nicht - dann eben kein Geld
 
-    const auto it = inventory.find(nummer);
-    if (it == inventory.end() || it->second <= 0)
-        return 0;
-
     // Weniger als gewuenscht ist in Ordnung: es wird verkauft, was da ist.
-    int wie = (anzahl < 0) ? it->second : anzahl;
-    if (wie > it->second)
-        wie = it->second;
-    if (wie <= 0)
-        return 0;
+    // Angefangen wird beim rohen Zeug - das Bearbeitete behaelt man lieber.
+    int offen = anzahl;
+    int geld  = 0;
 
-    const int geld = wie * OreOf(ores, nummer).value * moneyPerBlock;
-    money += geld;
+    for (auto it = inventory.begin(); it != inventory.end();)
+    {
+        if (it->first.ore != nummer || (anzahl >= 0 && offen <= 0))
+        {
+            ++it;
+            continue;
+        }
 
-    it->second -= wie;
-    if (it->second <= 0)
-        inventory.erase(it);
+        int wie = (anzahl < 0) ? it->second : offen;
+        if (wie > it->second)
+            wie = it->second;
 
-    lastSold = geld;
-    sellFx   = 1.0f;
+        geld += wie * OreOf(ores, nummer).value * moneyPerBlock;
+        if (anzahl >= 0)
+            offen -= wie;
+
+        it->second -= wie;
+        if (it->second <= 0)
+            it = inventory.erase(it);
+        else
+            ++it;
+    }
+
+    if (geld > 0)
+    {
+        money += geld;
+        lastSold = geld;
+        sellFx   = 1.0f;
+    }
     return geld;
 }
 
@@ -166,7 +195,7 @@ int World::sell(const OrePlan& ores)
 {
     int geld = 0;
     for (const auto& e : inventory)
-        geld += e.second * OreOf(ores, e.first).value * moneyPerBlock;
+        geld += e.second * OreOf(ores, e.first.ore).value * moneyPerBlock;
 
     inventory.clear();
     money += geld;
@@ -204,7 +233,11 @@ void World::tickMining(float dt, const OrePlan& ores)
         return;
 
     // Der Block wandert in die Tasche - Geld gibt es erst beim Verkaufen.
-    ++inventory[ore];
+    // Frisch abgebaut heisst roh, alles andere kommt erst durch Bearbeiten.
+    Item frisch;
+    frisch.ore   = ore;
+    frisch.state = (int)OreState::Raw;
+    ++inventory[frisch];
     lastOre = ore;
     ++minedCount;
 
@@ -414,14 +447,14 @@ void DrawInventory(World& world, const OrePlan& ores)
         if (frame - g_sell.lastFrame > 1)
         {
             g_sell.menge.clear();
-            g_sell.editing = -1;
+            g_sell.tippt = false;
         }
         g_sell.lastFrame = frame;
 
         // ---- Kopfzeile ----------------------------------------------------
         int wert = 0;
         for (const auto& e : world.inventory)
-            wert += e.second * OreOf(ores, e.first).value * world.moneyPerBlock;
+            wert += e.second * OreOf(ores, e.first.ore).value * world.moneyPerBlock;
 
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.97f, 0.99f, 1.0f));
         ImGui::TextUnformatted("Tasche");
@@ -466,14 +499,24 @@ void DrawInventory(World& world, const OrePlan& ores)
             if (proZeile < 1)
                 proZeile = 1;
 
-            int verkaufenErz = -1;  // erst nach der Schleife, sonst wackelt sie
-            int verkaufenWie = 0;
-            int spalte       = 0;
+            // Erst nach der Schleife handeln, sonst wackelt sie einem unter
+            // den Fingern weg.
+            World::Item verkaufen;
+            int         verkaufenWie = 0;
+            bool        verkaufenJa  = false;
+
+            World::Item wechselVon;
+            int         wechselZu = 0;
+            bool        wechselJa = false;
+
+            int spalte = 0;
 
             for (const auto& e : world.inventory)
             {
-                const Ore& erz    = OreOf(ores, e.first);
-                const int  anzahl = e.second;
+                const World::Item stapel = e.first;
+                const Ore&        erz    = OreOf(ores, stapel.ore);
+                const int         anzahl = e.second;
+                const OreState    zust   = (OreState)stapel.state;
 
                 if (spalte > 0)
                     ImGui::SameLine(0.0f, luft);
@@ -484,7 +527,7 @@ void DrawInventory(World& world, const OrePlan& ores)
                     spalte = 1;
                 }
 
-                ImGui::PushID(e.first);
+                ImGui::PushID(stapel.ore * 100 + stapel.state);
                 ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 12.0f);
                 ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.141f, 0.157f, 0.188f, 1.0f));
                 ImGui::BeginChild("karte", ImVec2(kartenBreite, kartenHoehe),
@@ -507,7 +550,7 @@ void DrawInventory(World& world, const OrePlan& ores)
                         {
                             const float t = OrePixel((float)gx / (float)zellen,
                                                      (float)gy / (float)zellen, erz.pattern,
-                                                     777u + (unsigned)e.first * 31u);
+                                                     777u + (unsigned)stapel.ore * 31u);
                             const ImVec2 q(ba.x + (float)gx * st, ba.y + (float)gy * st);
                             dl->AddRectFilled(q, ImVec2(q.x + st + 0.6f, q.y + st + 0.6f),
                                               Mix(erz.color2, erz.color1, t, 255));
@@ -518,11 +561,18 @@ void DrawInventory(World& world, const OrePlan& ores)
                     ImGui::Dummy(ImVec2(innen, bild));
                 }
 
-                // ---- Name und wie viele man hat ---------------------------
+                // ---- Name, Zustand, Anzahl --------------------------------
                 {
                     const float w = ImGui::CalcTextSize(erz.name.c_str()).x;
                     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (innen - w) * 0.5f);
                     ImGui::TextUnformatted(erz.name.c_str());
+                }
+
+                {
+                    const char* zn = OreStateName(zust);
+                    const float w  = ImGui::CalcTextSize(zn).x;
+                    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (innen - w) * 0.5f);
+                    ImGui::TextDisabled("%s", zn);
                 }
 
                 char haben[48];
@@ -534,11 +584,9 @@ void DrawInventory(World& world, const OrePlan& ores)
                 ImGui::Spacing();
 
                 // ---- Wie viele verkaufen? ---------------------------------
-                // Beim Betreten steht hier die volle Anzahl: einmal auf
-                // "Verkaufen" und alles ist weg.
-                auto it = g_sell.menge.find(e.first);
+                auto it = g_sell.menge.find(stapel);
                 if (it == g_sell.menge.end())
-                    it = g_sell.menge.insert(std::make_pair(e.first, anzahl)).first;
+                    it = g_sell.menge.insert(std::make_pair(stapel, anzahl)).first;
 
                 int& wie = it->second;
                 if (wie > anzahl)
@@ -556,7 +604,10 @@ void DrawInventory(World& world, const OrePlan& ores)
 
                 ImGui::SameLine();
 
-                if (g_sell.editing == e.first)
+                const bool tippeHier = g_sell.tippt && !(g_sell.editing < stapel) &&
+                                       !(stapel < g_sell.editing);
+
+                if (tippeHier)
                 {
                     ImGui::SetNextItemWidth(mitte);
                     if (g_sell.focus)
@@ -568,7 +619,7 @@ void DrawInventory(World& world, const OrePlan& ores)
                     // Wegklicken fangen wir beide mit IsItemDeactivated ab.
                     ImGui::InputInt("##zahl", &wie, 0, 0);
                     if (ImGui::IsItemDeactivated())
-                        g_sell.editing = -1;
+                        g_sell.tippt = false;
                 }
                 else
                 {
@@ -576,7 +627,8 @@ void DrawInventory(World& world, const OrePlan& ores)
                     std::snprintf(zahl, sizeof(zahl), "%d", wie);
                     if (ImGui::Button(zahl, ImVec2(mitte, 0.0f)))
                     {
-                        g_sell.editing = e.first;  // Klick auf die Zahl: selbst tippen
+                        g_sell.editing = stapel;  // Klick auf die Zahl: selbst tippen
+                        g_sell.tippt   = true;
                         g_sell.focus   = true;
                     }
                     if (ImGui::IsItemHovered())
@@ -598,10 +650,32 @@ void DrawInventory(World& world, const OrePlan& ores)
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.42f, 0.30f, 1.0f));
                 if (ImGui::Button(knopf, ImVec2(innen, 0.0f)))
                 {
-                    verkaufenErz = e.first;
+                    verkaufen    = stapel;
                     verkaufenWie = wie;
+                    verkaufenJa  = true;
                 }
                 ImGui::PopStyleColor();
+
+                // ZUM TESTEN: Zustand von Hand umstellen. Wie man einen
+                // Zustand wirklich erreicht, gibt es noch nicht - so kann man
+                // trotzdem schon sehen, dass die Stapel getrennt bleiben.
+                if (ImGui::BeginPopupContextItem("zustand"))
+                {
+                    ImGui::TextDisabled("Zustand (Test)");
+                    ImGui::Separator();
+                    for (int z = 0; z < (int)OreState::Count; ++z)
+                    {
+                        if (!erz.allows((OreState)z) || z == stapel.state)
+                            continue;
+                        if (ImGui::MenuItem(OreStateName((OreState)z)))
+                        {
+                            wechselVon = stapel;
+                            wechselZu  = z;
+                            wechselJa  = true;
+                        }
+                    }
+                    ImGui::EndPopup();
+                }
 
                 ImGui::EndChild();
                 ImGui::PopStyleColor();
@@ -609,10 +683,24 @@ void DrawInventory(World& world, const OrePlan& ores)
                 ImGui::PopID();
             }
 
-            if (verkaufenErz >= 0)
+            if (verkaufenJa)
             {
-                world.sell(ores, OreOf(ores, verkaufenErz).name, verkaufenWie);
-                g_sell.menge.erase(verkaufenErz);  // beim naechsten Mal wieder voll
+                world.sell(ores, verkaufen, verkaufenWie);
+                g_sell.menge.erase(verkaufen);  // beim naechsten Mal wieder voll
+            }
+
+            // Zustand umstellen (Test): der Stapel wandert komplett hinueber.
+            if (wechselJa)
+            {
+                const auto alt = world.inventory.find(wechselVon);
+                if (alt != world.inventory.end())
+                {
+                    World::Item neu = wechselVon;
+                    neu.state       = wechselZu;
+                    world.inventory[neu] += alt->second;
+                    world.inventory.erase(alt);
+                    g_sell.menge.clear();
+                }
             }
         }
     }

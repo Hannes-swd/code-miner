@@ -41,7 +41,7 @@ bool ReadLine(std::istream& in, std::string& line)
     return true;
 }
 
-const int kVersion = 1;
+const int kVersion = 2;  // 2: Tasche mit Zustand je Stapel
 
 }  // namespace
 
@@ -65,7 +65,7 @@ bool SaveGame(const World& world, const SkillTree& tree,
     // Die Tasche: was abgebaut, aber noch nicht verkauft ist.
     out << "tasche " << world.inventory.size() << "\n";
     for (const auto& e : world.inventory)
-        out << e.first << " " << e.second << "\n";
+        out << e.first.ore << " " << e.first.state << " " << e.second << "\n";
 
     // shared[...] soll einen Neustart ueberleben - das ist der ganze Witz
     // daran, also gehoert es in den Spielstand.
@@ -150,10 +150,11 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
             in >> n;
             for (std::size_t i = 0; i < n; ++i)
             {
-                int erz = 0, anzahl = 0;
-                in >> erz >> anzahl;
+                World::Item was;
+                int         anzahl = 0;
+                in >> was.ore >> was.state >> anzahl;
                 if (anzahl > 0)
-                    neueWelt.inventory[erz] = anzahl;
+                    neueWelt.inventory[was] = anzahl;
             }
         }
         else if (wort == "block")
