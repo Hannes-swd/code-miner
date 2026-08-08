@@ -25,6 +25,7 @@ add_executable(CodeKlicker WIN32
     src/world.cpp
     src/round.cpp
     src/skills.cpp
+    src/wiki.cpp
     src/skilltree.cpp
     src/skillfile.cpp
     src/save.cpp

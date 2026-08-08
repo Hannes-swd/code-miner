@@ -132,6 +132,11 @@ std::vector<std::string> Candidates()
 
 }  // namespace
 
+bool SkillFromKey(const std::string& key, Skill& out)
+{
+    return LookUp(key, out);
+}
+
 SkillPlan LoadSkillPlan()
 {
     SkillPlan plan;

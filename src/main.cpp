@@ -14,6 +14,7 @@
 #include "skillfile.h"
 #include "skills.h"
 #include "skilltree.h"
+#include "wiki.h"
 #include "world.h"
 
 #include "imgui.h"
@@ -165,7 +166,8 @@ enum class Page
 {
     Welt,
     Tasche,
-    Skills
+    Skills,
+    Wiki
 };
 
 // Reiter in der Menueleiste. Die offene Seite wird hervorgehoben.
@@ -298,6 +300,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     // Legierungen haengen ihre Ergebnisse hinten an die Erzliste an - deshalb
     // erst hier und deshalb ist die Erzliste oben nicht const.
     const AlloyPlan alloys = LoadAlloyPlan(ores);
+
+    // Was im Wiki steht, kommt aus data/wiki.json. Es wird einmal gelesen und
+    // danach nur noch angezeigt - erklaeren aendert nichts am Spiel.
+    const WikiBook wiki = LoadWikiBook();
 
     // Wie lange eine Runde dauert und was in der Vorbereitung still steht,
     // steht in data/runden.json. Fuer eine kurze Testrunde einfach dort die
@@ -519,6 +525,20 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
             if (PageTab("Skilltree", page == Page::Skills))
                 page = Page::Skills;
 
+            // Das Wiki ist immer erreichbar - auch in der Vorbereitung. Wer
+            // nachschlaegt, soll dafuer keine Runde verbrauchen.
+            // Neu freigeschaltete Seiten stehen als Zahl im Reiter - sonst
+            // merkt man erst beim Hineinschauen, dass es etwas Neues gibt.
+            char wikiLabel[32];
+            const int wikiNeu = WikiUnseen(wiki, limits, world.wikiSeen);
+            if (wikiNeu > 0)
+                std::snprintf(wikiLabel, sizeof(wikiLabel), "Wiki (%d)", wikiNeu);
+            else
+                std::snprintf(wikiLabel, sizeof(wikiLabel), "Wiki");
+
+            if (PageTab(wikiLabel, page == Page::Wiki))
+                page = Page::Wiki;
+
             // Die Runde gehoert in die Leiste: so ist sie von jeder Seite aus
             // zu sehen und zu starten.
             if (DrawRoundBar(world, rounds))
@@ -605,7 +625,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
         }
         else if (page == Page::Tasche)
         {
-            DrawInventory(world, ores, crafts, alloys, limits);
+            DrawInventory(world, ores, crafts, limits);
+        }
+        else if (page == Page::Wiki)
+        {
+            DrawWikiPage(wiki, limits, world.wikiSeen);
         }
         else
         {

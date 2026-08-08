@@ -4,6 +4,7 @@
 
 #include <map>
 #include <random>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -21,6 +22,10 @@ struct World
     // deshalb ihren eigenen Speicher - hier ist der gemeinsame Ablageort, ueber
     // den sich mehrere Konsolen etwas sagen koennen.
     std::map<std::string, int> shared;
+
+    // Welche Wiki-Seiten man schon aufgeschlagen hat. Alles, was freigeschaltet
+    // ist und hier NICHT drinsteht, wird als neu markiert.
+    std::set<std::string> wikiSeen;
 
     // ---- Runden ----------------------------------------------------------
     // Die Phase gehoert hierher, weil sie in den Spielstand muss: wer mitten
@@ -253,7 +258,10 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
 
 // Die Tasche: was man abgebaut hat. Das Rechtsklickmenue auf einer Karte
 // bietet genau die Schritte an, die von hier aus moeglich sind - deshalb
-// braucht die Seite die Limits. Die Legierungen stehen oben als eigener
-// Abschnitt: sie gehoeren nicht zu einem einzelnen Stapel.
+// braucht die Seite die Limits.
+//
+// Legieren gibt es hier mit Absicht NICHT: das soll der Spieler programmieren
+// ("wenn ich von beidem genug habe, misch es"), nicht von Hand klicken. Das
+// Ergebnis landet dann von selbst in der Tasche.
 void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
-                   const AlloyPlan& alloys, const Limits& limits);
+                   const Limits& limits);

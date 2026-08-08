@@ -59,3 +59,8 @@ struct SkillPlan
 
 // Sucht data/skills.txt an den ueblichen Stellen und liest sie ein.
 SkillPlan LoadSkillPlan();
+
+// Schluessel aus der Datei ("pruefen", "while", ...) zu einem Skill. false =
+// kenne ich nicht. Steht hier, weil auch data/wiki.json dieselben Schluessel
+// benutzt - zwei Tabellen wuerden frueher oder spaeter auseinanderlaufen.
+bool SkillFromKey(const std::string& key, Skill& out);

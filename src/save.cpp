@@ -45,7 +45,7 @@ bool ReadLine(std::istream& in, std::string& line)
 //    Punkt dazugekommen - beides verschiebt Nummern, die in der Datei stehen.
 // 5: Runden. Phase, Restzeit und Rundennummer gehoeren dazu - wer mitten im
 //    Lauf beendet, macht beim naechsten Start dort weiter.
-const int kVersion = 5;
+const int kVersion = 6;  // 6: gelesene Wiki-Seiten
 
 }  // namespace
 
@@ -81,6 +81,12 @@ bool SaveGame(const World& world, const SkillTree& tree,
     for (const auto& e : world.inventory)
         out << e.first.ore << " " << e.first.state << " " << e.second.count << " "
             << e.second.purity << "\n";
+
+    // Welche Wiki-Seiten schon gelesen sind. Ohne das waere nach jedem Start
+    // wieder alles als neu markiert.
+    out << "wiki " << world.wikiSeen.size() << "\n";
+    for (const std::string& t : world.wikiSeen)
+        out << t << "\n";
 
     // shared[...] soll einen Neustart ueberleben - das ist der ganze Witz
     // daran, also gehoert es in den Spielstand.
@@ -203,6 +209,22 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
             int lebt = 1;
             in >> neueWelt.ore >> neueWelt.oreSeed >> lebt;
             neueWelt.blockAlive = (lebt != 0);
+        }
+        else if (wort == "wiki")
+        {
+            std::size_t n = 0;
+            in >> n;
+            std::string rest;
+            std::getline(in, rest);  // Rest der Kopfzeile wegwerfen
+
+            for (std::size_t i = 0; i < n; ++i)
+            {
+                std::string titel;
+                if (!ReadLine(in, titel))
+                    break;
+                if (!titel.empty())
+                    neueWelt.wikiSeen.insert(titel);
+            }
         }
         else if (wort == "geteilt")
         {
