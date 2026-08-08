@@ -83,6 +83,7 @@ const char* SkillName(Skill skill)
     switch (skill)
     {
     case Skill::Root: return "Konsole";
+    case Skill::Mine: return "block.mine()";
     case Skill::Sell: return "block.sell()";
     case Skill::While: return "while";
     case Skill::If: return "if";
@@ -114,7 +115,8 @@ const char* SkillInfo(Skill skill)
 {
     switch (skill)
     {
-    case Skill::Root: return "Eine Konsole und block.mine(). Gehört dir von Anfang an.";
+    case Skill::Root: return "Deine erste Konsole. Abbauen kannst du am Anfang nur von Hand - klick auf den Block.";
+    case Skill::Mine: return "block.mine() - abbauen lassen, statt selbst zu klicken. Der erste Schritt zur Maschine.";
     case Skill::Sell: return "block.sell() verkauft alles aus der Tasche auf einmal. Ohne das musst du von Hand verkaufen.";
     case Skill::While: return "while und do. Bringt gleich die erste Schleife mit.";
     case Skill::If: return "if. Bringt gleich die erste Bedingung mit.";
@@ -147,6 +149,7 @@ const char* SkillTag(Skill skill)
     switch (skill)
     {
     case Skill::Root: return ">_";
+    case Skill::Mine: return "M";
     case Skill::Sell: return "$>";
     case Skill::While: return "W";
     case Skill::If: return "IF";
@@ -445,6 +448,7 @@ Limits SkillTree::limits() const
             ++functions;
             break;
 
+        case Skill::Mine: limits.allowMine = true; break;
         case Skill::Sell: limits.allowSell = true; break;
         case Skill::Bag: limits.allowBag = true; break;
         case Skill::Else: limits.allowElse = true; break;

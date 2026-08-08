@@ -8,11 +8,12 @@
 enum class Skill
 {
     None,  // "nichts" - fuer "braucht nichts"
-    Root,  // Startknoten: die erste Konsole und block.mine(). Gehoert einem schon.
+    Root,  // Startknoten: die erste Konsole. Gehoert einem schon.
 
     // Sprache freischalten. Jede dieser Faehigkeiten gibt es GENAU EINMAL im
     // Baum, und sie bringt genau eine Verwendung mit. Mehr gibt es nur ueber
     // die Erweiterungen weiter unten.
+    Mine,  // block.mine() - abbauen per Programm statt per Klick
     Sell,  // block.sell() - die Tasche zu Geld machen
     While,
     If,

@@ -50,18 +50,20 @@ Console::Console(int aId, ImVec2 aPos, bool withStarterCode) : id(aId), startPos
 
     if (withStarterCode)
     {
-        // Am Anfang ist alles gesperrt ausser block.mine(). Deshalb steht hier
-        // auch nur das - alles andere waere sofort eine Fehlermeldung.
+        // Am Anfang ist ALLES gesperrt - auch block.mine(). Deshalb steht hier
+        // nur ein leeres main(): alles andere waere sofort eine Fehlermeldung.
         editor.SetText(
-            "// Am Anfang kannst du genau eines:\n"
+            "// Am Anfang kann dein Programm noch gar nichts.\n"
             "//\n"
-            "//   block.mine()   abbauen  ->  +1 Geld\n"
+            "// Klick auf den Block, um ihn von Hand abzubauen.\n"
+            "// Was du abgebaut hast, liegt in der Tasche - dort\n"
+            "// kannst du es mit Rechtsklick verkaufen.\n"
             "//\n"
-            "// Alles andere - while, if, print - musst du dir im\n"
-            "// Skilltree kaufen. Drueck also erstmal oft auf Play.\n"
+            "// Jeden Befehl - block.mine(), block.sell(), while,\n"
+            "// if - musst du dir erst im Skilltree kaufen.\n"
             "\n"
             "int main() {\n"
-            "    block.mine();\n"
+            "\n"
             "}\n");
     }
     else

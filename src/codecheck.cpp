@@ -219,6 +219,11 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
                 if (!limits.allowPlace)
                     return locked("block.place()");
             }
+            else if (t.word == "mine")
+            {
+                if (!limits.allowMine)
+                    return locked("block.mine()");
+            }
             else if (t.word == "has")
             {
                 if (!limits.allowBag)

@@ -537,7 +537,7 @@ void DrawStatus(const Limits& limits, int level)
         if (limits.allowWhile || limits.allowFor || limits.allowIf || limits.allowElse ||
             limits.allowPrint || limits.allowCheck || limits.allowPlace || limits.allowShared ||
             limits.allowVariable || limits.allowClass || limits.allowFunction ||
-            limits.allowSell || limits.allowBag)
+            limits.allowSell || limits.allowBag || limits.allowMine)
         {
             ImGui::Spacing();
             ImGui::Separator();
@@ -549,6 +549,7 @@ void DrawStatus(const Limits& limits, int level)
             wort("else", limits.allowElse);
             wort("print()", limits.allowPrint);
             wort("block.isThere()", limits.allowCheck);
+            wort("block.mine()", limits.allowMine);
             wort("block.place()", limits.allowPlace);
             wort("block.sell()", limits.allowSell);
             wort("block.has(...)", limits.allowBag);

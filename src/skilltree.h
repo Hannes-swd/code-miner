@@ -42,6 +42,7 @@ struct Limits
     bool allowCheck    = false;
     bool allowPlace    = false;
     bool allowShared   = false;
+    bool allowMine     = false;
     bool allowSell     = false;
     bool allowBag      = false;
     bool allowVariable = false;

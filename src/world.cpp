@@ -380,105 +380,160 @@ void DrawInventory(World& world, const OrePlan& ores)
 {
     ImGuiViewport* vp = ImGui::GetMainViewport();
 
-    // Unten links, feste Groesse: das Fenster soll nicht bei jedem neuen Erz
-    // die Groesse aendern und irgendwann unten aus dem Bild wachsen.
-    ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + 14.0f, vp->WorkPos.y + vp->WorkSize.y - 314.0f),
-                            ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(262.0f, 300.0f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(vp->WorkPos);
+    ImGui::SetNextWindowSize(vp->WorkSize);
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
+    const ImGuiWindowFlags flags =
+        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus |
+        ImGuiWindowFlags_NoSavedSettings;
 
-    if (ImGui::Begin("Tasche", nullptr,
-                     ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing))
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.043f, 0.047f, 0.058f, 1.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(24.0f, 18.0f));
+
+    if (ImGui::Begin("##tasche", nullptr, flags))
     {
+        // ---- Kopfzeile ----------------------------------------------------
+        int wert = 0;
+        for (const auto& e : world.inventory)
+            wert += e.second * OreOf(ores, e.first).value * world.moneyPerBlock;
+
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.97f, 0.99f, 1.0f));
+        ImGui::TextUnformatted("Tasche");
+        ImGui::PopStyleColor();
+
+        ImGui::SameLine();
+        ImGui::TextDisabled("  %d Blöcke, zusammen %d Geld", world.inventoryCount(), wert);
+
+        if (!world.inventory.empty())
+        {
+            ImGui::SameLine(ImGui::GetWindowWidth() - 190.0f);
+            if (ImGui::Button("Alles verkaufen", ImVec2(160.0f, 0.0f)))
+                world.sell(ores);
+        }
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
         if (world.inventory.empty())
         {
+            ImGui::Spacing();
             ImGui::TextDisabled("Noch nichts abgebaut.");
-            ImGui::TextDisabled("Klick auf den Block.");
+            ImGui::TextDisabled("Geh auf die Welt-Seite und klick auf den Block -");
+            ImGui::TextDisabled("oder lass ein Programm block.mine() machen.");
         }
         else
         {
-            ImGui::TextDisabled("Rechtsklick auf eine Zeile");
-            ImGui::TextDisabled("zum Verkaufen.");
+            ImGui::TextDisabled("Rechtsklick auf eine Karte zum Verkaufen.");
+            ImGui::Spacing();
             ImGui::Spacing();
 
-            int verkaufen = -1;  // erst nach der Schleife, sonst wackelt sie
+            // ---- Karten, nebeneinander mit Umbruch -------------------------
+            const float kartenBreite = 170.0f;
+            const float kartenHoehe  = 200.0f;
+            const float bild         = 104.0f;
+            const float luft         = 16.0f;
+
+            const float platz = ImGui::GetContentRegionAvail().x;
+            int         proZeile = (int)((platz + luft) / (kartenBreite + luft));
+            if (proZeile < 1)
+                proZeile = 1;
+
+            int verkaufenAlles = -1;  // erst nach der Schleife, sonst wackelt sie
+            int verkaufenEins  = -1;
+            int spalte         = 0;
 
             for (const auto& e : world.inventory)
             {
                 const Ore& erz = OreOf(ores, e.first);
+
+                if (spalte > 0)
+                    ImGui::SameLine(0.0f, luft);
+                ++spalte;
+                if (spalte > proZeile)
+                {
+                    ImGui::NewLine();
+                    spalte = 1;
+                }
+
                 ImGui::PushID(e.first);
 
-                // Kleines Bild vom Erz - dieselbe Musterlogik wie beim Block,
-                // damit man in der Tasche dasselbe wiedererkennt.
-                const float  size = ImGui::GetTextLineHeight() * 1.6f;
-                const ImVec2 p    = ImGui::GetCursorScreenPos();
-                ImDrawList*  dl   = ImGui::GetWindowDrawList();
+                const ImVec2 p  = ImGui::GetCursorScreenPos();
+                ImDrawList*  dl = ImGui::GetWindowDrawList();
 
-                const int   zellen = 9;
-                const float st     = size / (float)zellen;
+                ImGui::InvisibleButton("karte", ImVec2(kartenBreite, kartenHoehe));
+                const bool drauf = ImGui::IsItemHovered();
+
+                // Karte
+                const ImVec2 a = p;
+                const ImVec2 b(p.x + kartenBreite, p.y + kartenHoehe);
+                dl->AddRectFilled(a, b, IM_COL32(36, 40, 48, 255), 12.0f);
+                dl->AddRect(a, b, drauf ? IM_COL32(150, 214, 92, 255) : IM_COL32(62, 68, 80, 255),
+                            12.0f, 0, drauf ? 2.4f : 1.6f);
+
+                // Bild vom Erz - dieselbe Musterlogik wie beim Block draussen
+                const ImVec2 ba(p.x + (kartenBreite - bild) * 0.5f, p.y + 16.0f);
+                const int    zellen = 18;
+                const float  st     = bild / (float)zellen;
                 for (int gy = 0; gy < zellen; ++gy)
                     for (int gx = 0; gx < zellen; ++gx)
                     {
                         const float t = OrePixel((float)gx / (float)zellen,
                                                  (float)gy / (float)zellen, erz.pattern,
                                                  777u + (unsigned)e.first * 31u);
-                        const ImVec2 q(p.x + (float)gx * st, p.y + (float)gy * st);
+                        const ImVec2 q(ba.x + (float)gx * st, ba.y + (float)gy * st);
                         dl->AddRectFilled(q, ImVec2(q.x + st + 0.6f, q.y + st + 0.6f),
                                           Mix(erz.color2, erz.color1, t, 255));
                     }
-                dl->AddRect(p, ImVec2(p.x + size, p.y + size), IM_COL32(16, 18, 22, 255), 3.0f, 0,
-                            1.5f);
+                dl->AddRect(ba, ImVec2(ba.x + bild, ba.y + bild), IM_COL32(16, 18, 22, 255), 5.0f,
+                            0, 2.0f);
 
-                // Eine unsichtbare Schaltflaeche darueber: die faengt den
-                // Rechtsklick und macht die ganze Zeile anklickbar.
-                ImGui::InvisibleButton("zeile", ImVec2(ImGui::GetContentRegionAvail().x, size));
-                const bool drauf = ImGui::IsItemHovered();
+                // Name, Anzahl, Wert
+                const ImVec2 ns = ImGui::CalcTextSize(erz.name.c_str());
+                dl->AddText(ImVec2(p.x + (kartenBreite - ns.x) * 0.5f, ba.y + bild + 12.0f),
+                            IM_COL32(240, 244, 250, 255), erz.name.c_str());
 
-                dl->AddText(ImVec2(p.x + size + 10.0f, p.y + size * 0.5f - ImGui::GetTextLineHeight() * 0.5f),
-                            drauf ? IM_COL32(255, 255, 255, 255) : IM_COL32(214, 220, 229, 255),
-                            erz.name.c_str());
-
-                char anzahl[32];
-                std::snprintf(anzahl, sizeof(anzahl), "%d", e.second);
+                char anzahl[48];
+                std::snprintf(anzahl, sizeof(anzahl), "x %d", e.second);
                 const ImVec2 as = ImGui::CalcTextSize(anzahl);
-                dl->AddText(ImVec2(p.x + ImGui::GetContentRegionAvail().x - as.x,
-                                   p.y + size * 0.5f - ImGui::GetTextLineHeight() * 0.5f),
+                dl->AddText(ImVec2(p.x + (kartenBreite - as.x) * 0.5f, ba.y + bild + 34.0f),
                             IM_COL32(178, 226, 122, 255), anzahl);
+
+                char geld[48];
+                std::snprintf(geld, sizeof(geld), "%d Geld",
+                              e.second * erz.value * world.moneyPerBlock);
+                const ImVec2 gs = ImGui::CalcTextSize(geld);
+                dl->AddText(ImVec2(p.x + (kartenBreite - gs.x) * 0.5f, ba.y + bild + 54.0f),
+                            IM_COL32(255, 214, 120, 255), geld);
 
                 if (ImGui::BeginPopupContextItem("menue"))
                 {
-                    const int geld = e.second * erz.value * world.moneyPerBlock;
                     ImGui::TextDisabled("%s x%d", erz.name.c_str(), e.second);
                     ImGui::Separator();
-                    if (ImGui::MenuItem("Verkaufen"))
-                        verkaufen = e.first;
-                    ImGui::TextDisabled("bringt %d Geld", geld);
+                    if (ImGui::MenuItem("Alle verkaufen"))
+                        verkaufenAlles = e.first;
+                    if (e.second > 1 && ImGui::MenuItem("Einen verkaufen"))
+                        verkaufenEins = e.first;
                     ImGui::EndPopup();
                 }
 
                 if (drauf)
-                    ImGui::SetTooltip("%s - %d Geld pro Stueck", erz.name.c_str(),
+                    ImGui::SetTooltip("%s - %d Geld pro Stück", erz.name.c_str(),
                                       erz.value * world.moneyPerBlock);
 
                 ImGui::PopID();
             }
 
-            if (verkaufen >= 0)
-                world.sell(ores, verkaufen);
-
-            ImGui::Spacing();
-            ImGui::Separator();
-            ImGui::Spacing();
-
-            int alles = 0;
-            for (const auto& e : world.inventory)
-                alles += e.second * OreOf(ores, e.first).value * world.moneyPerBlock;
-
-            ImGui::TextDisabled("Alles zusammen: %d Geld", alles);
+            if (verkaufenAlles >= 0)
+                world.sell(ores, verkaufenAlles);
+            if (verkaufenEins >= 0)
+                world.sell(ores, OreOf(ores, verkaufenEins).name, 1);
         }
     }
     ImGui::End();
 
-    ImGui::PopStyleVar();
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor();
 }

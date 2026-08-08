@@ -49,6 +49,7 @@
 #   prüfen        block.isThere(), isLoading(), exists(), isGone()
 #   platzieren    block.place()
 #   geteilt       shared["name"] - übersteht einen Neustart
+#   abbauen       block.mine() - abbauen lassen statt selbst klicken
 #   verkaufen     block.sell() - die Tasche zu Geld machen
 #   tasche        block.has("Stein") - nachschauen, was in der Tasche ist
 #   variablen     eigene Variablen (int, float, ...), dazu die erste
@@ -95,33 +96,34 @@ abstand     3
 # Die Bereiche dürfen sich überschneiden - der Abstand oben sorgt dafür,
 # dass trotzdem Luft dazwischen bleibt.
 
-verkaufen       1        6    einmal 1
-while           2        8    einmal 1
-if              4-9     18    einmal 1
-variablen       5-10    16    einmal 1
-print           6-12    12    einmal 1
-prüfen          7-13    14    einmal 1
-platzieren      8-14    14    einmal 1
-tasche          6-12    16    einmal 1   braucht if
-else            9-15    18    einmal 1   braucht if
-for            10-16    20    einmal 1   braucht while
-funktionen     11-17    20    einmal 1   braucht variablen
-klassen        13-19    22    einmal 1   braucht funktionen
-geteilt        14-20    24    einmal 1
+abbauen         1        6    einmal 1
+verkaufen       2        6    einmal 1
+while           3        8    einmal 1
+if              5-10    18    einmal 1
+variablen       6-11    16    einmal 1
+print           7-13    12    einmal 1
+tasche          7-13    16    einmal 1   braucht if
+prüfen          8-14    14    einmal 1
+platzieren      9-15    14    einmal 1
+else           10-16    18    einmal 1   braucht if
+for            11-17    20    einmal 1   braucht while
+funktionen     12-18    20    einmal 1   braucht variablen
+klassen        14-20    22    einmal 1   braucht funktionen
+geteilt        15-20    24    einmal 1
 
 
 # ---- mehr davon -------------------------------------------------------
 #
 # Diese Punkte tauchen erst auf, wenn das Passende schon gekauft ist.
 
-schleife+       3-20    16    oft 2    braucht while
-bedingung+      5-20    16    oft 2    braucht if
-variable+       7-20    12    oft 2    braucht variablen
-funktion+      13-20    16    oft 2    braucht funktionen
-klasse+        15-20    18    oft 2    braucht klassen
+schleife+       4-20    16    oft 2    braucht while
+bedingung+      6-20    16    oft 2    braucht if
+variable+       8-20    12    oft 2    braucht variablen
+funktion+      14-20    16    oft 2    braucht funktionen
+klasse+        16-20    18    oft 2    braucht klassen
 
 # Eine weitere Konsole ist ein großer Schritt - deshalb selten.
-konsole+        6-20    22    oft 1
+konsole+        7-20    22    oft 1
 
 
 # ---- Werte ------------------------------------------------------------

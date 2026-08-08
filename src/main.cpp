@@ -161,6 +161,7 @@ static void ApplyStyle()
 enum class Page
 {
     Welt,
+    Tasche,
     Skills
 };
 
@@ -272,7 +273,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     ImGui_ImplDX11_Init(g_device, g_context);
 
     // Zum Testen gibt es Startgeld. Beim Zuruecksetzen kommt genau das wieder.
-    const int kStartGeld = 5000;  // fuer das fertige Spiel auf 0
+    const int kStartGeld = 100000;  // fuer das fertige Spiel auf 0
 
     // Welche Erze es gibt, steht in data/erze.json.
     const OrePlan ores = LoadOrePlan();
@@ -417,11 +418,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
         // Die Werte kommen aus dem Baum - jedes Bild neu ausgerechnet. Dadurch
         // stimmen sie immer, egal in welcher Reihenfolge gekauft wurde.
-        Limits limits   = tree.limits();
-        // TEST
-        limits.allowWhile = limits.allowIf = limits.allowBag = limits.allowSell = true;
-        limits.allowPrint = true;
-        limits.maxLoops = 5; limits.maxIfs = 5;
+        const Limits limits   = tree.limits();
         world.moneyPerBlock   = limits.moneyPerBlock;
         world.respawnSeconds  = limits.respawnSeconds;
         engine.setSpeed(limits.linesPerSecond);
@@ -430,6 +427,19 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
         {
             if (PageTab("Welt", page == Page::Welt))
                 page = Page::Welt;
+
+            // Die Zahl im Reiter: dann sieht man auch von der Welt-Seite aus,
+            // dass sich in der Tasche etwas angesammelt hat.
+            char tasche[32];
+            const int dabei = world.inventoryCount();
+            if (dabei > 0)
+                std::snprintf(tasche, sizeof(tasche), "Tasche (%d)", dabei);
+            else
+                std::snprintf(tasche, sizeof(tasche), "Tasche");
+
+            if (PageTab(tasche, page == Page::Tasche))
+                page = Page::Tasche;
+
             if (PageTab("Skilltree", page == Page::Skills))
                 page = Page::Skills;
 
@@ -461,7 +471,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
         if (page == Page::Welt)
         {
             DrawWorld(world, ores);
-            DrawInventory(world, ores);
             DrawStatus(limits, world.level);
 
             bool trigger = false;
@@ -504,6 +513,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
                         engine.start(sources);
                 }
             }
+        }
+        else if (page == Page::Tasche)
+        {
+            DrawInventory(world, ores);
         }
         else
         {
