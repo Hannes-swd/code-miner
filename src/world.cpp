@@ -955,9 +955,21 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
 
             // ---- Karten, nebeneinander mit Umbruch -------------------------
             const float kartenBreite = 186.0f;
-            const float kartenHoehe  = 262.0f;
             const float bild         = 96.0f;
             const float luft         = 16.0f;
+
+            // Die Hoehe wird ausgerechnet, nicht geraten: sonst faellt der
+            // Verkaufen-Knopf unten heraus, sobald eine Zeile dazukommt
+            // (so ist es der Reinheit ergangen).
+            const ImGuiStyle& stil   = ImGui::GetStyle();
+            const float       zeile  = ImGui::GetTextLineHeight() + stil.ItemSpacing.y;
+            const float       knopf  = ImGui::GetFrameHeight() + stil.ItemSpacing.y;
+            const float kartenHoehe  = stil.WindowPadding.y * 2.0f  // Rand oben und unten
+                                      + bild + stil.ItemSpacing.y   // Bild vom Erz
+                                      + zeile * 4.0f                // Name, Zustand, Reinheit, Anzahl
+                                      + stil.ItemSpacing.y          // die Spacing-Zeile davor
+                                      + knopf * 2.0f                // Zaehler und Verkaufen
+                                      + 4.0f;
 
             const float platz = ImGui::GetContentRegionAvail().x;
             int         proZeile = (int)((platz + luft) / (kartenBreite + luft));

@@ -145,14 +145,18 @@ geteilt        15-24    24    einmal 1
 # Alles andere darf in beliebiger Reihenfolge kommen.
 
 waschen         4       10    einmal 2
-schmelzen       6-12    20    einmal 1
+schmelzen       6-12    20    einmal 1   braucht waschen
 reinigen        8-16    18    einmal 1   braucht waschen
-pressen        10-18    22    einmal 1
+pressen        10-18    22    einmal 1   braucht waschen
 giessen        11-19    26    einmal 1   braucht schmelzen
-polieren       13-21    28    einmal 1
+polieren       13-21    28    einmal 1   braucht giessen
 haerten        15-24    32    einmal 1   braucht giessen
 veredeln       18-30    40    einmal 1   braucht polieren
 
+# Die Verarbeitung ist eine Kette: waschen ist der Anfang, alles andere hängt
+# über "braucht" daran. So bekommst du nie einen Schritt angeboten, dessen
+# Vorgänger dir noch fehlt.
+#
 # Legieren braucht schmelzen: die Zutaten müssen geschmolzen sein, bevor man
 # sie zusammenkippen kann (siehe "von" in data/legierungen.json).
 legieren       14-22    34    einmal 1   braucht schmelzen

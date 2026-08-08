@@ -644,7 +644,15 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
         // Die Abrechnung liegt ueber allem - sie ist der Weg zur naechsten
         // Runde, egal auf welcher Seite man gerade ist.
         if (world.phase == RoundPhase::Report && DrawRoundReport(world, rounds))
-            NextRound(world);
+        {
+            // Ziel verfehlt und die Datei sagt "alles auf Anfang": dann ist das
+            // Spiel wirklich vorbei, nicht nur die Runde.
+            if (!RoundWon(world, rounds) && rounds.resetOnLoss &&
+                RoundTarget(rounds, world.roundNumber) > 0)
+                resetAll();
+            else
+                NextRound(world, rounds);
+        }
 
         // Geschlossene Konsolen entfernen
         for (std::size_t i = consoles.size(); i-- > 0;)

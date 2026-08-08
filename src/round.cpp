@@ -112,11 +112,54 @@ RoundPlan LoadRoundPlan()
     plan.handInPrepare = Flag(wurzel, "handabbau_in_vorbereitung", plan.handInPrepare,
                               plan.problems);
 
+    if (const JsonValue* ziel = wurzel.find("ziel"))
+    {
+        plan.targetStart  = (int)ziel->number("start", (double)plan.targetStart);
+        plan.targetGrowth = (float)ziel->number("wachstum", (double)plan.targetGrowth);
+
+        if (plan.targetStart < 0)
+        {
+            plan.problems.push_back("ziel.start ist negativ.");
+            plan.targetStart = 0;
+        }
+        if (plan.targetGrowth < 1.0f)
+        {
+            // Unter 1 wuerde das Ziel kleiner werden - dann waere jede Runde
+            // leichter als die davor.
+            plan.problems.push_back("ziel.wachstum muss mindestens 1 sein.");
+            plan.targetGrowth = 1.0f;
+        }
+    }
+
+    plan.resetOnLoss = Flag(wurzel, "neustart_bei_niederlage", plan.resetOnLoss, plan.problems);
+
     if (plan.freezeWorld && !plan.handInPrepare)
         plan.problems.push_back("Achtung: ohne Handabbau in der Vorbereitung kommt ein neuer "
                                 "Spielstand nie in Gang.");
 
     return plan;
+}
+
+int RoundTarget(const RoundPlan& plan, int round)
+{
+    if (round < 1)
+        round = 1;
+
+    double wert = (double)plan.targetStart;
+    for (int i = 1; i < round; ++i)
+        wert *= (double)plan.targetGrowth;
+
+    // Ueber zwei Milliarden passt nicht mehr in einen int - und waere ohnehin
+    // nicht mehr zu schaffen.
+    if (wert > 2000000000.0)
+        wert = 2000000000.0;
+
+    return (int)wert;
+}
+
+bool RoundWon(const World& world, const RoundPlan& plan)
+{
+    return world.roundMoneyEnd >= RoundTarget(plan, world.roundNumber);
 }
 
 void StartRound(World& world, const RoundPlan& plan)
@@ -159,9 +202,14 @@ void FinishRound(World& world, const RoundPlan& plan, const OrePlan& ores, const
     world.phase         = RoundPhase::Report;
 }
 
-void NextRound(World& world)
+void NextRound(World& world, const RoundPlan& plan)
 {
-    ++world.roundNumber;
+    // Nur wer das Ziel geschafft hat, kommt eine Runde weiter. Sonst darf man
+    // dieselbe noch einmal versuchen (bei "neustart_bei_niederlage" wird das
+    // vom Aufrufer gar nicht erst erreicht - der faengt komplett neu an).
+    if (RoundTarget(plan, world.roundNumber) <= 0 || RoundWon(world, plan))
+        ++world.roundNumber;
+
     world.phase     = RoundPhase::Prepare;
     world.roundLeft = 0.0f;
 }
@@ -200,6 +248,23 @@ bool DrawRoundBar(const World& world, const RoundPlan& plan)
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Ist die Zeit um, wird das Programm gestoppt, die Tasche "
                               "verkauft und abgerechnet.");
+
+        // Das Ziel gehoert daneben: sonst merkt man erst in der Abrechnung,
+        // dass es nicht gereicht hat.
+        const int ziel = RoundTarget(plan, world.roundNumber);
+        if (ziel > 0)
+        {
+            ImGui::SameLine();
+            ImGui::TextDisabled("Ziel %d", ziel);
+            ImGui::SameLine();
+            ImGui::TextColored(world.money >= ziel ? kZeitRuhig : kZeitKnapp, "(%d)",
+                               world.money);
+
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("So viel Geld musst du am Ende der Runde haben.\n"
+                                  "Was noch in der Tasche liegt, zaehlt erst nach dem "
+                                  "Verkauf mit.");
+        }
     }
     else if (world.phase == RoundPhase::Report)
     {
@@ -222,6 +287,13 @@ bool DrawRoundBar(const World& world, const RoundPlan& plan)
 
         ImGui::SameLine();
         ImGui::TextDisabled("Runde %d  -  Vorbereitung", world.roundNumber);
+
+        const int ziel = RoundTarget(plan, world.roundNumber);
+        if (ziel > 0)
+        {
+            ImGui::SameLine();
+            ImGui::TextDisabled(" -  Ziel: %d Geld", ziel);
+        }
     }
 
     return start;
@@ -257,7 +329,16 @@ bool DrawRoundReport(const World& world, const RoundPlan& plan)
         const ImVec4 rot(1.00f, 0.45f, 0.38f, 1.0f);
         const float  spalte = 240.0f;
 
-        ImGui::TextColored(gruen, "Runde %d ist vorbei", world.roundNumber);
+        const int  ziel     = RoundTarget(plan, world.roundNumber);
+        const bool geschafft = RoundWon(world, plan);
+
+        if (ziel <= 0)
+            ImGui::TextColored(gruen, "Runde %d ist vorbei", world.roundNumber);
+        else if (geschafft)
+            ImGui::TextColored(gruen, "Runde %d geschafft", world.roundNumber);
+        else
+            ImGui::TextColored(rot, "Runde %d nicht geschafft", world.roundNumber);
+
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
@@ -276,6 +357,14 @@ bool DrawRoundReport(const World& world, const RoundPlan& plan)
         ImGui::TextDisabled("Verdienst");
         ImGui::SameLine(spalte);
         ImGui::TextColored(verdienst < 0 ? rot : gruen, "%+d", verdienst);
+
+        if (ziel > 0)
+        {
+            ImGui::TextDisabled("Ziel");
+            ImGui::SameLine(spalte);
+            ImGui::TextColored(geschafft ? gruen : rot, "%d  (%+d)", ziel,
+                               world.roundMoneyEnd - ziel);
+        }
 
         ImGui::Spacing();
         ImGui::Separator();
@@ -300,14 +389,38 @@ bool DrawRoundReport(const World& world, const RoundPlan& plan)
         ImGui::Separator();
         ImGui::Spacing();
 
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.24f, 0.54f, 0.31f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.33f, 0.68f, 0.42f, 1.0f));
-        if (ImGui::Button("Weiter", ImVec2(140.0f, 0.0f)))
-            weiter = true;
-        ImGui::PopStyleColor(2);
+        // Verloren und "alles auf Anfang": dann ist der Knopf kein Weiter,
+        // sondern ein Neuanfang - und er sieht auch so aus.
+        const bool vorbei = (ziel > 0) && !geschafft && plan.resetOnLoss;
 
-        ImGui::SameLine();
-        ImGui::TextDisabled("Vorbereitung für Runde %d", world.roundNumber + 1);
+        if (vorbei)
+        {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.52f, 0.19f, 0.19f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.66f, 0.24f, 0.24f, 1.0f));
+            if (ImGui::Button("Neu anfangen", ImVec2(160.0f, 0.0f)))
+                weiter = true;
+            ImGui::PopStyleColor(2);
+
+            ImGui::SameLine();
+            ImGui::TextColored(rot, "Alles beginnt von vorn.");
+        }
+        else
+        {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.24f, 0.54f, 0.31f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.33f, 0.68f, 0.42f, 1.0f));
+            if (ImGui::Button("Weiter", ImVec2(140.0f, 0.0f)))
+                weiter = true;
+            ImGui::PopStyleColor(2);
+
+            ImGui::SameLine();
+
+            // Nicht geschafft, aber es geht weiter: dann kommt dieselbe Runde
+            // noch einmal, nicht die naechste.
+            if ((ziel > 0) && !geschafft)
+                ImGui::TextDisabled("Runde %d noch einmal", world.roundNumber);
+            else
+                ImGui::TextDisabled("Vorbereitung für Runde %d", world.roundNumber + 1);
+        }
     }
     ImGui::End();
 

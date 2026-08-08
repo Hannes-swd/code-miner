@@ -28,12 +28,29 @@ struct RoundPlan
     bool  freezeWorld   = true;    // Vorbereitung: Welt steht still
     bool  handInPrepare = true;    // ... nur der Klick auf den Block geht
 
+    // Am Ende der Runde musst du mindestens so viel Geld haben, sonst ist das
+    // Spiel vorbei. Der Betrag waechst mit jeder Runde - sonst waere Runde 10
+    // so leicht wie Runde 1.
+    int   targetStart  = 500;
+    float targetGrowth = 1.6f;
+
+    // Was passiert, wenn du es nicht schaffst:
+    //   true  = alles auf Anfang (so ist es gedacht)
+    //   false = nur eine Meldung, dieselbe Runde noch einmal (zum Ausprobieren)
+    bool resetOnLoss = true;
+
     std::vector<std::string> problems;  // was an der Datei nicht stimmte
     std::string              file;
 };
 
 // Sucht data/runden.json an den ueblichen Stellen und liest sie ein.
 RoundPlan LoadRoundPlan();
+
+// Wie viel Geld am Ende von Runde n dastehen muss.
+int RoundTarget(const RoundPlan& plan, int round);
+
+// Hat die letzte Runde gereicht? Gilt erst in der Abrechnung.
+bool RoundWon(const World& world, const RoundPlan& plan);
 
 // Runde starten: die Uhr beginnt zu laufen, und die Zahlen fuer die Abrechnung
 // werden festgehalten.
@@ -45,8 +62,9 @@ void StartRound(World& world, const RoundPlan& plan);
 void FinishRound(World& world, const RoundPlan& plan, const OrePlan& ores,
                  const CraftPlan& craft);
 
-// Abrechnung weggeklickt: zurueck in die Vorbereitung, Rundennummer hoch.
-void NextRound(World& world);
+// Abrechnung weggeklickt: zurueck in die Vorbereitung. Die Rundennummer steigt
+// nur, wenn das Ziel geschafft war.
+void NextRound(World& world, const RoundPlan& plan);
 
 // Restzeit als mm:ss.
 std::string RoundClock(float seconds);
@@ -55,5 +73,8 @@ std::string RoundClock(float seconds);
 // Rueckgabe: true = "Runde starten" wurde gedrueckt.
 bool DrawRoundBar(const World& world, const RoundPlan& plan);
 
-// Die Abrechnung, mitten im Bild. Rueckgabe: true = "Weiter" wurde gedrueckt.
+// Die Abrechnung, mitten im Bild.
+// Rueckgabe: true = weitergeklickt. Bei einer Niederlage mit "alles auf
+// Anfang" heisst das: neu anfangen - das macht der Aufrufer, die Runde kennt
+// den Rest des Spiels nicht.
 bool DrawRoundReport(const World& world, const RoundPlan& plan);
