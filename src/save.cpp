@@ -41,7 +41,11 @@ bool ReadLine(std::istream& in, std::string& line)
     return true;
 }
 
-const int kVersion = 2;  // 2: Tasche mit Zustand je Stapel
+// 4: Legierungen. Sie haengen hinten an der Erzliste, und im Baum ist ein
+//    Punkt dazugekommen - beides verschiebt Nummern, die in der Datei stehen.
+// 5: Runden. Phase, Restzeit und Rundennummer gehoeren dazu - wer mitten im
+//    Lauf beendet, macht beim naechsten Start dort weiter.
+const int kVersion = 5;
 
 }  // namespace
 
@@ -57,15 +61,26 @@ bool SaveGame(const World& world, const SkillTree& tree,
     out << "geld " << world.money << "\n";
     out << "abgebaut " << world.minedCount << "\n";
 
+    // Die Runde: Phase, Restzeit, Nummer. Wer mitten im Lauf beendet, soll
+    // dort weitermachen - und nicht mit einer geschenkten Vorbereitung.
+    out << "runde " << world.roundNumber << " " << (int)world.phase << " " << world.roundLeft
+        << "\n";
+    out << "runde_start " << world.roundMoneyStart << " " << world.roundMinedStart << "\n";
+    out << "runde_ende " << world.roundMoneyEnd << " " << world.roundMined << " "
+        << world.roundSoldCount << " " << world.roundSoldMoney << "\n";
+
     // Welcher Block gerade dasteht, gehoert dazu: sonst waere nach dem Laden
     // ploetzlich ein anderes Erz da.
     out << "block " << world.ore << " " << world.oreSeed << " " << (world.blockAlive ? 1 : 0)
         << "\n";
 
-    // Die Tasche: was abgebaut, aber noch nicht verkauft ist.
+    // Die Tasche: was abgebaut, aber noch nicht verkauft ist. Ein laufender
+    // Auftrag steht mit Absicht nicht drin - beim Beenden bricht er ab und das
+    // Material liegt wieder in der Tasche.
     out << "tasche " << world.inventory.size() << "\n";
     for (const auto& e : world.inventory)
-        out << e.first.ore << " " << e.first.state << " " << e.second << "\n";
+        out << e.first.ore << " " << e.first.state << " " << e.second.count << " "
+            << e.second.purity << "\n";
 
     // shared[...] soll einen Neustart ueberleben - das ist der ganze Witz
     // daran, also gehoert es in den Spielstand.
@@ -144,6 +159,31 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
         {
             in >> neueWelt.minedCount;
         }
+        else if (wort == "runde")
+        {
+            int phase = 0;
+            in >> neueWelt.roundNumber >> phase >> neueWelt.roundLeft;
+
+            // Eine kaputte Zahl darf nicht zu einer Phase werden, die es nicht
+            // gibt - dann haenge man fuer immer fest.
+            if (phase < 0 || phase > (int)RoundPhase::Report)
+                phase = (int)RoundPhase::Prepare;
+            neueWelt.phase = (RoundPhase)phase;
+
+            if (neueWelt.roundNumber < 1)
+                neueWelt.roundNumber = 1;
+            if (neueWelt.roundLeft < 0.0f)
+                neueWelt.roundLeft = 0.0f;
+        }
+        else if (wort == "runde_start")
+        {
+            in >> neueWelt.roundMoneyStart >> neueWelt.roundMinedStart;
+        }
+        else if (wort == "runde_ende")
+        {
+            in >> neueWelt.roundMoneyEnd >> neueWelt.roundMined >> neueWelt.roundSoldCount >>
+                neueWelt.roundSoldMoney;
+        }
         else if (wort == "tasche")
         {
             std::size_t n = 0;
@@ -151,10 +191,11 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
             for (std::size_t i = 0; i < n; ++i)
             {
                 World::Item was;
-                int         anzahl = 0;
-                in >> was.ore >> was.state >> anzahl;
+                int         anzahl   = 0;
+                int         reinheit = 0;
+                in >> was.ore >> was.state >> anzahl >> reinheit;
                 if (anzahl > 0)
-                    neueWelt.inventory[was] = anzahl;
+                    neueWelt.addToBag(was, anzahl, reinheit);
             }
         }
         else if (wort == "block")

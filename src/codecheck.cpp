@@ -239,6 +239,54 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
                 if (!limits.allowShared)
                     return locked("shared[...]");
             }
+            // Verarbeiten: je Befehl ein Punkt im Baum.
+            else if (t.word == "wash")
+            {
+                if (!limits.allowWash)
+                    return locked("block.wash(...)");
+            }
+            else if (t.word == "smelt")
+            {
+                if (!limits.allowSmelt)
+                    return locked("block.smelt(...)");
+            }
+            else if (t.word == "cast")
+            {
+                if (!limits.allowCast)
+                    return locked("block.cast(...)");
+            }
+            else if (t.word == "clean")
+            {
+                if (!limits.allowClean)
+                    return locked("block.clean(...)");
+            }
+            else if (t.word == "polish")
+            {
+                if (!limits.allowPolish)
+                    return locked("block.polish(...)");
+            }
+            else if (t.word == "harden")
+            {
+                if (!limits.allowHarden)
+                    return locked("block.harden(...)");
+            }
+            else if (t.word == "refine")
+            {
+                if (!limits.allowRefine)
+                    return locked("block.refine(...)");
+            }
+            else if (t.word == "press")
+            {
+                if (!limits.allowPress)
+                    return locked("block.press(...)");
+            }
+            // Legieren. Nachfragen und Machen haengen am selben Punkt: ohne
+            // legieren zu duerfen braucht man auch die Frage nicht.
+            else if (t.word == "alloy" || t.word == "canAlloy")
+            {
+                if (!limits.allowAlloy)
+                    return locked("block.alloy(...)");
+            }
             else if (t.word == "class" || t.word == "struct")
             {
                 if (!limits.allowClass)

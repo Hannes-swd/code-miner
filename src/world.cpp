@@ -1,6 +1,9 @@
 #include "world.h"
 
+#include "alloy.h"
+#include "craft.h"
 #include "ore.h"
+#include "skilltree.h"
 
 #include "imgui.h"
 
@@ -45,12 +48,47 @@ const Ore& OreOf(const OrePlan& ores, int index)
     return ores.ores[(std::size_t)index];
 }
 
+// Aus einer Zustands-Liste ("ein Bit je OreState") lesbaren Text machen:
+// "Geschmolzen oder Legiert".
+std::string StatesText(unsigned bits)
+{
+    std::string out;
+    for (int i = 0; i < (int)OreState::Count; ++i)
+    {
+        if ((bits & (1u << (unsigned)i)) == 0)
+            continue;
+        if (!out.empty())
+            out += " oder ";
+        out += OreStateName((OreState)i);
+    }
+    return out.empty() ? std::string("-") : out;
+}
+
 ImU32 Mix(const Color& a, const Color& b, float t, int alpha)
 {
     const int r = (int)((float)a.r + ((float)b.r - (float)a.r) * t);
     const int g = (int)((float)a.g + ((float)b.g - (float)a.g) * t);
     const int bl = (int)((float)a.b + ((float)b.b - (float)a.b) * t);
     return IM_COL32(r, g, bl, alpha);
+}
+
+// Ein Erz als kleines Bild - dieselben Farben und dasselbe Muster wie der
+// Block in der Welt. Der Startwert haengt am Erz und nicht am Zufall: derselbe
+// Stoff sieht in der Tasche immer gleich aus.
+void DrawOreTile(ImDrawList* dl, ImVec2 pos, float size, const Ore& erz, int ore, int zellen)
+{
+    const float st = size / (float)zellen;
+    for (int gy = 0; gy < zellen; ++gy)
+        for (int gx = 0; gx < zellen; ++gx)
+        {
+            const float t = OrePixel((float)gx / (float)zellen, (float)gy / (float)zellen,
+                                     erz.pattern, 777u + (unsigned)ore * 31u);
+            const ImVec2 q(pos.x + (float)gx * st, pos.y + (float)gy * st);
+            dl->AddRectFilled(q, ImVec2(q.x + st + 0.6f, q.y + st + 0.6f),
+                              Mix(erz.color2, erz.color1, t, 255));
+        }
+
+    dl->AddRect(pos, ImVec2(pos.x + size, pos.y + size), IM_COL32(16, 18, 22, 255), 5.0f, 0, 2.0f);
 }
 
 // Was auf der Taschen-Seite gerade in den Zaehlern steht. Beim Betreten wird
@@ -71,6 +109,12 @@ SellUi g_sell;
 
 bool World::mine()
 {
+    // In der Vorbereitung steht die Welt still. Ein Programm laeuft dort
+    // ohnehin nicht - der Riegel ist trotzdem hier, damit es nur EINE Stelle
+    // gibt, die das entscheidet.
+    if (frozen)
+        return false;
+
     if (!blockAlive)
         return false;
 
@@ -87,6 +131,11 @@ bool World::mine()
 
 bool World::mineByHand()
 {
+    // Der Handabbau ist die eine Ausnahme in der Vorbereitung: ganz am Anfang
+    // hat man weder Programm noch Geld, der erste Block muss von Hand kommen.
+    if (frozen && !handMine)
+        return false;
+
     if (!blockAlive)
         return false;
 
@@ -101,31 +150,83 @@ bool World::mineByHand()
     return true;
 }
 
+int StartPurity(const OrePlan& ores, const CraftPlan& craft, int ore)
+{
+    // Steht beim Erz nichts, gilt der Wert aus data/verarbeitung.json.
+    const int eigen = OreOf(ores, ore).purity;
+    return (eigen >= 0) ? eigen : craft.startPurity;
+}
+
+int StackValue(const OrePlan& ores, const CraftPlan& craft, int ore, int state, int purity,
+               int anzahl, int moneyPerBlock)
+{
+    if (anzahl <= 0)
+        return 0;
+
+    const double stueck = (double)OreOf(ores, ore).value * (double)craft.valueOf(state) *
+                          (double)craft.purityFactor(purity) * (double)moneyPerBlock;
+
+    // Mindestens 1 pro Stueck: sonst waere ein oxidierter Stein gratis, und
+    // "verkaufen" haette gar keine Wirkung mehr.
+    int je = (int)(stueck + 0.5);
+    if (je < 1)
+        je = 1;
+    return je * anzahl;
+}
+
+void World::addToBag(Item was, int anzahl, int reinheit)
+{
+    if (anzahl <= 0)
+        return;
+    if (reinheit < 0)
+        reinheit = 0;
+    if (reinheit > 100)
+        reinheit = 100;
+
+    Stack& stapel = inventory[was];
+
+    // Gewichtet nach Anzahl: zehn schmutzige und ein sauberes Stueck ergeben
+    // keinen halb sauberen Stapel.
+    const long long summe = (long long)stapel.count * stapel.purity + (long long)anzahl * reinheit;
+    stapel.count += anzahl;
+    stapel.purity = (int)(summe / stapel.count);
+}
+
 int World::inventoryCount() const
 {
     int summe = 0;
     for (const auto& e : inventory)
-        summe += e.second;
+        summe += e.second.count;
     return summe;
 }
 
-int World::sell(const OrePlan& ores, Item was, int anzahl)
+int World::bagCount(int ore, unsigned states) const
+{
+    int summe = 0;
+    for (const auto& e : inventory)
+        if (e.first.ore == ore && (states & (1u << (unsigned)e.first.state)) != 0)
+            summe += e.second.count;
+    return summe;
+}
+
+int World::sell(const OrePlan& ores, const CraftPlan& craft, Item was, int anzahl)
 {
     const auto it = inventory.find(was);
-    if (it == inventory.end() || it->second <= 0)
+    if (it == inventory.end() || it->second.count <= 0)
         return 0;
 
-    int wie = (anzahl < 0) ? it->second : anzahl;
-    if (wie > it->second)
-        wie = it->second;
+    int wie = (anzahl < 0) ? it->second.count : anzahl;
+    if (wie > it->second.count)
+        wie = it->second.count;
     if (wie <= 0)
         return 0;
 
-    const int geld = wie * OreOf(ores, was.ore).value * moneyPerBlock;
+    const int geld =
+        StackValue(ores, craft, was.ore, was.state, it->second.purity, wie, moneyPerBlock);
     money += geld;
 
-    it->second -= wie;
-    if (it->second <= 0)
+    it->second.count -= wie;
+    if (it->second.count <= 0)
         inventory.erase(it);
 
     lastSold = geld;
@@ -144,11 +245,11 @@ int World::inventoryOf(const OrePlan& ores, const std::string& name) const
     int summe = 0;
     for (const auto& e : inventory)
         if (e.first.ore == nummer)
-            summe += e.second;
+            summe += e.second.count;
     return summe;
 }
 
-int World::sell(const OrePlan& ores, const std::string& name, int anzahl)
+int World::sell(const OrePlan& ores, const CraftPlan& craft, const std::string& name, int anzahl)
 {
     const int nummer = FindOre(ores, name);
     if (nummer < 0)
@@ -167,16 +268,17 @@ int World::sell(const OrePlan& ores, const std::string& name, int anzahl)
             continue;
         }
 
-        int wie = (anzahl < 0) ? it->second : offen;
-        if (wie > it->second)
-            wie = it->second;
+        int wie = (anzahl < 0) ? it->second.count : offen;
+        if (wie > it->second.count)
+            wie = it->second.count;
 
-        geld += wie * OreOf(ores, nummer).value * moneyPerBlock;
+        geld += StackValue(ores, craft, nummer, it->first.state, it->second.purity, wie,
+                           moneyPerBlock);
         if (anzahl >= 0)
             offen -= wie;
 
-        it->second -= wie;
-        if (it->second <= 0)
+        it->second.count -= wie;
+        if (it->second.count <= 0)
             it = inventory.erase(it);
         else
             ++it;
@@ -191,11 +293,12 @@ int World::sell(const OrePlan& ores, const std::string& name, int anzahl)
     return geld;
 }
 
-int World::sell(const OrePlan& ores)
+int World::sell(const OrePlan& ores, const CraftPlan& craft)
 {
     int geld = 0;
     for (const auto& e : inventory)
-        geld += e.second * OreOf(ores, e.first.ore).value * moneyPerBlock;
+        geld += StackValue(ores, craft, e.first.ore, e.first.state, e.second.purity, e.second.count,
+                           moneyPerBlock);
 
     inventory.clear();
     money += geld;
@@ -210,6 +313,9 @@ int World::sell(const OrePlan& ores)
 
 bool World::place()
 {
+    if (frozen)
+        return false;
+
     if (blockAlive)
         return false;
 
@@ -221,8 +327,13 @@ bool World::place()
     return true;
 }
 
-void World::tickMining(float dt, const OrePlan& ores)
+void World::tickMining(float dt, const OrePlan& ores, const CraftPlan& craft)
 {
+    // Steht die Welt still, kommt auch ein angefangener Abbau nicht voran -
+    // ausser er wurde von Hand begonnen und Handabbau ist erlaubt.
+    if (frozen && !(byHand && handMine))
+        return;
+
     if (!blockAlive || !mining)
         return;
 
@@ -237,7 +348,7 @@ void World::tickMining(float dt, const OrePlan& ores)
     Item frisch;
     frisch.ore   = ore;
     frisch.state = (int)OreState::Raw;
-    ++inventory[frisch];
+    addToBag(frisch, 1, StartPurity(ores, craft, ore));
     lastOre = ore;
     ++minedCount;
 
@@ -256,10 +367,280 @@ void World::cancelMining()
     byHand    = false;
 }
 
+int World::startCraft(const OrePlan& ores, const Limits& limits, const CraftStep& step, Item was,
+                      int anzahl, bool byHandStart)
+{
+    // In der Vorbereitung wird nicht gearbeitet - sonst waere die Werkstatt
+    // ein Weg, die Uhr zu umgehen.
+    if (frozen)
+        return 0;
+
+    // Nur ein Auftrag gleichzeitig. Ein zweiter Aufruf macht nichts - so muss
+    // sich der Spielercode selbst darum kuemmern, zu warten.
+    if (crafting)
+        return 0;
+
+    if (!CraftUnlocked(step, limits))
+        return 0;
+    if (!step.fits(was.state))
+        return 0;
+
+    // Diamant schmilzt man nicht: was ein Erz werden darf, steht bei ihm.
+    if (!OreOf(ores, was.ore).allows((OreState)step.to))
+        return 0;
+
+    const auto it = inventory.find(was);
+    if (it == inventory.end() || it->second.count <= 0)
+        return 0;
+
+    int wie = (anzahl < 0) ? it->second.count : anzahl;
+    if (wie > it->second.count)
+        wie = it->second.count;
+    if (wie <= 0)
+        return 0;
+
+    craftItem    = was;
+    craftCount   = wie;
+    craftPurity  = it->second.purity;
+    craftTo      = step.to;
+    craftDelta   = step.purity;
+    craftName    = step.name;
+    craftSeconds = step.seconds * (float)wie;
+    craftTimer   = 0.0f;
+    crafting     = true;
+    craftByHand  = byHandStart;
+
+    // Aus der Tasche heraus: waehrend der Arbeit gehoert es der Werkstatt.
+    // Gemerkt wird es trotzdem - ein Abbruch muss es zurueckgeben koennen.
+    craftTaken.clear();
+    craftTaken.push_back({was, wie, it->second.purity});
+
+    it->second.count -= wie;
+    if (it->second.count <= 0)
+        inventory.erase(it);
+
+    return wie;
+}
+
+int World::startCraft(const OrePlan& ores, const CraftPlan& craft, const Limits& limits,
+                      const std::string& befehl, const std::string& erz, int anzahl)
+{
+    const CraftStep* step = craft.find(befehl);
+    if (step == nullptr)
+        return 0;
+
+    const int nummer = FindOre(ores, erz);
+    if (nummer < 0)
+        return 0;
+
+    // Aus dem Code kommt nur der Name. Genommen wird der erste Stapel, aus dem
+    // der Schritt ueberhaupt geht - die Zustaende stehen der Reihe nach, roh
+    // kommt also zuerst.
+    for (const auto& e : inventory)
+    {
+        if (e.first.ore != nummer || !step->fits(e.first.state))
+            continue;
+        const int wie = startCraft(ores, limits, *step, e.first, anzahl, false);
+        if (wie > 0)
+            return wie;
+    }
+
+    return 0;
+}
+
+// ---- Legieren -------------------------------------------------------------
+//
+// Es benutzt denselben einen Auftrags-Platz wie das Verarbeiten: es ist
+// derselbe Ofen, und der kann nur eines auf einmal.
+
+bool World::alloyPick(const AlloyRecipe& rezept, int anzahl, std::vector<Taken>& out,
+                      int& reinheit) const
+{
+    out.clear();
+    reinheit = 0;
+
+    if (anzahl <= 0 || rezept.parts.empty())
+        return false;
+
+    // Die Reinheit des Ergebnisses ist das nach Anzahl gewichtete Mittel der
+    // Zutaten: ein sauberes Stueck rettet keinen Haufen schmutziger.
+    long long summe  = 0;
+    long long stueck = 0;
+
+    for (const AlloyPart& p : rezept.parts)
+    {
+        int offen = p.count * anzahl;
+
+        for (const auto& e : inventory)
+        {
+            if (offen <= 0)
+                break;
+            if (e.first.ore != p.ore || !rezept.fits(e.first.state))
+                continue;
+
+            const int nimm = (e.second.count < offen) ? e.second.count : offen;
+            out.push_back({e.first, nimm, e.second.purity});
+            summe += (long long)nimm * e.second.purity;
+            stueck += nimm;
+            offen -= nimm;
+        }
+
+        if (offen > 0)
+            return false;  // von dieser Zutat liegt zu wenig da
+    }
+
+    int rein = (stueck > 0) ? (int)(summe / stueck) : 0;
+    rein += rezept.purity;
+    if (rein < 0)
+        rein = 0;
+    if (rein > 100)
+        rein = 100;
+
+    reinheit = rein;
+    return true;
+}
+
+int World::canAlloy(const OrePlan& ores, const AlloyRecipe& rezept, const Limits& limits) const
+{
+    if (!limits.allowAlloy || rezept.result < 0 || rezept.parts.empty())
+        return 0;
+
+    // Der neue Stoff muss den Zielzustand ueberhaupt kennen.
+    if (!OreOf(ores, rezept.result).allows((OreState)rezept.to))
+        return 0;
+
+    int moeglich = -1;
+    for (const AlloyPart& p : rezept.parts)
+    {
+        if (p.count <= 0)
+            return 0;
+
+        const int wie = bagCount(p.ore, rezept.from) / p.count;
+        if (moeglich < 0 || wie < moeglich)
+            moeglich = wie;
+    }
+
+    return (moeglich > 0) ? moeglich : 0;
+}
+
+int World::canAlloy(const OrePlan& ores, const AlloyPlan& alloys, const Limits& limits,
+                    const std::string& name) const
+{
+    const AlloyRecipe* rezept = alloys.find(name);
+    return (rezept != nullptr) ? canAlloy(ores, *rezept, limits) : 0;
+}
+
+int World::startAlloy(const OrePlan& ores, const AlloyRecipe& rezept, const Limits& limits,
+                      int anzahl, bool byHandStart)
+{
+    if (frozen)
+        return 0;
+
+    // Nur ein Auftrag gleichzeitig - genau wie beim Verarbeiten.
+    if (crafting)
+        return 0;
+
+    const int moeglich = canAlloy(ores, rezept, limits);
+    if (moeglich <= 0)
+        return 0;
+
+    int wie = (anzahl < 0) ? moeglich : anzahl;
+    if (wie > moeglich)
+        wie = moeglich;
+    if (wie <= 0)
+        return 0;
+
+    std::vector<Taken> nehmen;
+    int                rein = 0;
+    if (!alloyPick(rezept, wie, nehmen, rein))
+        return 0;
+
+    // Jetzt erst aus der Tasche nehmen: waehrend der Arbeit gehoert es der
+    // Werkstatt und laesst sich nicht verkaufen.
+    for (const Taken& t : nehmen)
+    {
+        const auto it = inventory.find(t.was);
+        if (it == inventory.end())
+            continue;
+        it->second.count -= t.count;
+        if (it->second.count <= 0)
+            inventory.erase(it);
+    }
+
+    craftItem.ore   = rezept.result;
+    craftItem.state = rezept.to;
+    craftCount      = wie;
+    craftPurity     = rein;
+    craftTo         = rezept.to;
+    craftDelta      = 0;  // der Aufschlag steckt schon in rein
+    craftName       = "Legieren";
+    craftSeconds    = rezept.seconds * (float)wie;
+    craftTimer      = 0.0f;
+    crafting        = true;
+    craftByHand     = byHandStart;
+    craftTaken      = nehmen;
+
+    return wie;
+}
+
+int World::startAlloy(const OrePlan& ores, const AlloyPlan& alloys, const Limits& limits,
+                      const std::string& name, int anzahl, bool byHandStart)
+{
+    const AlloyRecipe* rezept = alloys.find(name);
+    if (rezept == nullptr)
+        return 0;
+    return startAlloy(ores, *rezept, limits, anzahl, byHandStart);
+}
+
+void World::tickCraft(float dt)
+{
+    if (frozen)
+        return;
+
+    if (!crafting)
+        return;
+
+    craftTimer += dt;
+    if (craftTimer < craftSeconds)
+        return;
+
+    // Beim Legieren ist craftItem schon das Ergebnis-Erz - deshalb tut hier
+    // beides dasselbe.
+    Item fertig;
+    fertig.ore   = craftItem.ore;
+    fertig.state = craftTo;
+    addToBag(fertig, craftCount, craftPurity + craftDelta);
+
+    crafting     = false;
+    craftByHand  = false;
+    craftTimer   = 0.0f;
+    craftCount   = 0;
+    craftTaken.clear();
+}
+
+void World::cancelCraft()
+{
+    if (!crafting)
+        return;
+
+    // Unveraendert zurueck: ein abgebrochener Auftrag darf nichts kosten.
+    for (const Taken& t : craftTaken)
+        addToBag(t.was, t.count, t.purity);
+
+    crafting     = false;
+    craftByHand  = false;
+    craftTimer   = 0.0f;
+    craftCount   = 0;
+    craftTaken.clear();
+}
+
 void World::update(float dt, const OrePlan& ores)
 {
     // ---- Nachwachsen ----------------------------------------------------
-    if (!blockAlive && respawnTimer > 0.0f)
+    // Steht die Welt still, waechst nichts nach. Die Effekte darunter laufen
+    // trotzdem aus: sie sind nur Anzeige, und ein eingefrorener Rahmen mitten
+    // im Bild saehe nach Fehler aus.
+    if (!frozen && !blockAlive && respawnTimer > 0.0f)
     {
         respawnTimer -= dt;
         if (respawnTimer <= 0.0f)
@@ -290,7 +671,8 @@ void World::update(float dt, const OrePlan& ores)
     }
 }
 
-void DrawWorld(World& world, const OrePlan& ores)
+void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const AlloyPlan& alloys,
+               const RoundPlan& rounds)
 {
     ImGuiViewport* vp = ImGui::GetMainViewport();
     ImDrawList*    dl = ImGui::GetBackgroundDrawList();
@@ -398,31 +780,87 @@ void DrawWorld(World& world, const OrePlan& ores)
                 world.mineByHand();
         }
 
+        const int rein = StartPurity(ores, craft, world.ore);
+
         ImGui::BeginTooltip();
         ImGui::TextUnformatted(erz.name.c_str());
         ImGui::TextDisabled("%d Geld beim Verkaufen  -  %.1f s Abbau",
-                            erz.value * world.moneyPerBlock, erz.mineSeconds);
-        if (world.blockAlive)
+                            StackValue(ores, craft, world.ore, (int)OreState::Raw, rein, 1,
+                                       world.moneyPerBlock),
+                            erz.mineSeconds);
+        ImGui::TextDisabled("Reinheit %d%%  -  verarbeitet ist er mehr wert", rein);
+        if (world.blockAlive && (!world.frozen || world.handMine))
             ImGui::TextDisabled("Klick zum Abbauen");
+        else if (world.frozen)
+            ImGui::TextDisabled("Erst die Runde starten");
         ImGui::EndTooltip();
     }
 
-    // Stimmt an data/erze.json etwas nicht, muss man das sehen - sonst sucht
-    // man den Fehler im Spiel statt in der Datei.
-    if (!ores.problems.empty())
+    // Die Welt steht still. Das muss man sofort sehen - sonst wartet man
+    // darauf, dass der Block nachwaechst, und versteht nicht, warum nichts
+    // passiert.
+    if (world.frozen && world.phase == RoundPhase::Prepare)
     {
-        float y = vp->WorkPos.y + 12.0f;
-        dl->AddText(ImVec2(vp->WorkPos.x + 16.0f, y), IM_COL32(250, 140, 108, 255),
-                    "data/erze.json:");
-        for (const std::string& p : ores.problems)
+        const char* zeile1 = "Vorbereitung  -  die Welt steht still";
+        const char* zeile2 = world.handMine
+                                 ? "Oben \"Runde starten\". Auf den Block klicken darfst du auch so."
+                                 : "Oben \"Runde starten\".";
+
+        const ImVec2 s1 = ImGui::CalcTextSize(zeile1);
+        const ImVec2 s2 = ImGui::CalcTextSize(zeile2);
+        const float  y0 = b.y + 40.0f;
+
+        dl->AddText(ImVec2(c.x - s1.x * 0.5f, y0), IM_COL32(150, 165, 200, 235), zeile1);
+        dl->AddText(ImVec2(c.x - s2.x * 0.5f, y0 + ImGui::GetTextLineHeight() + 4.0f),
+                    IM_COL32(120, 130, 152, 235), zeile2);
+    }
+
+    // Ein Auftrag laeuft: man soll auch hier sehen, wie weit er ist - sonst
+    // wartet man auf der Welt-Seite blind.
+    if (world.crafting)
+    {
+        const float t = (world.craftSeconds > 0.0f) ? world.craftTimer / world.craftSeconds : 1.0f;
+
+        // Beim Legieren steht in craftItem schon das Ergebnis - so liest sich
+        // beides richtig: "Waschen: Gold x3" und "Legieren: Elektrum x2".
+        char text[128];
+        std::snprintf(text, sizeof(text), "%s: %s x%d", world.craftName.c_str(),
+                      OreOf(ores, world.craftItem.ore).name.c_str(), world.craftCount);
+        const ImVec2 ts = ImGui::CalcTextSize(text);
+
+        const ImVec2 pa(c.x - 90.0f, b.y + 44.0f);
+        const ImVec2 pb(c.x + 90.0f, b.y + 50.0f);
+        dl->AddText(ImVec2(c.x - ts.x * 0.5f, pa.y - ImGui::GetTextLineHeight() - 4.0f),
+                    IM_COL32(180, 200, 240, 235), text);
+        dl->AddRectFilled(pa, pb, IM_COL32(40, 44, 52, 220), 3.0f);
+        dl->AddRectFilled(pa, ImVec2(pa.x + (pb.x - pa.x) * t, pb.y), IM_COL32(120, 170, 240, 255),
+                          3.0f);
+    }
+
+    // Stimmt an den Dateien etwas nicht, muss man das sehen - sonst sucht man
+    // den Fehler im Spiel statt in der Datei.
+    float y = vp->WorkPos.y + 12.0f;
+    auto  meldungen = [&](const char* datei, const std::vector<std::string>& liste)
+    {
+        if (liste.empty())
+            return;
+        dl->AddText(ImVec2(vp->WorkPos.x + 16.0f, y), IM_COL32(250, 140, 108, 255), datei);
+        for (const std::string& p : liste)
         {
             y += ImGui::GetTextLineHeight() + 2.0f;
             dl->AddText(ImVec2(vp->WorkPos.x + 16.0f, y), IM_COL32(250, 140, 108, 255), p.c_str());
         }
-    }
+        y += ImGui::GetTextLineHeight() + 8.0f;
+    };
+
+    meldungen("data/erze.json:", ores.problems);
+    meldungen("data/verarbeitung.json:", craft.problems);
+    meldungen("data/legierungen.json:", alloys.problems);
+    meldungen("data/runden.json:", rounds.problems);
 }
 
-void DrawInventory(World& world, const OrePlan& ores)
+void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
+                   const AlloyPlan& alloys, const Limits& limits)
 {
     ImGuiViewport* vp = ImGui::GetMainViewport();
 
@@ -454,7 +892,8 @@ void DrawInventory(World& world, const OrePlan& ores)
         // ---- Kopfzeile ----------------------------------------------------
         int wert = 0;
         for (const auto& e : world.inventory)
-            wert += e.second * OreOf(ores, e.first.ore).value * world.moneyPerBlock;
+            wert += StackValue(ores, craft, e.first.ore, e.first.state, e.second.purity,
+                               e.second.count, world.moneyPerBlock);
 
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.97f, 0.99f, 1.0f));
         ImGui::TextUnformatted("Tasche");
@@ -467,12 +906,213 @@ void DrawInventory(World& world, const OrePlan& ores)
         {
             ImGui::SameLine(ImGui::GetWindowWidth() - 190.0f);
             if (ImGui::Button("Alles verkaufen", ImVec2(160.0f, 0.0f)))
-                world.sell(ores);
+                world.sell(ores, craft);
         }
 
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
+
+        // ---- Laeuft gerade ein Auftrag? ------------------------------------
+        // Was in Arbeit ist, liegt nicht in der Tasche. Ohne diese Zeile waere
+        // es einfach verschwunden.
+        if (world.crafting)
+        {
+            const float t =
+                (world.craftSeconds > 0.0f) ? world.craftTimer / world.craftSeconds : 1.0f;
+
+            ImGui::TextColored(ImVec4(0.62f, 0.74f, 0.96f, 1.0f), "%s: %d x %s",
+                               world.craftName.c_str(), world.craftCount,
+                               OreOf(ores, world.craftItem.ore).name.c_str());
+
+            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.47f, 0.67f, 0.94f, 1.0f));
+            char rest[48];
+            std::snprintf(rest, sizeof(rest), "noch %.1f s",
+                          (double)(world.craftSeconds - world.craftTimer));
+            ImGui::ProgressBar(t, ImVec2(320.0f, 0.0f), rest);
+            ImGui::PopStyleColor();
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+        }
+
+        // ---- Legieren ------------------------------------------------------
+        // Eine Legierung gehoert zu keinem einzelnen Stapel, sondern zu
+        // mehreren - deshalb steht sie hier und nicht im Rechtsklickmenue einer
+        // Karte. Aufgeklappt ist der Abschnitt erst, wenn man es auch darf.
+        if (!alloys.recipes.empty())
+        {
+            const ImGuiTreeNodeFlags auf =
+                limits.allowAlloy ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_None;
+
+            if (ImGui::CollapsingHeader("Legieren", auf))
+            {
+                ImGui::TextDisabled(
+                    "Zwei Erze werden ein neuer Stoff: mehr wert als seine Teile - und danach ganz "
+                    "normal weiterzuverarbeiten.");
+                if (!limits.allowAlloy)
+                    ImGui::TextColored(ImVec4(0.98f, 0.72f, 0.42f, 1.0f),
+                                       "Noch nicht freigeschaltet - \"legieren\" im Skilltree.");
+                ImGui::Spacing();
+
+                // Alle Karten gleich hoch: sonst steht die Reihe schief.
+                std::size_t meisteTeile = 2;
+                for (const AlloyRecipe& r : alloys.recipes)
+                    if (r.parts.size() > meisteTeile)
+                        meisteTeile = r.parts.size();
+
+                const float zeile   = ImGui::GetTextLineHeightWithSpacing();
+                const float karteB  = 254.0f;
+                const float karteH  = 62.0f + zeile * (float)(meisteTeile + 2) +
+                                     ImGui::GetFrameHeight() + 26.0f;
+                const float luftA   = 16.0f;
+
+                const float platzA  = ImGui::GetContentRegionAvail().x;
+                int         proZeileA = (int)((platzA + luftA) / (karteB + luftA));
+                if (proZeileA < 1)
+                    proZeileA = 1;
+
+                // Erst nach der Schleife handeln, sonst wackelt sie einem unter
+                // den Fingern weg.
+                const AlloyRecipe* legieren    = nullptr;
+                int                legierenWie = 0;
+
+                int spalteA = 0;
+
+                for (std::size_t ri = 0; ri < alloys.recipes.size(); ++ri)
+                {
+                    const AlloyRecipe& r   = alloys.recipes[ri];
+                    const Ore&         erg = OreOf(ores, r.result);
+
+                    if (spalteA > 0)
+                        ImGui::SameLine(0.0f, luftA);
+                    ++spalteA;
+                    if (spalteA > proZeileA)
+                    {
+                        ImGui::NewLine();
+                        spalteA = 1;
+                    }
+
+                    // Was jetzt herauskaeme - mit derselben Rechnung, die das
+                    // Legieren danach wirklich macht.
+                    std::vector<World::Taken> vorschau;
+                    int                       rein     = 0;
+                    const bool                material = world.alloyPick(r, 1, vorschau, rein);
+                    const int moeglich = world.canAlloy(ores, r, limits);
+
+                    ImGui::PushID((int)ri + 5000);
+                    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 12.0f);
+                    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.141f, 0.157f, 0.188f, 1.0f));
+                    ImGui::BeginChild("rezept", ImVec2(karteB, karteH), ImGuiChildFlags_Borders,
+                                      ImGuiWindowFlags_NoScrollbar |
+                                          ImGuiWindowFlags_NoScrollWithMouse);
+
+                    const float innenA = ImGui::GetContentRegionAvail().x;
+
+                    // ---- Kopf: Bild und Name ------------------------------
+                    {
+                        const float bildA = 44.0f;
+                        DrawOreTile(ImGui::GetWindowDrawList(), ImGui::GetCursorScreenPos(), bildA,
+                                    erg, r.result, 12);
+                        ImGui::Dummy(ImVec2(bildA, bildA));
+                        ImGui::SameLine(0.0f, 10.0f);
+
+                        ImGui::BeginGroup();
+                        ImGui::TextUnformatted(r.name.c_str());
+                        if (material)
+                            ImGui::TextDisabled("%s, %d%%  -  %d Geld",
+                                                OreStateName((OreState)r.to), rein,
+                                                StackValue(ores, craft, r.result, r.to, rein, 1,
+                                                           world.moneyPerBlock));
+                        else
+                            ImGui::TextDisabled("%s", OreStateName((OreState)r.to));
+                        ImGui::EndGroup();
+                    }
+
+                    ImGui::Spacing();
+
+                    // ---- Zutaten: was fehlt, sieht man sofort --------------
+                    for (const AlloyPart& p : r.parts)
+                    {
+                        const Ore& zutat = OreOf(ores, p.ore);
+                        const int  da    = world.bagCount(p.ore, r.from);
+
+                        ImGui::TextColored(da >= p.count ? ImVec4(0.70f, 0.89f, 0.48f, 1.0f)
+                                                         : ImVec4(0.94f, 0.55f, 0.44f, 1.0f),
+                                           "%d x %s", p.count, zutat.name.c_str());
+                        ImGui::SameLine(innenA - 62.0f);
+                        ImGui::TextDisabled("%d da", da);
+                    }
+
+                    ImGui::TextDisabled("aus: %s", StatesText(r.from).c_str());
+
+                    // ---- Knoepfe ------------------------------------------
+                    const bool geht = (moeglich > 0) && !world.crafting && !world.frozen;
+
+                    ImGui::BeginDisabled(!geht);
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.42f, 0.30f, 1.0f));
+
+                    const float breit = (moeglich > 1) ? innenA * 0.62f : innenA;
+                    if (ImGui::Button("Legieren", ImVec2(breit, 0.0f)))
+                    {
+                        legieren    = &r;
+                        legierenWie = 1;
+                    }
+                    ImGui::PopStyleColor();
+                    ImGui::EndDisabled();
+
+                    // Der Grund, warum es nicht geht, gehoert an den Knopf -
+                    // sonst sucht man ihn.
+                    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                    {
+                        if (!limits.allowAlloy)
+                            ImGui::SetTooltip("Noch nicht freigeschaltet.");
+                        else if (world.frozen)
+                            ImGui::SetTooltip("Erst die Runde starten - die Welt steht still.");
+                        else if (!material)
+                            ImGui::SetTooltip("Es fehlen Zutaten - im richtigen Zustand.");
+                        else if (world.crafting)
+                            ImGui::SetTooltip("Es läuft schon ein Auftrag.");
+                        else
+                            ImGui::SetTooltip("1 Stück, %.1f s  -  Reinheit %d%%",
+                                              (double)r.seconds, rein);
+                    }
+
+                    if (moeglich > 1)
+                    {
+                        ImGui::SameLine();
+                        ImGui::BeginDisabled(!geht);
+                        char alles[32];
+                        std::snprintf(alles, sizeof(alles), "x%d", moeglich);
+                        if (ImGui::Button(alles, ImVec2(0.0f, 0.0f)))
+                        {
+                            legieren    = &r;
+                            legierenWie = -1;  // so viele wie moeglich
+                        }
+                        ImGui::EndDisabled();
+
+                        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                            ImGui::SetTooltip("%d Stück, %.1f s", moeglich,
+                                              (double)(r.seconds * (float)moeglich));
+                    }
+
+                    ImGui::EndChild();
+                    ImGui::PopStyleColor();
+                    ImGui::PopStyleVar();
+                    ImGui::PopID();
+                }
+
+                // Von Hand gestartet: der Auftrag laeuft auch ohne Programm.
+                if (legieren != nullptr &&
+                    world.startAlloy(ores, *legieren, limits, legierenWie, true) > 0)
+                    g_sell.menge.clear();
+            }
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+        }
 
         if (world.inventory.empty())
         {
@@ -485,12 +1125,14 @@ void DrawInventory(World& world, const OrePlan& ores)
         {
             ImGui::TextDisabled(
                 "Mit den Pfeilen die Anzahl einstellen, auf die Zahl klicken zum Eintippen.");
+            ImGui::TextDisabled(
+                "Rechtsklick auf eine Karte: verarbeiten - das macht den Stapel wertvoller.");
             ImGui::Spacing();
             ImGui::Spacing();
 
             // ---- Karten, nebeneinander mit Umbruch -------------------------
             const float kartenBreite = 186.0f;
-            const float kartenHoehe  = 242.0f;
+            const float kartenHoehe  = 262.0f;
             const float bild         = 96.0f;
             const float luft         = 16.0f;
 
@@ -505,9 +1147,9 @@ void DrawInventory(World& world, const OrePlan& ores)
             int         verkaufenWie = 0;
             bool        verkaufenJa  = false;
 
-            World::Item wechselVon;
-            int         wechselZu = 0;
-            bool        wechselJa = false;
+            World::Item      arbeitAn;
+            const CraftStep* arbeitSchritt = nullptr;
+            int              arbeitWie     = 0;
 
             int spalte = 0;
 
@@ -515,7 +1157,8 @@ void DrawInventory(World& world, const OrePlan& ores)
             {
                 const World::Item stapel = e.first;
                 const Ore&        erz    = OreOf(ores, stapel.ore);
-                const int         anzahl = e.second;
+                const int         anzahl = e.second.count;
+                const int         rein   = e.second.purity;
                 const OreState    zust   = (OreState)stapel.state;
 
                 if (spalte > 0)
@@ -541,23 +1184,7 @@ void DrawInventory(World& world, const OrePlan& ores)
                 {
                     const ImVec2 ba(ImGui::GetCursorScreenPos().x + (innen - bild) * 0.5f,
                                     ImGui::GetCursorScreenPos().y);
-                    ImDrawList* dl = ImGui::GetWindowDrawList();
-
-                    const int   zellen = 18;
-                    const float st     = bild / (float)zellen;
-                    for (int gy = 0; gy < zellen; ++gy)
-                        for (int gx = 0; gx < zellen; ++gx)
-                        {
-                            const float t = OrePixel((float)gx / (float)zellen,
-                                                     (float)gy / (float)zellen, erz.pattern,
-                                                     777u + (unsigned)stapel.ore * 31u);
-                            const ImVec2 q(ba.x + (float)gx * st, ba.y + (float)gy * st);
-                            dl->AddRectFilled(q, ImVec2(q.x + st + 0.6f, q.y + st + 0.6f),
-                                              Mix(erz.color2, erz.color1, t, 255));
-                        }
-                    dl->AddRect(ba, ImVec2(ba.x + bild, ba.y + bild), IM_COL32(16, 18, 22, 255),
-                                5.0f, 0, 2.0f);
-
+                    DrawOreTile(ImGui::GetWindowDrawList(), ba, bild, erz, stapel.ore, 18);
                     ImGui::Dummy(ImVec2(innen, bild));
                 }
 
@@ -573,6 +1200,18 @@ void DrawInventory(World& world, const OrePlan& ores)
                     const float w  = ImGui::CalcTextSize(zn).x;
                     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (innen - w) * 0.5f);
                     ImGui::TextDisabled("%s", zn);
+                }
+
+                {
+                    // Die Reinheit haengt direkt am Preis, also gehoert sie auf
+                    // die Karte. Gruen ab sauber, sonst gedaempft.
+                    char text[48];
+                    std::snprintf(text, sizeof(text), "Reinheit %d%%", rein);
+                    const float w = ImGui::CalcTextSize(text).x;
+                    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (innen - w) * 0.5f);
+                    ImGui::TextColored(rein >= 70 ? ImVec4(0.62f, 0.82f, 0.96f, 1.0f)
+                                                  : ImVec4(0.62f, 0.64f, 0.70f, 1.0f),
+                                       "%s", text);
                 }
 
                 char haben[48];
@@ -645,7 +1284,8 @@ void DrawInventory(World& world, const OrePlan& ores)
                 // ---- Verkaufen --------------------------------------------
                 char knopf[64];
                 std::snprintf(knopf, sizeof(knopf), "Verkaufen  %d",
-                              wie * erz.value * world.moneyPerBlock);
+                              StackValue(ores, craft, stapel.ore, stapel.state, rein, wie,
+                                         world.moneyPerBlock));
 
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.42f, 0.30f, 1.0f));
                 if (ImGui::Button(knopf, ImVec2(innen, 0.0f)))
@@ -656,24 +1296,50 @@ void DrawInventory(World& world, const OrePlan& ores)
                 }
                 ImGui::PopStyleColor();
 
-                // ZUM TESTEN: Zustand von Hand umstellen. Wie man einen
-                // Zustand wirklich erreicht, gibt es noch nicht - so kann man
-                // trotzdem schon sehen, dass die Stapel getrennt bleiben.
-                if (ImGui::BeginPopupContextItem("zustand"))
+                // Verarbeiten. Angeboten wird genau das, was von hier aus
+                // wirklich geht: der Zustand muss passen, das Erz muss das Ziel
+                // erlauben, und gekauft sein muss der Schritt auch.
+                if (ImGui::BeginPopupContextWindow("verarbeiten"))
                 {
-                    ImGui::TextDisabled("Zustand (Test)");
+                    ImGui::TextDisabled("Verarbeiten");
                     ImGui::Separator();
-                    for (int z = 0; z < (int)OreState::Count; ++z)
+
+                    int moeglich = 0;
+                    for (const CraftStep& s : craft.steps)
                     {
-                        if (!erz.allows((OreState)z) || z == stapel.state)
+                        if (!s.fits(stapel.state) || !erz.allows((OreState)s.to) ||
+                            !CraftUnlocked(s, limits))
                             continue;
-                        if (ImGui::MenuItem(OreStateName((OreState)z)))
+
+                        ++moeglich;
+
+                        char zeile[96];
+                        std::snprintf(zeile, sizeof(zeile), "%s  ->  %s", s.name.c_str(),
+                                      OreStateName((OreState)s.to));
+
+                        if (ImGui::MenuItem(zeile, nullptr, false, !world.crafting &&
+                                                                       !world.frozen))
                         {
-                            wechselVon = stapel;
-                            wechselZu  = z;
-                            wechselJa  = true;
+                            arbeitAn      = stapel;
+                            arbeitSchritt = &s;
+                            arbeitWie     = wie;
                         }
+
+                        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                            ImGui::SetTooltip("%d Stück, %.1f s  -  Reinheit %+d%%\nDanach %d Geld",
+                                              wie, (double)(s.seconds * (float)wie), s.purity,
+                                              StackValue(ores, craft, stapel.ore, s.to,
+                                                         rein + s.purity, wie,
+                                                         world.moneyPerBlock));
                     }
+
+                    if (moeglich == 0)
+                        ImGui::TextDisabled("Von hier aus geht nichts.");
+                    else if (world.frozen)
+                        ImGui::TextDisabled("Erst die Runde starten.");
+                    else if (world.crafting)
+                        ImGui::TextDisabled("Es läuft schon ein Auftrag.");
+
                     ImGui::EndPopup();
                 }
 
@@ -685,22 +1351,15 @@ void DrawInventory(World& world, const OrePlan& ores)
 
             if (verkaufenJa)
             {
-                world.sell(ores, verkaufen, verkaufenWie);
+                world.sell(ores, craft, verkaufen, verkaufenWie);
                 g_sell.menge.erase(verkaufen);  // beim naechsten Mal wieder voll
             }
 
-            // Zustand umstellen (Test): der Stapel wandert komplett hinueber.
-            if (wechselJa)
+            // Von Hand gestartet: der Auftrag laeuft auch ohne Programm weiter.
+            if (arbeitSchritt != nullptr)
             {
-                const auto alt = world.inventory.find(wechselVon);
-                if (alt != world.inventory.end())
-                {
-                    World::Item neu = wechselVon;
-                    neu.state       = wechselZu;
-                    world.inventory[neu] += alt->second;
-                    world.inventory.erase(alt);
+                if (world.startCraft(ores, limits, *arbeitSchritt, arbeitAn, arbeitWie, true) > 0)
                     g_sell.menge.clear();
-                }
             }
         }
     }

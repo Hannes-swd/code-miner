@@ -59,6 +59,16 @@ struct Ore
     int   minLevel    = 1;     // ab welchem Level er ueberhaupt auftaucht
     int   value       = 1;     // Geld pro Block, mal dem Boost aus dem Baum
 
+    // Kommt der Stoff im Boden vor? Legierungen nicht: die entstehen nur in
+    // der Werkstatt und duerfen nie als Block dastehen. Sie haengen trotzdem
+    // in dieser Liste, damit sie sich in der Tasche wie jedes Erz verhalten.
+    bool minable = true;
+
+    // Mit welcher Reinheit der Block aus dem Boden kommt, in Prozent.
+    // -1 = steht nicht in der Datei, dann gilt der Startwert aus
+    // data/verarbeitung.json.
+    int purity = -1;
+
     Color color1;      // helle Adern
     Color color2;      // dunkler Grund
     float pattern = 5.0f;  // wie fein das Muster ist
@@ -67,9 +77,13 @@ struct Ore
     // Steht in der Datei nichts, sind alle erlaubt.
     unsigned states = 0xFFFFFFFFu;
 
-    // Womit sich das Erz legieren laesst. Wird eingelesen und mitgeschleppt,
-    // aber noch von nichts benutzt - das Legieren selbst kommt spaeter.
+    // Womit sich das Erz legieren laesst. data/legierungen.json prueft jedes
+    // Rezept dagegen: was hier nicht zueinander steht, laesst sich nicht
+    // zusammenschmelzen.
     std::vector<std::string> alloyWith;
+
+    // Steht der Name in "legierbar_mit"? Gross- und Kleinschreibung ist egal.
+    bool alloyableWith(const std::string& andere) const;
 
     bool allows(OreState s) const
     {
@@ -95,8 +109,12 @@ struct OrePlan
 // Sucht data/erze.json an den ueblichen Stellen und liest sie ein.
 OrePlan LoadOrePlan();
 
-// Welches Erz kommt als naechstes? Nur was das Level erlaubt, und je seltener,
-// desto unwahrscheinlicher.
+// "#RRGGBB" oder "#RGB". false = kaputte Angabe, dann bleibt out unveraendert.
+// Steht hier, weil auch data/legierungen.json Farben mitbringt.
+bool ParseOreColor(const std::string& text, Color& out);
+
+// Welches Erz kommt als naechstes? Nur was das Level erlaubt, nur was im Boden
+// vorkommt, und je seltener, desto unwahrscheinlicher.
 int RollOre(const OrePlan& plan, int level, std::mt19937& rng);
 
 // Erz-Nummer zu einem Namen, -1 = kenne ich nicht. Gross- und Kleinschreibung

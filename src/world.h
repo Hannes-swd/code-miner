@@ -1,11 +1,18 @@
 #pragma once
 
+#include "round.h"
+
 #include <map>
 #include <random>
 #include <string>
 #include <vector>
 
 struct OrePlan;
+struct CraftPlan;
+struct CraftStep;
+struct AlloyPlan;
+struct AlloyRecipe;
+struct Limits;
 
 // Die Welt. Aktuell: genau ein Block in der Mitte - aber jedes Mal ein anderer.
 struct World
@@ -14,6 +21,29 @@ struct World
     // deshalb ihren eigenen Speicher - hier ist der gemeinsame Ablageort, ueber
     // den sich mehrere Konsolen etwas sagen koennen.
     std::map<std::string, int> shared;
+
+    // ---- Runden ----------------------------------------------------------
+    // Die Phase gehoert hierher, weil sie in den Spielstand muss: wer mitten
+    // im Lauf beendet, macht dort weiter.
+    RoundPhase phase       = RoundPhase::Prepare;
+    int        roundNumber = 1;
+    float      roundLeft   = 0.0f;  // Restzeit in Sekunden
+
+    // Stand beim Start der Runde - daraus wird spaeter die Differenz.
+    int roundMoneyStart = 0;
+    int roundMinedStart = 0;
+
+    // Was die Abrechnung anzeigt. Steht fest, sobald die Zeit um ist.
+    int roundMoneyEnd  = 0;
+    int roundMined     = 0;
+    int roundSoldCount = 0;
+    int roundSoldMoney = 0;
+
+    // Steht die Welt gerade still? Setzt main jedes Bild neu aus Phase und
+    // data/runden.json - so muss die Welt selbst nichts von Runden wissen.
+    // Gehoert deshalb auch nicht in den Spielstand.
+    bool frozen   = false;  // kein Abbau, kein Nachwachsen, kein Auftrag
+    bool handMine = true;   // ... ausser dem Klick auf den Block, wenn erlaubt
 
     bool blockAlive = true;
     int  minedCount = 0;
@@ -49,9 +79,34 @@ struct World
         }
     };
 
+    // Was in einem Stapel drin ist.
+    //
+    // Die Reinheit gehoert zum Inhalt und nicht zum Schluessel: sonst haette
+    // man fuer jede Nachkommastelle einen eigenen Stapel. Treffen zwei Stapel
+    // aufeinander, wird sie nach Anzahl gewichtet gemittelt.
+    struct Stack
+    {
+        int count  = 0;
+        int purity = 0;  // Prozent, 0..100
+    };
+
     // Was man abgebaut, aber noch nicht verkauft hat.
     // Abbauen bringt kein Geld, erst das Verkaufen tut das.
-    std::map<Item, int> inventory;
+    std::map<Item, Stack> inventory;
+
+    // Was fuer den laufenden Auftrag aus der Tasche genommen wurde. Beim
+    // Legieren sind das mehrere Sorten - und beim Abbruch muss alles zurueck,
+    // genau so, wie es hineinging.
+    struct Taken
+    {
+        Item was;
+        int  count  = 0;
+        int  purity = 0;
+    };
+
+    // Stuecke in die Tasche legen. Der einzige Weg dorthin - so kann die
+    // Reinheit gar nicht vergessen werden.
+    void addToBag(Item was, int anzahl, int reinheit);
 
     // Steigt mit dem Spielstand. Welche Erze es ueberhaupt geben kann, haengt
     // daran. Ausgerechnet wird es woanders (siehe main), hier steht nur das
@@ -74,23 +129,84 @@ struct World
 
     std::mt19937 rng{20260808u};  // wuerfelt das naechste Erz
 
+    // Verarbeiten braucht Zeit, und es laeuft immer nur EIN Auftrag. Was drin
+    // ist, liegt solange nicht in der Tasche - verkaufen kann man es also
+    // nicht, waehrend es in Arbeit ist.
+    // Legieren benutzt denselben Platz: es ist derselbe Ofen. Deshalb steht
+    // hier kein zweiter Satz Felder - beim Legieren ist craftItem eben schon
+    // das Ergebnis.
+    bool  crafting    = false;
+    bool  craftByHand = false;  // aus der Tasche gestartet: laeuft ohne Programm
+    Item  craftItem;            // was herauskommt (Erz und Zielzustand)
+    int   craftCount  = 0;
+    int   craftPurity = 0;      // Reinheit, mit der es hineinging
+    int   craftTo     = 0;      // OreState, was herauskommt
+    int   craftDelta  = 0;      // was der Schritt an der Reinheit macht
+    float craftTimer  = 0.0f;
+    float craftSeconds = 0.0f;  // Gesamtdauer: dauer mal Anzahl
+    std::string craftName;      // "Waschen" - fuer die Anzeige
+
+    // Was dafuer aus der Tasche genommen wurde.
+    std::vector<Taken> craftTaken;
+
     bool mine();       // faengt an abzubauen; false = da ist nichts (mehr)
     bool mineByHand();  // dasselbe, aber per Mausklick - laeuft ohne Programm
     bool place();      // true = jetzt hingesetzt, false = stand schon da
 
     // Verkaufen. Ohne Angabe geht alles ueber die Theke.
     // Rueckgabe: wie viel Geld es gab.
-    int sell(const OrePlan& ores);
-    int sell(const OrePlan& ores, Item was, int anzahl);  // genau ein Stapel
+    int sell(const OrePlan& ores, const CraftPlan& craft);
+    int sell(const OrePlan& ores, const CraftPlan& craft, Item was, int anzahl);  // ein Stapel
 
     // Fuer block.sell("Stein", 3): diese Sorte in jedem Zustand, hoechstens so
     // viele. anzahl < 0 heisst alles davon.
-    int sell(const OrePlan& ores, const std::string& name, int anzahl);
+    int sell(const OrePlan& ores, const CraftPlan& craft, const std::string& name, int anzahl);
+
+    // Einen Auftrag starten. Rueckgabe: wie viele Stuecke wirklich in Arbeit
+    // gegeben wurden, 0 = ging nicht.
+    //
+    // Aus der Tasche heraus ist der Stapel bekannt, aus dem Spielercode nur der
+    // Name des Erzes - dann wird der erste Stapel genommen, der zum Schritt
+    // passt (die Zustaende stehen der Reihe nach, roh kommt also zuerst).
+    int startCraft(const OrePlan& ores, const Limits& limits, const CraftStep& step, Item was,
+                   int anzahl, bool byHand);
+    int startCraft(const OrePlan& ores, const CraftPlan& craft, const Limits& limits,
+                   const std::string& befehl, const std::string& erz, int anzahl);
+
+    // Legieren. Es benutzt denselben einen Auftrags-Platz wie das Verarbeiten -
+    // es laeuft immer nur EINER.
+    //
+    // Rueckgabe: wie viele Stuecke wirklich in Arbeit gegeben wurden, 0 = ging
+    // nicht (Zutaten fehlen, falscher Zustand, nicht freigeschaltet, oder es
+    // laeuft schon ein Auftrag).
+    int startAlloy(const OrePlan& ores, const AlloyRecipe& rezept, const Limits& limits,
+                   int anzahl, bool byHand);
+    int startAlloy(const OrePlan& ores, const AlloyPlan& alloys, const Limits& limits,
+                   const std::string& name, int anzahl, bool byHand);
+
+    // Wie viele Stueck koennte man daraus gerade machen? 0 = gar keins.
+    // Ein laufender Auftrag zaehlt hier NICHT hinein: die Frage ist, ob das
+    // Material reicht.
+    int canAlloy(const OrePlan& ores, const AlloyRecipe& rezept, const Limits& limits) const;
+    int canAlloy(const OrePlan& ores, const AlloyPlan& alloys, const Limits& limits,
+                 const std::string& name) const;
+
+    // Welche Stapel fuer so viele Stuecke genommen wuerden und welche Reinheit
+    // dabei herauskaeme. false = das Material reicht nicht.
+    //
+    // Steht extra hier, damit die Tasche vorher zeigen kann, was herauskommt -
+    // und zwar mit derselben Rechnung, die es danach wirklich tut.
+    bool alloyPick(const AlloyRecipe& rezept, int anzahl, std::vector<Taken>& out,
+                   int& reinheit) const;
 
     int inventoryCount() const;  // wie viele Bloecke insgesamt in der Tasche
 
     // Fuer block.has("Stein"): wie viele davon liegen in der Tasche.
     int inventoryOf(const OrePlan& ores, const std::string& name) const;
+
+    // Wie viele Stuecke dieses Erzes in einem der Zustaende liegen (ein Bit je
+    // OreState).
+    int bagCount(int ore, unsigned states) const;
 
     // Einen Knopf "Block zuruecksetzen" gibt es mit Absicht nicht: damit
     // koennte man von Hand schneller abbauen als jedes Programm.
@@ -98,10 +214,17 @@ struct World
     // Der Abbau gehoert zum laufenden Programm: er kommt nur voran, solange das
     // Programm laeuft. Sonst wuerde ein angehaltenes Programm weiter abbauen -
     // man druckt auf Pause und der Block geht trotzdem kaputt.
-    void tickMining(float dt, const OrePlan& ores);
+    void tickMining(float dt, const OrePlan& ores, const CraftPlan& craft);
 
     // Abbau abbrechen, der Block bleibt ganz. Beim Stoppen des Programms.
     void cancelMining();
+
+    // Dasselbe fuers Verarbeiten: es laeuft nur, solange das Programm laeuft -
+    // ausser der Auftrag kam aus der Tasche.
+    void tickCraft(float dt);
+
+    // Auftrag abbrechen. Was drin war, kommt unveraendert zurueck.
+    void cancelCraft();
 
     // Nachwachsen und Effekte. Laeuft immer, auch im Skilltree - der Block
     // waechst ja auch nach, waehrend man dort etwas kauft. Beim Nachwachsen
@@ -109,9 +232,28 @@ struct World
     void update(float dt, const OrePlan& ores);
 };
 
+// Was ein Stapel wert ist: Grundwert des Erzes * Zustandsfaktor *
+// Reinheitsfaktor * Geld pro Block.
+//
+// Steht an EINER Stelle, damit Verkauf, Tasche und Tooltip nie etwas
+// Verschiedenes behaupten.
+int StackValue(const OrePlan& ores, const CraftPlan& craft, int ore, int state, int purity,
+               int anzahl, int moneyPerBlock);
+
+// Mit welcher Reinheit ein Block dieses Erzes aus dem Boden kommt.
+int StartPurity(const OrePlan& ores, const CraftPlan& craft, int ore);
+
 // Zeichnet die Welt in den Hintergrund (hinter alle Konsolen).
 // Ein Klick auf den Block baut ihn ab - dafuer braucht man kein Programm.
-void DrawWorld(World& world, const OrePlan& ores);
+//
+// Der Rundenplan ist dabei, weil auch seine Fehler rot im Bild stehen sollen:
+// sonst sucht man den Fehler im Spiel statt in der Datei.
+void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const AlloyPlan& alloys,
+               const RoundPlan& rounds);
 
-// Die Tasche: was man abgebaut hat. Rechtsklick auf eine Zeile verkauft sie.
-void DrawInventory(World& world, const OrePlan& ores);
+// Die Tasche: was man abgebaut hat. Das Rechtsklickmenue auf einer Karte
+// bietet genau die Schritte an, die von hier aus moeglich sind - deshalb
+// braucht die Seite die Limits. Die Legierungen stehen oben als eigener
+// Abschnitt: sie gehoeren nicht zu einem einzelnen Stapel.
+void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
+                   const AlloyPlan& alloys, const Limits& limits);

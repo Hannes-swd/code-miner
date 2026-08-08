@@ -3,10 +3,13 @@
 // Fenster (Win32) + Grafik (DirectX 11) + Oberflaeche (Dear ImGui).
 // Beides gehoert zu Windows, es wird also nichts weiter installiert.
 
+#include "alloy.h"
 #include "codecheck.h"
 #include "console.h"
+#include "craft.h"
 #include "native.h"
 #include "ore.h"
+#include "round.h"
 #include "save.h"
 #include "skillfile.h"
 #include "skills.h"
@@ -287,7 +290,19 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     const int kStartGeld = kUnendlichGeld ? kVielGeld : 100000;
 
     // Welche Erze es gibt, steht in data/erze.json.
-    const OrePlan ores = LoadOrePlan();
+    OrePlan ores = LoadOrePlan();
+
+    // Und was man daraus machen kann, in data/verarbeitung.json.
+    const CraftPlan crafts = LoadCraftPlan();
+
+    // Legierungen haengen ihre Ergebnisse hinten an die Erzliste an - deshalb
+    // erst hier und deshalb ist die Erzliste oben nicht const.
+    const AlloyPlan alloys = LoadAlloyPlan(ores);
+
+    // Wie lange eine Runde dauert und was in der Vorbereitung still steht,
+    // steht in data/runden.json. Fuer eine kurze Testrunde einfach dort die
+    // Zahl kleiner machen - hier steht sie mit Absicht nicht.
+    const RoundPlan rounds = LoadRoundPlan();
 
     World world;
     world.money = kStartGeld;
@@ -396,6 +411,35 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
             world.level = 1 + world.minedCount / ores.perLevel;
         }
 
+        // ---- Runden ------------------------------------------------------
+        //
+        // In der Vorbereitung steht die Welt still: nichts wird abgebaut,
+        // nichts waechst nach, kein Auftrag laeuft. Die Welt selbst kennt
+        // keine Runden - sie bekommt nur diese zwei Schalter.
+        world.frozen = rounds.freezeWorld && world.phase != RoundPhase::Run;
+
+        // Waehrend der Abrechnung nicht: was danach noch in die Tasche faellt,
+        // steht in keiner Rechnung mehr.
+        world.handMine = rounds.handInPrepare && world.phase != RoundPhase::Report;
+
+        if (world.phase == RoundPhase::Run)
+        {
+            world.roundLeft -= dt;
+            if (world.roundLeft <= 0.0f)
+            {
+                // Zeit um: erst das Programm anhalten, dann abrechnen. Sonst
+                // koennte das Kind noch eine Zeile mitten in den Verkauf
+                // hineinfunken.
+                engine.stop();
+                FinishRound(world, rounds, ores, crafts);
+
+                // Die Abrechnung soll einen Absturz ueberleben - sie ist der
+                // einzige Ort, an dem man das Ergebnis je zu sehen bekommt.
+                SaveGame(world, tree, consoles);
+                saveTimer = 0.0f;
+            }
+        }
+
         // Abgebaut wird nur, solange das Programm laeuft.
         //
         // Pause haelt den Abbau an der Stelle an, Stopp bricht ihn ab. Sonst
@@ -404,7 +448,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
         if (world.byHand)
         {
             // Von Hand angeklickt: das laeuft immer, auch ohne Programm.
-            world.tickMining(dt, ores);
+            world.tickMining(dt, ores, crafts);
         }
         else
         {
@@ -412,7 +456,23 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
             {
             case RunState::Paused: break;  // eingefroren
             case RunState::Idle: world.cancelMining(); break;
-            default: world.tickMining(dt, ores); break;  // laeuft oder gerade fertig
+            default: world.tickMining(dt, ores, crafts); break;  // laeuft oder gerade fertig
+            }
+        }
+
+        // Verarbeiten haengt genauso am Programm - ausser der Auftrag wurde in
+        // der Tasche angeklickt. Bricht er ab, kommt das Material zurueck.
+        if (world.craftByHand)
+        {
+            world.tickCraft(dt);
+        }
+        else
+        {
+            switch (engine.state())
+            {
+            case RunState::Paused: break;
+            case RunState::Idle: world.cancelCraft(); break;
+            default: world.tickCraft(dt); break;
             }
         }
 
@@ -421,7 +481,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
             world.money = kVielGeld;
 
         // Zeit vergeht auf jeder Seite: der Block waechst auch nach, waehrend
-        // man im Skilltree ist.
+        // man im Skilltree ist - aber nur waehrend der Runde. In der
+        // Vorbereitung steht er (siehe world.frozen).
         world.update(dt, ores);
 
         saveTimer += dt;
@@ -458,6 +519,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
             if (PageTab("Skilltree", page == Page::Skills))
                 page = Page::Skills;
 
+            // Die Runde gehoert in die Leiste: so ist sie von jeder Seite aus
+            // zu sehen und zu starten.
+            if (DrawRoundBar(world, rounds))
+                StartRound(world, rounds);
+
             // Diese Knoepfe gehoeren zur Welt-Seite.
             if (page == Page::Welt)
             {
@@ -480,20 +546,28 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
             ImGui::EndMainMenuBar();
         }
 
-        // Das Programm laeuft weiter, egal welche Seite offen ist.
-        engine.update(dt, world, ores);
+        // Das Programm laeuft weiter, egal welche Seite offen ist - aber nur
+        // waehrend der Runde. In der Vorbereitung ruehrt sich der Motor nicht.
+        if (world.phase == RoundPhase::Run)
+            engine.update(dt, world, ores, crafts, alloys, limits);
 
         if (page == Page::Welt)
         {
-            DrawWorld(world, ores);
-            DrawStatus(limits, world.level);
+            DrawWorld(world, ores, crafts, alloys, rounds);
+            DrawStatus(limits, world);
 
             bool trigger = false;
             for (auto& c : consoles)
                 if (DrawConsole(*c, engine))
                     trigger = true;
 
-            if (trigger)
+            if (trigger && world.phase != RoundPhase::Run)
+            {
+                // Ohne laufende Runde gibt es nichts zu tun. Das gehoert
+                // gesagt - sonst haelt man den Knopf fuer kaputt.
+                engine.fail("Erst die Runde starten - oben in der Leiste.", 0, 0);
+            }
+            else if (trigger)
             {
                 const bool anyEdited =
                     std::any_of(consoles.begin(), consoles.end(),
@@ -531,7 +605,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
         }
         else if (page == Page::Tasche)
         {
-            DrawInventory(world, ores);
+            DrawInventory(world, ores, crafts, alloys, limits);
         }
         else
         {
@@ -540,8 +614,13 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
             // Dieselbe Ecke wie auf der Welt-Seite: was man schon hat. Beim
             // Kaufen will man ja sehen, was man damit ueberhaupt schon kann.
-            DrawStatus(limits, world.level);
+            DrawStatus(limits, world);
         }
+
+        // Die Abrechnung liegt ueber allem - sie ist der Weg zur naechsten
+        // Runde, egal auf welcher Seite man gerade ist.
+        if (world.phase == RoundPhase::Report && DrawRoundReport(world, rounds))
+            NextRound(world);
 
         // Geschlossene Konsolen entfernen
         for (std::size_t i = consoles.size(); i-- > 0;)

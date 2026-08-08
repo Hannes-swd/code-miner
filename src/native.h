@@ -20,6 +20,10 @@
 //                    M      block.mine()
 //                    S      block.place()
 //                    Q      block.exists()  (wartet auf 1 oder 0)
+//                    C ...  block.wash(...) und die anderen Schritte
+//                           (wartet auf die Anzahl, die angenommen wurde)
+//                    G ...  block.alloy(...)   - legieren
+//                    P ...  block.canAlloy(...) - wie viele gingen gerade?
 //                    O text print("text")
 //                    X      main() ist zu Ende
 //
@@ -54,7 +58,8 @@ public:
     void start(const std::vector<SourceFile>& files) override;
     void togglePause() override;
     void stop() override;
-    void update(float dt, World& world, const OrePlan& ores) override;
+    void update(float dt, World& world, const OrePlan& ores, const CraftPlan& craft,
+                const AlloyPlan& alloys, const Limits& limits) override;
     void setSpeed(float linesPerSecond) override { mLinesPerSecond = linesPerSecond; }
     void fail(const std::string& message, int console, int line) override;
 
@@ -102,8 +107,10 @@ private:
     std::string mMsg;
 
     bool launch(const Build& build);
-    void pump(World& world, const OrePlan& ores);
-    void handle(const std::string& msg, World& world, const OrePlan& ores);
+    void pump(World& world, const OrePlan& ores, const CraftPlan& craft, const AlloyPlan& alloys,
+              const Limits& limits);
+    void handle(const std::string& msg, World& world, const OrePlan& ores, const CraftPlan& craft,
+                const AlloyPlan& alloys, const Limits& limits);
     void sendChild(const char* text);
     void closeChild();
     void finish(const char* reason);

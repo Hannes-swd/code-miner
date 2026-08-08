@@ -1,0 +1,99 @@
+{
+  "hilfe": [
+    "Verarbeiten: aus einem Zustand einen anderen machen.",
+    "",
+    "Das ist KEINE feste Kette, sondern ein NETZ. Aus einem Zustand koennen",
+    "mehrere Schritte fuehren, und ein Schritt kann aus mehreren Zustaenden",
+    "heraus gehen. Genau daraus entsteht die Entscheidung: welchen Weg gehst du?",
+    "",
+    "reinheit.start   Reinheit in Prozent, mit der ein frisch abgebauter Block",
+    "                 in die Tasche wandert. Ein Erz darf in data/erze.json mit",
+    "                 \"reinheit\": 65 einen eigenen Startwert haben.",
+    "reinheit.wert_min / wert_max",
+    "                 Was die Reinheit am Preis macht: bei 0% zaehlt wert_min,",
+    "                 bei 100% wert_max, dazwischen linear.",
+    "",
+    "zustandswert     Faktor auf den Grundwert des Erzes, je Zustand. Er haengt",
+    "                 nur am Zustand und nicht am Weg dorthin - zwei Wege zum",
+    "                 selben Zustand geben also denselben Preis.",
+    "",
+    "Preis eines Stuecks = wert (aus erze.json) * zustandswert * Reinheitsfaktor",
+    "                      * Geld pro Block (aus dem Skilltree).",
+    "",
+    "Eine Zeile in \"schritte\":",
+    "  befehl    so heisst er im Spielercode: block.wash(\"Gold\").",
+    "            Moeglich sind wash, smelt, cast, clean, polish, harden,",
+    "            refine, press - fuer jeden gibt es einen Punkt im Skilltree.",
+    "  name      was in der Tasche im Menue steht.",
+    "  von       LISTE der Zustaende, aus denen der Schritt heraus geht.",
+    "  zu        was dabei herauskommt.",
+    "  dauer     Sekunden pro Stueck. Es laeuft immer nur EIN Auftrag.",
+    "  reinheit  Aenderung in Prozentpunkten, darf negativ sein. Am Ende wird",
+    "            auf 0..100 begrenzt.",
+    "",
+    "Ein Schritt geht nur, wenn das Erz den Ziel-Zustand in seiner Liste",
+    "\"zustaende\" erlaubt - Diamant schmilzt man nicht.",
+    "",
+    "\"oxidized\" und \"alloy\" haben mit Absicht keinen Schritt: Legieren kommt",
+    "spaeter, Oxidieren ist Verfall."
+  ],
+
+  "reinheit": { "start": 70, "wert_min": 0.5, "wert_max": 1.5 },
+
+  "zustandswert": {
+    "raw": 1.0,
+    "washed": 1.2,
+    "pressed": 1.8,
+    "smelted": 2.0,
+    "cleaned": 2.4,
+    "cast": 2.8,
+    "hardened": 3.4,
+    "polished": 4.5,
+    "alloy": 5.0,
+    "refined": 6.0,
+    "oxidized": 0.6
+  },
+
+  "schritte": [
+    {
+      "befehl": "wash", "name": "Waschen",
+      "von": ["raw"], "zu": "washed",
+      "dauer": 0.6, "reinheit": 10
+    },
+    {
+      "befehl": "clean", "name": "Reinigen",
+      "von": ["raw", "washed", "cast", "pressed"], "zu": "cleaned",
+      "dauer": 1.0, "reinheit": 18
+    },
+    {
+      "befehl": "press", "name": "Pressen",
+      "von": ["raw", "washed", "cleaned"], "zu": "pressed",
+      "dauer": 0.8, "reinheit": -3
+    },
+    {
+      "befehl": "smelt", "name": "Schmelzen",
+      "von": ["raw", "washed", "pressed"], "zu": "smelted",
+      "dauer": 1.5, "reinheit": -5
+    },
+    {
+      "befehl": "cast", "name": "Gießen",
+      "von": ["smelted"], "zu": "cast",
+      "dauer": 1.2, "reinheit": 0
+    },
+    {
+      "befehl": "harden", "name": "Härten",
+      "von": ["smelted", "cast", "pressed", "cleaned"], "zu": "hardened",
+      "dauer": 2.0, "reinheit": -4
+    },
+    {
+      "befehl": "polish", "name": "Polieren",
+      "von": ["cast", "cleaned", "hardened"], "zu": "polished",
+      "dauer": 1.8, "reinheit": 8
+    },
+    {
+      "befehl": "refine", "name": "Veredeln",
+      "von": ["cleaned", "hardened", "polished"], "zu": "refined",
+      "dauer": 3.0, "reinheit": 25
+    }
+  ]
+}

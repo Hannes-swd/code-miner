@@ -472,7 +472,7 @@ bool DrawSkillPage(World& world, SkillTree& tree)
     return resetWanted;
 }
 
-void DrawStatus(const Limits& limits, int level)
+void DrawStatus(const Limits& limits, const World& world)
 {
     ImGuiViewport* vp = ImGui::GetMainViewport();
 
@@ -493,12 +493,48 @@ void DrawStatus(const Limits& limits, int level)
 
     if (ImGui::Begin("##status", nullptr, flags))
     {
-        ImGui::TextDisabled("Was du kannst");
-        ImGui::Spacing();
-
         // Nur was da ist. Eine Zeile "Klassen: 0" wuerde verraten, dass es
         // Klassen ueberhaupt gibt - das soll der Baum machen, nicht diese Ecke.
         const ImVec4 gruen(0.72f, 0.90f, 0.50f, 1.0f);
+
+        // ---- Runde --------------------------------------------------------
+        // Steht ganz oben: in welcher Phase man ist, entscheidet ueber alles
+        // andere in diesem Kasten.
+        ImGui::TextDisabled("%-12s", "Runde");
+        ImGui::SameLine(140.0f);
+        ImGui::TextColored(gruen, "%d", world.roundNumber);
+
+        if (world.phase == RoundPhase::Run)
+        {
+            const bool knapp = world.roundLeft <= 60.0f;
+            ImGui::TextDisabled("%-12s", "Restzeit");
+            ImGui::SameLine(140.0f);
+            ImGui::TextColored(knapp ? ImVec4(1.00f, 0.45f, 0.38f, 1.0f) : gruen, "%s",
+                               RoundClock(world.roundLeft).c_str());
+        }
+        else if (world.phase == RoundPhase::Report)
+        {
+            ImGui::TextDisabled("%-12s", "Phase");
+            ImGui::SameLine(140.0f);
+            ImGui::TextColored(gruen, "Abrechnung");
+        }
+        else
+        {
+            ImGui::TextDisabled("%-12s", "Phase");
+            ImGui::SameLine(140.0f);
+            ImGui::TextColored(ImVec4(0.62f, 0.72f, 0.95f, 1.0f), "Vorbereitung");
+
+            if (world.frozen)
+                ImGui::TextDisabled("Die Welt steht still.");
+            ImGui::TextDisabled("Weiter: oben \"Runde starten\".");
+        }
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGui::TextDisabled("Was du kannst");
+        ImGui::Spacing();
 
         auto zahl = [&](const char* name, int wert)
         {
@@ -516,7 +552,7 @@ void DrawStatus(const Limits& limits, int level)
             ImGui::TextColored(gruen, "%s", name);
         };
 
-        zahl("Level", level);
+        zahl("Level", world.level);
         zahl("Schleifen", limits.maxLoops);
         zahl("Bedingungen", limits.maxIfs);
         zahl("Variablen", limits.maxVariables);
@@ -538,7 +574,9 @@ void DrawStatus(const Limits& limits, int level)
         if (limits.allowWhile || limits.allowFor || limits.allowIf || limits.allowElse ||
             limits.allowPrint || limits.allowCheck || limits.allowPlace || limits.allowShared ||
             limits.allowVariable || limits.allowClass || limits.allowFunction ||
-            limits.allowSell || limits.allowBag || limits.allowMine)
+            limits.allowSell || limits.allowBag || limits.allowMine || limits.allowWash ||
+            limits.allowSmelt || limits.allowCast || limits.allowClean || limits.allowPolish ||
+            limits.allowHarden || limits.allowRefine || limits.allowPress || limits.allowAlloy)
         {
             ImGui::Spacing();
             ImGui::Separator();
@@ -554,6 +592,15 @@ void DrawStatus(const Limits& limits, int level)
             wort("block.place()", limits.allowPlace);
             wort("block.sell()", limits.allowSell);
             wort("block.has(...)", limits.allowBag);
+            wort("block.wash(...)", limits.allowWash);
+            wort("block.clean(...)", limits.allowClean);
+            wort("block.press(...)", limits.allowPress);
+            wort("block.smelt(...)", limits.allowSmelt);
+            wort("block.cast(...)", limits.allowCast);
+            wort("block.harden(...)", limits.allowHarden);
+            wort("block.polish(...)", limits.allowPolish);
+            wort("block.refine(...)", limits.allowRefine);
+            wort("block.alloy(...)", limits.allowAlloy);
             wort("shared[...]", limits.allowShared);
             wort("int, float, ...", limits.allowVariable);
             wort("class, struct", limits.allowClass);

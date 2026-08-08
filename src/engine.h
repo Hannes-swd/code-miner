@@ -5,6 +5,9 @@
 
 struct World;
 struct OrePlan;
+struct CraftPlan;
+struct AlloyPlan;
+struct Limits;
 
 // Eine Konsole als Quelltext-Stueck. Alle Konsolen zusammen ergeben EIN
 // Programm - deshalb sieht Konsole 1 auch die Variablen aus Konsole 2.
@@ -33,8 +36,11 @@ public:
     virtual void togglePause()                               = 0;
     virtual void stop()                                      = 0;
     // Die Erzliste braucht der Motor fuers Verkaufen: block.sell() muss
-    // wissen, was ein Block wert ist.
-    virtual void update(float dt, World& world, const OrePlan& ores) = 0;
+    // wissen, was ein Block wert ist. Verarbeitung, Legierungen und Limits
+    // kommen dazu, weil block.wash() und block.alloy() beides brauchen: was
+    // moeglich ist und was gekauft ist.
+    virtual void update(float dt, World& world, const OrePlan& ores, const CraftPlan& craft,
+                        const AlloyPlan& alloys, const Limits& limits) = 0;
 
     // Tempo in Zeilen pro Sekunde. Der Skilltree dreht daran.
     virtual void setSpeed(float linesPerSecond) = 0;

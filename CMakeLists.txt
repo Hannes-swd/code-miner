@@ -23,11 +23,14 @@ add_executable(CodeKlicker WIN32
     src/main.cpp
     src/console.cpp
     src/world.cpp
+    src/round.cpp
     src/skills.cpp
     src/skilltree.cpp
     src/skillfile.cpp
     src/save.cpp
     src/ore.cpp
+    src/craft.cpp
+    src/alloy.cpp
     src/json.cpp
     src/codecheck.cpp
     src/native.cpp

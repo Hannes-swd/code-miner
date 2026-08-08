@@ -11,8 +11,19 @@
 namespace
 {
 
+// Fuer den Vergleich von Namen: Gross- und Kleinschreibung soll egal sein.
+std::string Lower(std::string s)
+{
+    for (char& c : s)
+        if (c >= 'A' && c <= 'Z')
+            c = (char)(c - 'A' + 'a');
+    return s;
+}
+
+}  // namespace
+
 // "#RRGGBB" oder "#RGB". Kaputte Angaben bleiben grau, damit man es sieht.
-bool ParseColor(const std::string& text, Color& out)
+bool ParseOreColor(const std::string& text, Color& out)
 {
     std::string hex = text;
     if (!hex.empty() && hex[0] == '#')
@@ -58,6 +69,9 @@ bool ParseColor(const std::string& text, Color& out)
     out.b = (unsigned char)teil[2];
     return true;
 }
+
+namespace
+{
 
 std::vector<std::string> Candidates()
 {
@@ -212,6 +226,7 @@ OrePlan LoadOrePlan()
         erz.minLevel    = (int)e.number("ab_level", 1);
         erz.value       = (int)e.number("wert", 1);
         erz.pattern     = (float)e.number("muster", 5.0);
+        erz.purity      = (int)e.number("reinheit", -1.0);
 
         if (erz.rarity < 0.01f)
             erz.rarity = 0.01f;
@@ -221,10 +236,12 @@ OrePlan LoadOrePlan()
             erz.value = 1;
         if (erz.pattern < 0.5f)
             erz.pattern = 0.5f;
+        if (erz.purity > 100)
+            erz.purity = 100;
 
-        if (!ParseColor(e.text("farbe1", ""), erz.color1))
+        if (!ParseOreColor(e.text("farbe1", ""), erz.color1))
             plan.problems.push_back(erz.name + ": farbe1 fehlt oder ist kein #RRGGBB.");
-        if (!ParseColor(e.text("farbe2", ""), erz.color2))
+        if (!ParseOreColor(e.text("farbe2", ""), erz.color2))
             plan.problems.push_back(erz.name + ": farbe2 fehlt oder ist kein #RRGGBB.");
 
         // Welche Zustaende es bei diesem Erz geben darf. Fehlt die Liste, sind
@@ -254,9 +271,8 @@ OrePlan LoadOrePlan()
             erz.states |= (1u << (unsigned)OreState::Raw);
         }
 
-        // Nur einlesen und mitschleppen. Das Legieren selbst gibt es noch
-        // nicht - die Liste steht schon mal da, damit sie nicht spaeter
-        // nachgetragen werden muss.
+        // Womit sich das Erz legieren laesst. Geprueft wird das erst in
+        // data/legierungen.json - dort steht, welche Rezepte es gibt.
         if (const JsonValue* l = e.find("legierbar_mit"))
         {
             if (l->type != JsonValue::Type::Array)
@@ -322,19 +338,20 @@ int FindOreState(const std::string& key)
     return -1;
 }
 
+bool Ore::alloyableWith(const std::string& andere) const
+{
+    const std::string gesucht = Lower(andere);
+    for (const std::string& w : alloyWith)
+        if (Lower(w) == gesucht)
+            return true;
+    return false;
+}
+
 int FindOre(const OrePlan& plan, const std::string& name)
 {
-    auto klein = [](std::string s)
-    {
-        for (char& c : s)
-            if (c >= 'A' && c <= 'Z')
-                c = (char)(c - 'A' + 'a');
-        return s;
-    };
-
-    const std::string gesucht = klein(name);
+    const std::string gesucht = Lower(name);
     for (std::size_t i = 0; i < plan.ores.size(); ++i)
-        if (klein(plan.ores[i].name) == gesucht)
+        if (Lower(plan.ores[i].name) == gesucht)
             return (int)i;
 
     return -1;
@@ -342,10 +359,11 @@ int FindOre(const OrePlan& plan, const std::string& name)
 
 int RollOre(const OrePlan& plan, int level, std::mt19937& rng)
 {
-    // Gewicht = 1 / Seltenheit. Was das Level noch nicht hergibt, faellt raus.
+    // Gewicht = 1 / Seltenheit. Was das Level noch nicht hergibt, faellt raus -
+    // und was gar nicht im Boden vorkommt (Legierungen) sowieso.
     double summe = 0.0;
     for (const Ore& o : plan.ores)
-        if (o.minLevel <= level)
+        if (o.minable && o.minLevel <= level)
             summe += 1.0 / (double)o.rarity;
 
     if (summe <= 0.0)
@@ -355,7 +373,7 @@ int RollOre(const OrePlan& plan, int level, std::mt19937& rng)
 
     for (std::size_t i = 0; i < plan.ores.size(); ++i)
     {
-        if (plan.ores[i].minLevel > level)
+        if (!plan.ores[i].minable || plan.ores[i].minLevel > level)
             continue;
 
         wurf -= 1.0 / (double)plan.ores[i].rarity;

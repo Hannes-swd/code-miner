@@ -1,7 +1,10 @@
 #include "native.h"
 
+#include "alloy.h"
+#include "craft.h"
 #include "instrument.h"
 #include "ore.h"
+#include "skilltree.h"
 #include "world.h"
 
 #include <chrono>
@@ -27,6 +30,9 @@ void place();
 int  sell();
 int  sellSome(const char* erz, int anzahl);
 int  inBag(const char* erz);
+int  craft(const char* schritt, const char* erz, int anzahl);
+int  alloy(const char* name, int anzahl);
+int  canAlloy(const char* name);
 bool exists();
 void out(const char* text);
 
@@ -132,6 +138,64 @@ struct CkBlock
         return ck::inBag(erz.c_str()) >= anzahl;
     }
 
+    // Verarbeiten. Roh verkaufen bringt wenig - verarbeitet ist ein Block
+    // deutlich mehr wert.
+    //
+    //     block.wash("Gold");        alles, was gerade passt
+    //     block.smelt("Gold", 3);    genau drei Stueck
+    //
+    // Rueckgabe: wie viele Stuecke wirklich in Arbeit gegeben wurden.
+    // 0 heisst: ging nicht - falscher Zustand, nichts da, noch nicht
+    // freigeschaltet, oder es laeuft schon ein Auftrag. Es laeuft immer nur
+    // EINER, und er braucht Zeit.
+    //
+    // Was von wo nach wo geht, steht in data/verarbeitung.json - dort ist es
+    // ein Netz und keine feste Kette.
+    int wash(const std::string& erz)   const { return ck::craft("wash", erz.c_str(), -1); }
+    int smelt(const std::string& erz)  const { return ck::craft("smelt", erz.c_str(), -1); }
+    int cast(const std::string& erz)   const { return ck::craft("cast", erz.c_str(), -1); }
+    int clean(const std::string& erz)  const { return ck::craft("clean", erz.c_str(), -1); }
+    int polish(const std::string& erz) const { return ck::craft("polish", erz.c_str(), -1); }
+    int harden(const std::string& erz) const { return ck::craft("harden", erz.c_str(), -1); }
+    int refine(const std::string& erz) const { return ck::craft("refine", erz.c_str(), -1); }
+    int press(const std::string& erz)  const { return ck::craft("press", erz.c_str(), -1); }
+
+    int wash(const std::string& erz, int anzahl)   const { return ck::craft("wash", erz.c_str(), anzahl); }
+    int smelt(const std::string& erz, int anzahl)  const { return ck::craft("smelt", erz.c_str(), anzahl); }
+    int cast(const std::string& erz, int anzahl)   const { return ck::craft("cast", erz.c_str(), anzahl); }
+    int clean(const std::string& erz, int anzahl)  const { return ck::craft("clean", erz.c_str(), anzahl); }
+    int polish(const std::string& erz, int anzahl) const { return ck::craft("polish", erz.c_str(), anzahl); }
+    int harden(const std::string& erz, int anzahl) const { return ck::craft("harden", erz.c_str(), anzahl); }
+    int refine(const std::string& erz, int anzahl) const { return ck::craft("refine", erz.c_str(), anzahl); }
+    int press(const std::string& erz, int anzahl)  const { return ck::craft("press", erz.c_str(), anzahl); }
+
+    // Legieren: aus zwei verschiedenen Erzen wird EIN neuer Stoff, der mehr
+    // wert ist als seine Teile - und der sich danach normal weiterverarbeiten
+    // laesst.
+    //
+    //     block.alloy("Elektrum");       ein Stueck
+    //     block.alloy("Elektrum", 3);    drei Stueck
+    //
+    // Rueckgabe: wie viele Stuecke wirklich in Arbeit gegeben wurden.
+    // 0 heisst: ging nicht - Zutaten fehlen, falscher Zustand, noch nicht
+    // freigeschaltet, oder es laeuft schon ein Auftrag. Legieren benutzt
+    // denselben Platz wie das Verarbeiten: es laeuft immer nur EINER.
+    //
+    // Welche Rezepte es gibt und in welchem Zustand die Zutaten sein muessen,
+    // steht in data/legierungen.json.
+    int alloy(const std::string& stoff) const { return ck::alloy(stoff.c_str(), 1); }
+    int alloy(const std::string& stoff, int anzahl) const
+    {
+        return ck::alloy(stoff.c_str(), anzahl);
+    }
+
+    // Wie viele Stueck koenntest du gerade davon machen? 0 = keins.
+    // Damit kannst du dich VORHER entscheiden:
+    //
+    //     if (block.canAlloy("Elektrum")) block.alloy("Elektrum");
+    //     else                            block.sell("Gold");
+    int canAlloy(const std::string& stoff) const { return ck::canAlloy(stoff.c_str()); }
+
     // Ist der Block gerade da?
     //   true  = da, man kann ihn abbauen
     //   false = weg, er waechst gerade nach
@@ -199,6 +263,40 @@ int sell()
 int sellSome(const char* erz, int anzahl)
 {
     std::printf("K %d %s\n", anzahl, erz ? erz : "");
+    std::fflush(stdout);
+    char buf[64];
+    if (!std::fgets(buf, sizeof(buf), stdin))
+        std::exit(0);
+    return std::atoi(buf);
+}
+
+// Verarbeiten. Das Spiel antwortet, wie viele Stuecke es angenommen hat -
+// deshalb wird hier gewartet.
+int craft(const char* schritt, const char* erz, int anzahl)
+{
+    std::printf("C %s %d %s\n", schritt, anzahl, erz ? erz : "");
+    std::fflush(stdout);
+    char buf[64];
+    if (!std::fgets(buf, sizeof(buf), stdin))
+        std::exit(0);
+    return std::atoi(buf);
+}
+
+// Legieren. Das Spiel antwortet, wie viele Stuecke es angenommen hat.
+int alloy(const char* name, int anzahl)
+{
+    std::printf("G %d %s\n", anzahl, name ? name : "");
+    std::fflush(stdout);
+    char buf[64];
+    if (!std::fgets(buf, sizeof(buf), stdin))
+        std::exit(0);
+    return std::atoi(buf);
+}
+
+// Nur nachfragen: wie viele Stuecke gingen gerade?
+int canAlloy(const char* name)
+{
+    std::printf("P %s\n", name ? name : "");
     std::fflush(stdout);
     char buf[64];
     if (!std::fgets(buf, sizeof(buf), stdin))
@@ -673,7 +771,8 @@ bool Native::launch(const Build& build)
     return true;
 }
 
-void Native::pump(World& world, const OrePlan& ores)
+void Native::pump(World& world, const OrePlan& ores, const CraftPlan& craft,
+                  const AlloyPlan& alloys, const Limits& limits)
 {
     if (mFromChild == nullptr)
         return;
@@ -696,11 +795,12 @@ void Native::pump(World& world, const OrePlan& ores)
         mPending.erase(0, nl + 1);
         while (!entry.empty() && entry.back() == '\r')
             entry.pop_back();
-        handle(entry, world, ores);
+        handle(entry, world, ores, craft, alloys, limits);
     }
 }
 
-void Native::handle(const std::string& msg, World& world, const OrePlan& ores)
+void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
+                    const CraftPlan& craft, const AlloyPlan& alloys, const Limits& limits)
 {
     if (msg.empty())
         return;
@@ -738,17 +838,63 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores)
             const std::string rest = msg.substr(2);
             const std::size_t cut  = rest.find(' ');
             if (cut != std::string::npos)
-                geld = world.sell(ores, rest.substr(cut + 1),
+                geld = world.sell(ores, craft, rest.substr(cut + 1),
                                   std::atoi(rest.substr(0, cut).c_str()));
         }
         else
         {
-            geld = world.sell(ores);
+            geld = world.sell(ores, craft);
         }
 
         sendChild((std::to_string(geld) + "\n").c_str());
         mMsg = (geld > 0) ? ("Verkauft: " + std::to_string(geld) + " Geld.")
                           : std::string("Nichts zu verkaufen.");
+        break;
+    }
+
+    case 'C':  // verarbeiten:  C <schritt> <anzahl> <erz>
+    {
+        int wie = 0;
+
+        // Getrennt wird von vorne: Schritt und Anzahl sind ein Wort, der Rest
+        // ist der Name des Erzes - der darf Leerzeichen haben.
+        const std::string rest = (msg.size() > 2) ? msg.substr(2) : std::string();
+        const std::size_t a    = rest.find(' ');
+        const std::size_t b    = (a != std::string::npos) ? rest.find(' ', a + 1) : a;
+
+        if (b != std::string::npos)
+            wie = world.startCraft(ores, craft, limits, rest.substr(0, a), rest.substr(b + 1),
+                                   std::atoi(rest.c_str() + a + 1));
+
+        sendChild((std::to_string(wie) + "\n").c_str());
+        mMsg = (wie > 0) ? (world.craftName + ": " + std::to_string(wie) + " Stück.")
+                         : std::string("Verarbeiten ging nicht.");
+        break;
+    }
+
+    case 'G':  // legieren:  G <anzahl> <name>
+    {
+        int wie = 0;
+
+        // Wie beim Verarbeiten: die Anzahl ist ein Wort, der Rest ist der Name -
+        // der darf Leerzeichen haben.
+        const std::string rest = (msg.size() > 2) ? msg.substr(2) : std::string();
+        const std::size_t cut  = rest.find(' ');
+
+        if (cut != std::string::npos)
+            wie = world.startAlloy(ores, alloys, limits, rest.substr(cut + 1),
+                                   std::atoi(rest.c_str()), false);
+
+        sendChild((std::to_string(wie) + "\n").c_str());
+        mMsg = (wie > 0) ? ("Legieren: " + std::to_string(wie) + " Stück.")
+                         : std::string("Legieren ging nicht.");
+        break;
+    }
+
+    case 'P':  // block.canAlloy(...) - wie viele gingen gerade?
+    {
+        const std::string name = (msg.size() > 2) ? msg.substr(2) : std::string();
+        sendChild((std::to_string(world.canAlloy(ores, alloys, limits, name)) + "\n").c_str());
         break;
     }
 
@@ -801,7 +947,8 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores)
     }
 }
 
-void Native::update(float dt, World& world, const OrePlan& ores)
+void Native::update(float dt, World& world, const OrePlan& ores, const CraftPlan& craft,
+                    const AlloyPlan& alloys, const Limits& limits)
 {
     if (mPhase == Phase::Compiling)
     {
@@ -843,7 +990,7 @@ void Native::update(float dt, World& world, const OrePlan& ores)
     if (mPhase != Phase::Running && mPhase != Phase::Paused)
         return;
 
-    pump(world, ores);
+    pump(world, ores, craft, alloys, limits);
 
     if (mPhase == Phase::Running)
     {
@@ -865,7 +1012,7 @@ void Native::update(float dt, World& world, const OrePlan& ores)
 
     if (mProcess != nullptr && WaitForSingleObject(mProcess, 0) == WAIT_OBJECT_0)
     {
-        pump(world, ores);
+        pump(world, ores, craft, alloys, limits);
         if (mPhase == Phase::Running || mPhase == Phase::Paused)
         {
             DWORD code = 0;

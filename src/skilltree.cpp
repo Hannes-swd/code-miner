@@ -109,6 +109,15 @@ const char* SkillName(Skill skill)
     case Skill::Variable: return "Variablen";
     case Skill::Class: return "Klassen";
     case Skill::Function: return "Funktionen";
+    case Skill::Wash: return "block.wash()";
+    case Skill::Smelt: return "block.smelt()";
+    case Skill::Cast: return "block.cast()";
+    case Skill::Clean: return "block.clean()";
+    case Skill::Polish: return "block.polish()";
+    case Skill::Harden: return "block.harden()";
+    case Skill::Refine: return "block.refine()";
+    case Skill::Press: return "block.press()";
+    case Skill::Alloy: return "block.alloy()";
     case Skill::ExtraLoop: return "+1 Schleife";
     case Skill::ExtraIf: return "+1 Bedingung";
     case Skill::ExtraConsole: return "+1 Konsole";
@@ -142,6 +151,15 @@ const char* SkillInfo(Skill skill)
     case Skill::Variable: return "Eigene Variablen: int, float, bool, auto ... Erstmal genau eine.";
     case Skill::Class: return "struct und class. Erstmal genau eine.";
     case Skill::Function: return "Eigene Funktionen und Methoden. Erstmal genau eine.";
+    case Skill::Wash: return "block.wash(\"Stein\") - waschen. Der erste Schritt, der einen Block mehr wert macht.";
+    case Skill::Smelt: return "block.smelt(\"Kupfer\") - schmelzen. Kostet Reinheit, bringt aber viel Wert.";
+    case Skill::Cast: return "block.cast(\"Kupfer\") - gießen. Geht nur mit Geschmolzenem.";
+    case Skill::Clean: return "block.clean(\"Stein\") - reinigen. Der große Sprung bei der Reinheit.";
+    case Skill::Polish: return "block.polish(\"Diamant\") - polieren. Braucht etwas Gegossenes, Gereinigtes oder Gehärtetes.";
+    case Skill::Harden: return "block.harden(\"Eisen\") - härten. Aus mehreren Zuständen heraus möglich.";
+    case Skill::Refine: return "block.refine(\"Gold\") - veredeln. Das Wertvollste, was ein einzelnes Erz werden kann.";
+    case Skill::Press: return "block.press(\"Kohle\") - pressen. Schnell und billig, dafür wenig Gewinn.";
+    case Skill::Alloy: return "block.alloy(\"Elektrum\") - zwei Erze zu einem neuen Stoff verschmelzen, der mehr wert ist als beide zusammen. block.canAlloy(\"Elektrum\") sagt vorher, wie viele gingen. Braucht schmelzen.";
     case Skill::ExtraLoop: return "Eine Schleife mehr im Code erlaubt.";
     case Skill::ExtraIf: return "Eine Bedingung mehr im Code erlaubt.";
     case Skill::ExtraConsole: return "Eine Konsole mehr.";
@@ -175,6 +193,15 @@ const char* SkillTag(Skill skill)
     case Skill::Variable: return "x=";
     case Skill::Class: return "{}";
     case Skill::Function: return "f()";
+    case Skill::Wash: return "WA";
+    case Skill::Smelt: return "SM";
+    case Skill::Cast: return "CA";
+    case Skill::Clean: return "CL";
+    case Skill::Polish: return "PO";
+    case Skill::Harden: return "HA";
+    case Skill::Refine: return "RF";
+    case Skill::Press: return "PS";
+    case Skill::Alloy: return "AL";
     case Skill::ExtraLoop: return "+L";
     case Skill::ExtraIf: return "+I";
     case Skill::ExtraConsole: return "+K";
@@ -482,6 +509,16 @@ Limits SkillTree::limits() const
         case Skill::Check: limits.allowCheck = true; break;
         case Skill::Place: limits.allowPlace = true; break;
         case Skill::Shared: limits.allowShared = true; break;
+
+        case Skill::Wash: limits.allowWash = true; break;
+        case Skill::Smelt: limits.allowSmelt = true; break;
+        case Skill::Cast: limits.allowCast = true; break;
+        case Skill::Clean: limits.allowClean = true; break;
+        case Skill::Polish: limits.allowPolish = true; break;
+        case Skill::Harden: limits.allowHarden = true; break;
+        case Skill::Refine: limits.allowRefine = true; break;
+        case Skill::Press: limits.allowPress = true; break;
+        case Skill::Alloy: limits.allowAlloy = true; break;
 
         case Skill::ExtraLoop: ++loops; break;
         case Skill::ExtraIf: ++ifs; break;

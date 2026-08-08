@@ -28,6 +28,22 @@ enum class Skill
     Class,     // struct und class
     Function,  // eigene Funktionen und Methoden
 
+    // Verarbeiten. Ein Punkt je Befehl - welche Schritte damit moeglich sind,
+    // steht in data/verarbeitung.json.
+    Wash,    // block.wash()
+    Smelt,   // block.smelt()
+    Cast,    // block.cast()
+    Clean,   // block.clean()
+    Polish,  // block.polish()
+    Harden,  // block.harden()
+    Refine,  // block.refine()
+    Press,   // block.press()
+
+    // Legieren: zwei Erze werden ein neuer Stoff. block.alloy() und
+    // block.canAlloy() - welche Rezepte es gibt, steht in
+    // data/legierungen.json.
+    Alloy,
+
     // Mehr davon. Diese Punkte tauchen im Baum erst auf, wenn das Passende
     // schon gekauft ist - eine zweite Bedingung ohne "if" waere sinnlos.
     ExtraLoop,

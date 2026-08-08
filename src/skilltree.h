@@ -49,6 +49,19 @@ struct Limits
     bool allowClass    = false;
     bool allowFunction = false;
 
+    // Verarbeiten: ein Schalter je Befehl.
+    bool allowWash   = false;
+    bool allowSmelt  = false;
+    bool allowCast   = false;
+    bool allowClean  = false;
+    bool allowPolish = false;
+    bool allowHarden = false;
+    bool allowRefine = false;
+    bool allowPress  = false;
+
+    // Legieren: block.alloy(...) und block.canAlloy(...).
+    bool allowAlloy = false;
+
     int maxLoops     = 0;
     int maxIfs       = 0;
     int maxConsoles  = 1;

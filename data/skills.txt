@@ -57,6 +57,23 @@
 #   klassen       struct und class, dazu die erste
 #   funktionen    eigene Funktionen und Methoden, dazu die erste
 #
+#   waschen       block.wash("Stein")   - verarbeiten
+#   reinigen      block.clean("Stein")
+#   pressen       block.press("Kohle")
+#   schmelzen     block.smelt("Kupfer")
+#   giessen       block.cast("Kupfer")
+#   härten        block.harden("Eisen")
+#   polieren      block.polish("Diamant")
+#   veredeln      block.refine("Gold")
+#
+#   legieren      block.alloy("Elektrum") und block.canAlloy("Elektrum")
+#                 - zwei Erze zu einem neuen Stoff verschmelzen
+#
+#   Was von welchem Zustand aus geht, steht in data/verarbeitung.json - das
+#   ist ein Netz, keine feste Kette. Der Skilltree sagt nur, welche Schritte
+#   du überhaupt benutzen darfst. Welche Legierungen es gibt, steht in
+#   data/legierungen.json.
+#
 #   schleife+     eine Schleife mehr erlaubt
 #   bedingung+    eine Bedingung mehr erlaubt
 #   variable+     eine Variable mehr erlaubt
@@ -115,6 +132,30 @@ for            11-17    20    einmal 1   braucht while
 funktionen     12-18    20    einmal 1   braucht variablen
 klassen        14-24    22    einmal 1   braucht funktionen
 geteilt        15-24    24    einmal 1
+
+
+# ---- Verarbeiten ------------------------------------------------------
+#
+# Roh verkaufen bringt wenig. Waschen steht mit Absicht auf einem festen
+# Schritt: es kommt damit früh und immer - sonst lohnt sich die Tasche zu
+# lange nicht.
+#
+# Die späteren Schritte bauen aufeinander auf, aber nicht als eine Reihe:
+# gießen braucht schmelzen, härten braucht gießen, veredeln braucht polieren.
+# Alles andere darf in beliebiger Reihenfolge kommen.
+
+waschen         4       10    einmal 2
+schmelzen       6-12    20    einmal 1
+reinigen        8-16    18    einmal 1   braucht waschen
+pressen        10-18    22    einmal 1
+giessen        11-19    26    einmal 1   braucht schmelzen
+polieren       13-21    28    einmal 1
+haerten        15-24    32    einmal 1   braucht giessen
+veredeln       18-30    40    einmal 1   braucht polieren
+
+# Legieren braucht schmelzen: die Zutaten müssen geschmolzen sein, bevor man
+# sie zusammenkippen kann (siehe "von" in data/legierungen.json).
+legieren       14-22    34    einmal 1   braucht schmelzen
 
 
 # ---- mehr davon -------------------------------------------------------

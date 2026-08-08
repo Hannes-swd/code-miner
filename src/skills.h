@@ -4,11 +4,11 @@ struct World;
 struct SkillTree;
 struct Limits;
 
-// Kleine Anzeige auf der Welt-Seite: was du kannst und wie viel davon.
+// Kleine Anzeige auf der Welt-Seite: welche Runde laeuft, und was du kannst.
 //
 // Bewusst nur das, was du HAST - was noch fehlt, steht nirgends. Das soll die
 // Ueberraschung im Baum bleiben.
-void DrawStatus(const Limits& limits, int level);
+void DrawStatus(const Limits& limits, const World& world);
 
 // Die Skilltree-Seite. Wird STATT der Welt gezeigt, nicht daneben.
 //
