@@ -1,0 +1,979 @@
+#include "native.h"
+
+#include "instrument.h"
+#include "ore.h"
+#include "world.h"
+
+#include <chrono>
+#include <cstdlib>
+#include <cstring>
+#include <vector>
+
+namespace
+{
+
+// ---------------------------------------------------------------------------
+// Die Spiel-API, die dem Spielercode zur Verfuegung steht.
+// Wird per /FI erzwungen - dadurch steht KEINE Zeile vor dem Code des
+// Spielers und alle Zeilennummern bleiben unveraendert.
+// ---------------------------------------------------------------------------
+const char* kKlickerHeader = R"KLICKER(#pragma once
+#include <string>
+
+namespace ck {
+void line(int console, int n);
+void mine();
+void place();
+int  sell();
+int  sellSome(const char* erz, int anzahl);
+int  inBag(const char* erz);
+bool exists();
+void out(const char* text);
+
+int  getShared(const char* name);
+void setShared(const char* name, int value);
+void addShared(const char* name, int delta);
+}
+
+// Eine geteilte Variable. Sie liegt nicht in diesem Programm, sondern im Spiel -
+// deshalb sehen ALLE Konsolen denselben Wert.
+//
+//     shared["punkte"] = 10;
+//     shared["punkte"] += 1;
+//     int p = shared["punkte"];
+class CkSharedValue
+{
+public:
+    explicit CkSharedValue(const std::string& name) : mName(name) {}
+
+    operator int() const { return ck::getShared(mName.c_str()); }
+
+    CkSharedValue& operator=(int value)
+    {
+        ck::setShared(mName.c_str(), value);
+        return *this;
+    }
+
+    // Ohne das wuerde  shared["a"] = shared["b"];  nur den Namen kopieren.
+    CkSharedValue& operator=(const CkSharedValue& other)
+    {
+        return *this = (int)other;
+    }
+
+    // += und -= gehen in einem Rutsch zum Spiel. Wichtig, wenn zwei Konsolen
+    // gleichzeitig hochzaehlen - sonst koennte eine die andere ueberschreiben.
+    CkSharedValue& operator+=(int value)
+    {
+        ck::addShared(mName.c_str(), value);
+        return *this;
+    }
+    CkSharedValue& operator-=(int value)
+    {
+        ck::addShared(mName.c_str(), -value);
+        return *this;
+    }
+
+    CkSharedValue& operator++()
+    {
+        ck::addShared(mName.c_str(), 1);
+        return *this;
+    }
+    CkSharedValue& operator--()
+    {
+        ck::addShared(mName.c_str(), -1);
+        return *this;
+    }
+    int operator++(int)
+    {
+        const int before = ck::getShared(mName.c_str());
+        ck::addShared(mName.c_str(), 1);
+        return before;
+    }
+    int operator--(int)
+    {
+        const int before = ck::getShared(mName.c_str());
+        ck::addShared(mName.c_str(), -1);
+        return before;
+    }
+
+private:
+    std::string mName;
+};
+
+struct CkShared
+{
+    CkSharedValue operator[](const std::string& name) const { return CkSharedValue(name); }
+};
+
+static CkShared shared;
+
+struct CkBlock
+{
+    void mine()  const { ck::mine(); }
+    void place() const { ck::place(); }
+
+    // Verkauft alles aus der Tasche und gibt zurueck, wie viel Geld es gab.
+    int sell() const { return ck::sell(); }
+
+    // Nur eine Sorte: block.sell("Stein") verkauft alle Steine,
+    // block.sell("Stein", 3) genau drei davon.
+    int sell(const std::string& erz) const { return ck::sellSome(erz.c_str(), -1); }
+    int sell(const std::string& erz, int anzahl) const
+    {
+        return ck::sellSome(erz.c_str(), anzahl);
+    }
+
+    // In die Tasche schauen, ohne zu verkaufen:
+    //     if (block.has("Stein")) ...        mindestens einer
+    //     if (block.has("Stein", 10)) ...    mindestens zehn
+    bool has(const std::string& erz) const { return ck::inBag(erz.c_str()) > 0; }
+    bool has(const std::string& erz, int anzahl) const
+    {
+        return ck::inBag(erz.c_str()) >= anzahl;
+    }
+
+    // Ist der Block gerade da?
+    //   true  = da, man kann ihn abbauen
+    //   false = weg, er waechst gerade nach
+    bool isThere() const { return ck::exists(); }
+    bool exists()  const { return ck::exists(); }
+
+    // Waechst er gerade nach? Genau das Gegenteil von isThere().
+    bool isLoading() const { return !ck::exists(); }
+    bool isGone()    const { return !ck::exists(); }
+};
+
+static const CkBlock block;
+
+inline void print(const char* text)        { ck::out(text); }
+inline void print(const std::string& text) { ck::out(text.c_str()); }
+inline void print(int value)               { ck::out(std::to_string(value).c_str()); }
+inline void print(double value)            { ck::out(std::to_string(value).c_str()); }
+inline void print(bool value)              { ck::out(value ? "true" : "false"); }
+inline void print(const CkSharedValue& v)  { ck::out(std::to_string((int)v).c_str()); }
+)KLICKER";
+
+const char* kKlickerSource = R"KLICKER(#include <cstdio>
+#include <cstdlib>
+
+namespace ck {
+
+static void waitForGo()
+{
+    char buf[32];
+    if (!std::fgets(buf, sizeof(buf), stdin))
+        std::exit(0);
+}
+
+void line(int console, int n)
+{
+    std::printf("L %d %d\n", console, n);
+    std::fflush(stdout);
+    waitForGo();
+}
+
+void mine()
+{
+    std::printf("M\n");
+    std::fflush(stdout);
+}
+
+void place()
+{
+    std::printf("S\n");
+    std::fflush(stdout);
+}
+
+// Verkaufen. Das Spiel antwortet mit dem Geld - deshalb wird hier gewartet.
+int sell()
+{
+    std::printf("K\n");
+    std::fflush(stdout);
+    char buf[64];
+    if (!std::fgets(buf, sizeof(buf), stdin))
+        std::exit(0);
+    return std::atoi(buf);
+}
+
+// Verkaufen, aber nur eine Sorte. anzahl < 0 heisst: alles davon.
+int sellSome(const char* erz, int anzahl)
+{
+    std::printf("K %d %s\n", anzahl, erz ? erz : "");
+    std::fflush(stdout);
+    char buf[64];
+    if (!std::fgets(buf, sizeof(buf), stdin))
+        std::exit(0);
+    return std::atoi(buf);
+}
+
+// Wie viele davon liegen in der Tasche?
+int inBag(const char* erz)
+{
+    std::printf("I %s\n", erz ? erz : "");
+    std::fflush(stdout);
+    char buf[64];
+    if (!std::fgets(buf, sizeof(buf), stdin))
+        std::exit(0);
+    return std::atoi(buf);
+}
+
+bool exists()
+{
+    std::printf("Q\n");
+    std::fflush(stdout);
+    char buf[32];
+    if (!std::fgets(buf, sizeof(buf), stdin))
+        std::exit(0);
+    return buf[0] == '1';
+}
+
+void out(const char* text)
+{
+    std::printf("O %s\n", text ? text : "");
+    std::fflush(stdout);
+}
+
+int getShared(const char* name)
+{
+    std::printf("V %s\n", name);
+    std::fflush(stdout);
+    char buf[64];
+    if (!std::fgets(buf, sizeof(buf), stdin))
+        std::exit(0);
+    return std::atoi(buf);
+}
+
+void setShared(const char* name, int value)
+{
+    std::printf("W %s %d\n", name, value);
+    std::fflush(stdout);
+}
+
+void addShared(const char* name, int delta)
+{
+    std::printf("A %s %d\n", name, delta);
+    std::fflush(stdout);
+}
+
+}
+
+namespace {
+struct AtEnd
+{
+    ~AtEnd()
+    {
+        std::printf("X\n");
+        std::fflush(stdout);
+    }
+};
+AtEnd g_atEnd;
+}
+)KLICKER";
+
+// ---------------------------------------------------------------------------
+// Visual Studio finden
+// ---------------------------------------------------------------------------
+
+bool FileExists(const std::wstring& p)
+{
+    return GetFileAttributesW(p.c_str()) != INVALID_FILE_ATTRIBUTES;
+}
+
+std::wstring Widen(const std::string& s)
+{
+    if (s.empty())
+        return L"";
+    const int n = MultiByteToWideChar(CP_ACP, 0, s.data(), (int)s.size(), nullptr, 0);
+    std::wstring w(n, L'\0');
+    MultiByteToWideChar(CP_ACP, 0, s.data(), (int)s.size(), w.data(), n);
+    return w;
+}
+
+std::string Trim(const std::string& s)
+{
+    const std::size_t a = s.find_first_not_of(" \t\r\n");
+    if (a == std::string::npos)
+        return "";
+    return s.substr(a, s.find_last_not_of(" \t\r\n") - a + 1);
+}
+
+std::wstring FindVcVars()
+{
+    wchar_t pf[MAX_PATH] = {};
+    if (GetEnvironmentVariableW(L"ProgramFiles(x86)", pf, MAX_PATH) != 0)
+    {
+        const std::wstring vswhere =
+            std::wstring(pf) + L"\\Microsoft Visual Studio\\Installer\\vswhere.exe";
+        if (FileExists(vswhere))
+        {
+            std::string out;
+            if (RunCapture(L"\"" + vswhere + L"\" -latest -products * -property installationPath",
+                           L"", out, nullptr, 15000))
+            {
+                const std::wstring root = Widen(Trim(out));
+                if (!root.empty())
+                {
+                    const std::wstring bat = root + L"\\VC\\Auxiliary\\Build\\vcvars64.bat";
+                    if (FileExists(bat))
+                        return bat;
+                }
+            }
+        }
+    }
+
+    static const wchar_t* kFallback[] = {
+        L"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat",
+        L"C:\\Program Files\\Microsoft Visual Studio\\2022\\Professional\\VC\\Auxiliary\\Build\\vcvars64.bat",
+        L"C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Auxiliary\\Build\\vcvars64.bat",
+    };
+    for (const wchar_t* p : kFallback)
+        if (FileExists(p))
+            return p;
+
+    return L"";
+}
+
+// Die Umgebung, die cl.exe braucht (INCLUDE, LIB, PATH ...). vcvars64.bat
+// einmal aufrufen, das Ergebnis merken - danach ist Kompilieren schnell.
+struct Toolchain
+{
+    std::vector<wchar_t> env;  // doppelt nullterminierter Block
+    std::wstring         clExe;
+    std::string          problem;
+};
+
+const Toolchain& GetToolchain()
+{
+    static Toolchain tc;
+    static bool      done = false;
+    if (done)
+        return tc;
+    done = true;
+
+    const std::wstring vcvars = FindVcVars();
+    if (vcvars.empty())
+    {
+        tc.problem = "Visual Studio 2022 wurde nicht gefunden (vcvars64.bat fehlt).";
+        return tc;
+    }
+
+    std::string out;
+    if (!RunCapture(L"cmd.exe /c \"\"" + vcvars + L"\" >nul 2>&1 && set\"", L"", out, nullptr,
+                    60000))
+    {
+        tc.problem = "vcvars64.bat konnte nicht ausgefuehrt werden.";
+        return tc;
+    }
+
+    std::wstring pathValue;
+    std::size_t  pos = 0;
+    while (pos < out.size())
+    {
+        std::size_t nl = out.find('\n', pos);
+        if (nl == std::string::npos)
+            nl = out.size();
+
+        std::string entry = out.substr(pos, nl - pos);
+        pos               = nl + 1;
+        while (!entry.empty() && (entry.back() == '\r' || entry.back() == '\n'))
+            entry.pop_back();
+
+        const std::size_t eq = entry.find('=');
+        if (eq == std::string::npos || eq == 0)
+            continue;
+
+        const std::wstring wide = Widen(entry);
+        tc.env.insert(tc.env.end(), wide.begin(), wide.end());
+        tc.env.push_back(L'\0');
+
+        if (_strnicmp(entry.c_str(), "PATH=", 5) == 0)
+            pathValue = Widen(entry.substr(5));
+    }
+    tc.env.push_back(L'\0');
+
+    // CreateProcess sucht Programme in der Umgebung des AUFRUFERS, nicht in der
+    // uebergebenen. Deshalb brauchen wir den vollen Pfad zu cl.exe.
+    wchar_t found[MAX_PATH] = {};
+    if (SearchPathW(pathValue.empty() ? nullptr : pathValue.c_str(), L"cl.exe", nullptr, MAX_PATH,
+                    found, nullptr) != 0)
+        tc.clExe = found;
+    else
+        tc.problem = "cl.exe wurde nicht gefunden.";
+
+    return tc;
+}
+
+// Zerlegt "W name wert" bzw. "A name differenz".
+// Getrennt wird am LETZTEN Leerzeichen, damit Namen mit Leerzeichen gehen.
+bool SplitNameValue(const std::string& msg, std::string& name, int& value)
+{
+    if (msg.size() < 3)
+        return false;
+
+    const std::string rest = msg.substr(2);
+    const std::size_t sep  = rest.rfind(' ');
+    if (sep == std::string::npos || sep == 0)
+        return false;
+
+    name  = rest.substr(0, sep);
+    value = std::atoi(rest.c_str() + sep + 1);
+    return true;
+}
+
+// Aus der Ausgabe von cl.exe die erste Fehlermeldung holen - samt der Konsole
+// und der Zeile, in der sie steht.
+//
+// Moeglich ist das durch die #line-Anweisungen: der Compiler meldet Fehler
+// dadurch als  konsole2(7,5): error ...  statt als Zeile in der
+// zusammengesetzten Datei.
+void ParseCompilerError(const std::string& out, std::string& message, int& console, int& line)
+{
+    std::size_t pos = 0;
+    while (pos < out.size())
+    {
+        std::size_t nl = out.find('\n', pos);
+        if (nl == std::string::npos)
+            nl = out.size();
+
+        const std::string entry = Trim(out.substr(pos, nl - pos));
+        pos                     = nl + 1;
+
+        if (entry.find(": error") == std::string::npos &&
+            entry.find(": fatal error") == std::string::npos)
+            continue;
+
+        const std::size_t open = entry.find("konsole");
+        if (open != std::string::npos)
+        {
+            console = std::atoi(entry.c_str() + open + 7);
+
+            const std::size_t paren = entry.find('(', open);
+            if (paren != std::string::npos)
+                line = std::atoi(entry.c_str() + paren + 1);
+
+            const std::size_t close = entry.find("): ", open);
+            message = (close != std::string::npos) ? entry.substr(close + 3) : entry;
+        }
+        else
+        {
+            message = entry;
+        }
+        return;
+    }
+
+    message = out.empty() ? "Kompilieren fehlgeschlagen." : Trim(out);
+    if (message.size() > 300)
+        message = message.substr(0, 300) + " ...";
+}
+
+// Setzt alle Konsolen zu einer einzigen .cpp zusammen.
+//
+// Reihenfolge: erst die Konsolen OHNE main(), dann die mit. In C++ muss eine
+// Variable vor ihrer Benutzung stehen - so sieht die Konsole mit main()
+// automatisch alles aus den anderen.
+//
+// Vor jedes Stueck kommt ein  #line 1 "konsoleN"  - dadurch meldet der Compiler
+// Fehler mit der richtigen Konsole und der richtigen Zeilennummer.
+std::string CombineSources(const std::vector<SourceFile>& files)
+{
+    std::string out;
+
+    auto append = [&out](const SourceFile& f)
+    {
+        out += "#line 1 \"konsole";
+        out += std::to_string(f.id);
+        out += "\"\n";
+        out += Instrument(f.code, f.id);
+        if (!out.empty() && out.back() != '\n')
+            out += '\n';
+    };
+
+    for (const SourceFile& f : files)
+        if (!ContainsMainFunction(f.code))
+            append(f);
+
+    for (const SourceFile& f : files)
+        if (ContainsMainFunction(f.code))
+            append(f);
+
+    return out;
+}
+
+}  // namespace
+
+// ---------------------------------------------------------------------------
+// Uebersetzen (laeuft auf einem eigenen Thread, damit das Fenster fluessig bleibt)
+// ---------------------------------------------------------------------------
+
+static Native::Build CompileToExe(const std::vector<SourceFile>& files, int runId,
+                                  const std::string& lastCombined, const std::wstring& lastExe,
+                                  const std::wstring& lastDir);
+
+Native::~Native()
+{
+    stop();
+    if (mBuild.valid())
+        mBuild.wait();
+}
+
+void Native::start(const std::vector<SourceFile>& files)
+{
+    stop();
+
+    mConsole    = 0;
+    mLine       = 0;
+    mErrConsole = 0;
+    mErrLine    = 0;
+    mBudget     = 0.0f;
+    mAwaitingGo = false;
+    mPending.clear();
+    mMsg   = "kompiliert ...";
+    mPhase = Phase::Compiling;
+
+    static int counter = 0;
+    const int  id      = ++counter;
+
+    const std::string  lastCombined = mLastCombined;
+    const std::wstring lastExe      = mLastExe;
+    const std::wstring lastDir      = mLastDir;
+
+    mBuild = std::async(std::launch::async, [files, id, lastCombined, lastExe, lastDir]
+                        { return CompileToExe(files, id, lastCombined, lastExe, lastDir); });
+}
+
+void Native::fail(const std::string& message, int console, int line)
+{
+    stop();
+    mPhase      = Phase::Failed;
+    mMsg        = message;
+    mErrConsole = console;
+    mErrLine    = line;
+    mConsole    = 0;
+    mLine       = 0;
+}
+
+void Native::togglePause()
+{
+    if (mPhase == Phase::Running)
+        mPhase = Phase::Paused;
+    else if (mPhase == Phase::Paused)
+        mPhase = Phase::Running;
+}
+
+void Native::stop()
+{
+    closeChild();
+    if (mPhase == Phase::Running || mPhase == Phase::Paused || mPhase == Phase::Compiling)
+        mPhase = Phase::Idle;
+    mConsole    = 0;
+    mLine       = 0;
+    mAwaitingGo = false;
+    mPending.clear();
+}
+
+RunState Native::state() const
+{
+    switch (mPhase)
+    {
+    case Phase::Compiling:
+    case Phase::Running: return RunState::Running;
+    case Phase::Paused: return RunState::Paused;
+    case Phase::Done: return RunState::Done;
+    case Phase::Failed: return RunState::Failed;
+    default: return RunState::Idle;
+    }
+}
+
+void Native::closeChild()
+{
+    if (mProcess != nullptr)
+    {
+        if (WaitForSingleObject(mProcess, 0) != WAIT_OBJECT_0)
+            TerminateProcess(mProcess, 1);
+        CloseHandle(mProcess);
+        mProcess = nullptr;
+    }
+    if (mFromChild != nullptr)
+    {
+        CloseHandle(mFromChild);
+        mFromChild = nullptr;
+    }
+    if (mToChild != nullptr)
+    {
+        CloseHandle(mToChild);
+        mToChild = nullptr;
+    }
+}
+
+void Native::finish(const char* reason)
+{
+    mPhase      = Phase::Done;
+    mConsole    = 0;
+    mLine       = 0;
+    mAwaitingGo = false;
+    if (mMsg.empty() || mMsg == "läuft" || mMsg == "kompiliert ...")
+        mMsg = reason;
+    closeChild();
+}
+
+void Native::sendChild(const char* text)
+{
+    if (mToChild == nullptr)
+        return;
+    DWORD written = 0;
+    WriteFile(mToChild, text, (DWORD)std::strlen(text), &written, nullptr);
+}
+
+bool Native::launch(const Build& build)
+{
+    SECURITY_ATTRIBUTES sa{sizeof(sa), nullptr, TRUE};
+
+    HANDLE outRead = nullptr, outWrite = nullptr;
+    HANDLE inRead = nullptr, inWrite = nullptr;
+
+    if (!CreatePipe(&outRead, &outWrite, &sa, 0))
+        return false;
+    if (!CreatePipe(&inRead, &inWrite, &sa, 0))
+    {
+        CloseHandle(outRead);
+        CloseHandle(outWrite);
+        return false;
+    }
+    SetHandleInformation(outRead, HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(inWrite, HANDLE_FLAG_INHERIT, 0);
+
+    STARTUPINFOW si{};
+    si.cb         = sizeof(si);
+    si.dwFlags    = STARTF_USESTDHANDLES;
+    si.hStdOutput = outWrite;
+    si.hStdError  = outWrite;
+    si.hStdInput  = inRead;
+
+    std::wstring cmd = L"\"" + build.exe + L"\"";
+    cmd.push_back(L'\0');
+
+    PROCESS_INFORMATION pi{};
+    const BOOL          ok = CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, TRUE,
+                                            CREATE_NO_WINDOW, nullptr, build.dir.c_str(), &si, &pi);
+
+    CloseHandle(outWrite);
+    CloseHandle(inRead);
+
+    if (!ok)
+    {
+        CloseHandle(outRead);
+        CloseHandle(inWrite);
+        return false;
+    }
+
+    CloseHandle(pi.hThread);
+    mProcess   = pi.hProcess;
+    mFromChild = outRead;
+    mToChild   = inWrite;
+    return true;
+}
+
+void Native::pump(World& world, const OrePlan& ores)
+{
+    if (mFromChild == nullptr)
+        return;
+
+    DWORD available = 0;
+    while (PeekNamedPipe(mFromChild, nullptr, 0, nullptr, &available, nullptr) && available > 0)
+    {
+        char        buf[2048];
+        const DWORD want = (available < sizeof(buf)) ? available : (DWORD)sizeof(buf);
+        DWORD       got  = 0;
+        if (!ReadFile(mFromChild, buf, want, &got, nullptr) || got == 0)
+            break;
+        mPending.append(buf, got);
+    }
+
+    std::size_t nl;
+    while ((nl = mPending.find('\n')) != std::string::npos)
+    {
+        std::string entry = mPending.substr(0, nl);
+        mPending.erase(0, nl + 1);
+        while (!entry.empty() && entry.back() == '\r')
+            entry.pop_back();
+        handle(entry, world, ores);
+    }
+}
+
+void Native::handle(const std::string& msg, World& world, const OrePlan& ores)
+{
+    if (msg.empty())
+        return;
+
+    switch (msg[0])
+    {
+    case 'L':  // "L konsole zeile"
+    {
+        const char* p = msg.c_str() + 1;
+        mConsole      = std::atoi(p);
+        const std::size_t sep = msg.rfind(' ');
+        mLine         = (sep != std::string::npos) ? std::atoi(msg.c_str() + sep + 1) : 0;
+        mAwaitingGo   = true;
+        break;
+    }
+
+    case 'M':
+        mMsg = world.mine() ? "Block abgebaut." : "Der Block ist schon abgebaut.";
+        break;
+
+    case 'S':
+        mMsg = world.place() ? "Block hingesetzt." : "Der Block steht schon da.";
+        break;
+
+    case 'Q':
+        sendChild(world.blockAlive ? "1\n" : "0\n");
+        break;
+
+    case 'K':  // verkaufen. Ohne Zusatz alles, sonst "K <anzahl> <erz>"
+    {
+        int geld = 0;
+
+        if (msg.size() > 2)
+        {
+            const std::string rest = msg.substr(2);
+            const std::size_t cut  = rest.find(' ');
+            if (cut != std::string::npos)
+                geld = world.sell(ores, rest.substr(cut + 1),
+                                  std::atoi(rest.substr(0, cut).c_str()));
+        }
+        else
+        {
+            geld = world.sell(ores);
+        }
+
+        sendChild((std::to_string(geld) + "\n").c_str());
+        mMsg = (geld > 0) ? ("Verkauft: " + std::to_string(geld) + " Geld.")
+                          : std::string("Nichts zu verkaufen.");
+        break;
+    }
+
+    case 'I':  // block.has(...) - in die Tasche schauen
+    {
+        const std::string erz = (msg.size() > 2) ? msg.substr(2) : std::string();
+        sendChild((std::to_string(world.inventoryOf(ores, erz)) + "\n").c_str());
+        break;
+    }
+
+    case 'O':
+        mMsg = (msg.size() > 2) ? msg.substr(2) : std::string();
+        break;
+
+    // Geteilte Variablen. Sie liegen im Spiel, deshalb sehen alle Konsolen
+    // denselben Wert.
+    case 'V':  // lesen  -> Wert zurueckschicken
+    {
+        const std::string name = msg.substr(2);
+        const auto        it   = world.shared.find(name);
+        const int         value = (it != world.shared.end()) ? it->second : 0;
+        sendChild((std::to_string(value) + "\n").c_str());
+        break;
+    }
+
+    case 'W':  // schreiben:  W name wert
+    {
+        std::string name;
+        int         value = 0;
+        if (SplitNameValue(msg, name, value))
+            world.shared[name] = value;
+        break;
+    }
+
+    case 'A':  // dazuzaehlen:  A name differenz
+    {
+        std::string name;
+        int         delta = 0;
+        if (SplitNameValue(msg, name, delta))
+            world.shared[name] += delta;
+        break;
+    }
+
+    case 'X':
+        finish("Fertig.");
+        break;
+
+    default:
+        break;
+    }
+}
+
+void Native::update(float dt, World& world, const OrePlan& ores)
+{
+    if (mPhase == Phase::Compiling)
+    {
+        if (!mBuild.valid())
+        {
+            mPhase = Phase::Idle;
+            return;
+        }
+        if (mBuild.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+            return;
+
+        const Build build = mBuild.get();
+        if (!build.ok)
+        {
+            mPhase      = Phase::Failed;
+            mErrConsole = build.errorConsole;
+            mErrLine    = build.errorLine;
+            mMsg        = build.error;
+            mConsole    = 0;
+            mLine       = 0;
+            return;
+        }
+        if (!launch(build))
+        {
+            mPhase = Phase::Failed;
+            mMsg   = "run.exe konnte nicht gestartet werden.";
+            return;
+        }
+        mLastCombined = build.combined;
+        mLastExe      = build.exe;
+        mLastDir      = build.dir;
+
+        mPhase  = Phase::Running;
+        mMsg    = "läuft";
+        mBudget = 1.0f;  // die erste Zeile sofort freigeben
+        return;
+    }
+
+    if (mPhase != Phase::Running && mPhase != Phase::Paused)
+        return;
+
+    pump(world, ores);
+
+    if (mPhase == Phase::Running)
+    {
+        mBudget += dt * mLinesPerSecond;
+
+        // Hoechstens eine Zeile auf Vorrat. Sonst spart das Spiel waehrend
+        // einer Pause oder beim Kompilieren Zeilen an und feuert sie danach
+        // auf einen Schlag ab - das sieht aus, als holte es etwas nach.
+        if (mBudget > 1.0f)
+            mBudget = 1.0f;
+
+        if (mAwaitingGo && mBudget >= 1.0f)
+        {
+            mBudget -= 1.0f;
+            mAwaitingGo = false;
+            sendChild("g\n");
+        }
+    }
+
+    if (mProcess != nullptr && WaitForSingleObject(mProcess, 0) == WAIT_OBJECT_0)
+    {
+        pump(world, ores);
+        if (mPhase == Phase::Running || mPhase == Phase::Paused)
+        {
+            DWORD code = 0;
+            GetExitCodeProcess(mProcess, &code);
+            if (code == 0)
+            {
+                finish("Fertig.");
+            }
+            else
+            {
+                mPhase   = Phase::Failed;
+                mConsole = 0;
+                mLine    = 0;
+                mMsg = "Das Programm ist abgestürzt (Code " + std::to_string((int)code) + ").";
+                closeChild();
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+static Native::Build CompileToExe(const std::vector<SourceFile>& files, int runId,
+                                  const std::string& lastCombined, const std::wstring& lastExe,
+                                  const std::wstring& lastDir)
+{
+    Native::Build build;
+
+    // Erst pruefen, ob es ueberhaupt ein Programm gibt. Ohne diese Pruefung
+    // kaeme nur eine kryptische Linker-Meldung.
+    std::vector<int> withMain;
+    for (const SourceFile& f : files)
+        if (ContainsMainFunction(f.code))
+            withMain.push_back(f.id);
+
+    if (withMain.empty())
+    {
+        build.error = "Keine Konsole hat ein  int main() { ... }  - dort startet das Programm.";
+        return build;
+    }
+    if (withMain.size() > 1)
+    {
+        build.error = "Konsole " + std::to_string(withMain[0]) + " und Konsole " +
+                      std::to_string(withMain[1]) +
+                      " haben beide ein main(). Es darf nur eines geben.";
+        build.errorConsole = withMain[1];
+        return build;
+    }
+
+    // Hat sich seit dem letzten Mal nichts geaendert? Dann die fertige
+    // run.exe einfach noch einmal starten. Beim Klicken am Spielanfang ist
+    // genau das der Normalfall.
+    build.combined = CombineSources(files);
+
+    if (!lastExe.empty() && build.combined == lastCombined &&
+        GetFileAttributesW(lastExe.c_str()) != INVALID_FILE_ATTRIBUTES)
+    {
+        build.ok     = true;
+        build.reused = true;
+        build.exe    = lastExe;
+        build.dir    = lastDir;
+        return build;
+    }
+
+    const std::wstring base = WorkDir();
+    if (base.empty())
+    {
+        build.error = "Kein Temp-Ordner verfuegbar.";
+        return build;
+    }
+
+    const std::wstring dir = base + L"r" + std::to_wstring(runId) + L"\\";
+    CreateDirectoryW(dir.c_str(), nullptr);
+    build.dir = dir;
+
+    const std::wstring headerPath = dir + L"klicker.h";
+
+    if (!WriteTextFile(headerPath, kKlickerHeader) ||
+        !WriteTextFile(dir + L"klicker.cpp", kKlickerSource) ||
+        !WriteTextFile(dir + L"run.cpp", build.combined))
+    {
+        build.error = "Dateien konnten nicht geschrieben werden.";
+        return build;
+    }
+
+    const Toolchain& tc = GetToolchain();
+    if (tc.clExe.empty())
+    {
+        build.error = tc.problem.empty() ? "Der C++-Compiler wurde nicht gefunden." : tc.problem;
+        return build;
+    }
+
+    // /utf-8: damit Umlaute in print("...") richtig ankommen - der Editor
+    // liefert UTF-8, und ImGui erwartet ebenfalls UTF-8.
+    const std::wstring cmd = L"\"" + tc.clExe +
+                             L"\" /nologo /EHsc /std:c++17 /W1 /utf-8 /FI\"" + headerPath +
+                             L"\" /Fe\"run.exe\" run.cpp klicker.cpp";
+
+    std::string out;
+    const bool  ok = RunCapture(cmd, dir, out, tc.env.data(), 60000);
+
+    if (!ok)
+    {
+        ParseCompilerError(out, build.error, build.errorConsole, build.errorLine);
+        return build;
+    }
+
+    build.ok  = true;
+    build.exe = dir + L"run.exe";
+    return build;
+}

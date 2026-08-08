@@ -1,0 +1,97 @@
+
+{
+  "level": { "art": "bloecke", "pro_level": 20 },
+
+  "erze": [
+    {
+      "name": "Stein",
+      "seltenheit": 1,
+      "abbaudauer": 0.5,
+      "ab_level": 1,
+      "wert": 1,
+      "farbe1": "#8A909C",
+      "farbe2": "#4A4F59",
+      "muster": 5
+    },
+    {
+      "name": "Kohle",
+      "seltenheit": 4,
+      "abbaudauer": 0.7,
+      "ab_level": 1,
+      "wert": 3,
+      "farbe1": "#4C5058",
+      "farbe2": "#15171B",
+      "muster": 7
+    },
+    {
+      "name": "Granit",
+      "seltenheit": 6,
+      "abbaudauer": 0.9,
+      "ab_level": 2,
+      "wert": 5,
+      "farbe1": "#C98F86",
+      "farbe2": "#5E4744",
+      "muster": 9
+    },
+    {
+      "name": "Kupfer",
+      "seltenheit": 9,
+      "abbaudauer": 1.0,
+      "ab_level": 2,
+      "wert": 8,
+      "farbe1": "#E08A4E",
+      "farbe2": "#5C3A26",
+      "muster": 6
+    },
+    {
+      "name": "Eisen",
+      "seltenheit": 14,
+      "abbaudauer": 1.3,
+      "ab_level": 3,
+      "wert": 14,
+      "farbe1": "#DCD6CC",
+      "farbe2": "#6B6259",
+      "muster": 5
+    },
+    {
+      "name": "Silber",
+      "seltenheit": 24,
+      "abbaudauer": 1.7,
+      "ab_level": 5,
+      "wert": 30,
+      "farbe1": "#EFF3F8",
+      "farbe2": "#7C8490",
+      "muster": 4
+    },
+    {
+      "name": "Gold",
+      "seltenheit": 40,
+      "abbaudauer": 2.2,
+      "ab_level": 7,
+      "wert": 70,
+      "farbe1": "#F5C542",
+      "farbe2": "#6B5320",
+      "muster": 4
+    },
+    {
+      "name": "Smaragd",
+      "seltenheit": 80,
+      "abbaudauer": 2.8,
+      "ab_level": 10,
+      "wert": 160,
+      "farbe1": "#4BE38C",
+      "farbe2": "#1B4A33",
+      "muster": 3
+    },
+    {
+      "name": "Diamant",
+      "seltenheit": 150,
+      "abbaudauer": 3.5,
+      "ab_level": 13,
+      "wert": 400,
+      "farbe1": "#8EE8FF",
+      "farbe2": "#26505E",
+      "muster": 3
+    }
+  ]
+}

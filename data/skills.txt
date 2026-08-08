@@ -1,0 +1,134 @@
+# Was wird wann freigeschaltet.
+# ==============================
+#
+# Diese Datei bestimmt den ganzen Skilltree. Das Spiel liest sie beim Start.
+# Ändern, Spiel neu starten - fertig. Neu bauen musst du dafür nicht.
+#
+# Der Baum wird NICHT vorher gewürfelt. Du siehst immer nur einen Schritt
+# weiter. Erst wenn du etwas kaufst, wird gewürfelt, was dahinter kommt - aus
+# allem, was zu diesem Schritt passt UND was du schon hast.
+#
+#
+# EINE ZEILE PRO PUNKT
+#
+#     schlüssel     schritt   preis   wie oft      [braucht ...]
+#
+#   schlüssel   was der Punkt freischaltet. Die Liste steht unten.
+#   schritt     ab wann bis wann er auftauchen darf.
+#               "4" heißt genau Schritt 4, "3-8" heißt irgendwo dazwischen.
+#   preis       Grundpreis in Schritt 1. Weiter draußen wird alles teurer,
+#               siehe "steigerung". Der Grundpreis macht nur noch den
+#               Unterschied INNERHALB eines Schrittes aus.
+#   wie oft     "einmal"  = gibt es im ganzen Baum nur ein einziges Mal.
+#                           Dahinter darf eine Zahl stehen: wie stark der
+#                           Punkt gezogen wird (ohne Zahl: 2).
+#               "oft N"   = darf immer wieder kommen, N ist das Gewicht.
+#                           Je größer N, desto öfter.
+#   braucht X   der Punkt taucht erst auf, wenn X GEKAUFT ist.
+#               Damit gibt es "+1 Bedingung" erst, wenn du "if" hast.
+#
+# Alles hinter einem # ist Kommentar, leere Zeilen sind egal.
+# Umlaute darfst du weglassen: "pruefen" geht genauso wie "prüfen".
+#
+# WICHTIG: Schritt heißt Tiefe im Baum. Ein Punkt in Schritt 5 hängt hinter
+# vier anderen - früher als beim 5. Kauf kannst du ihn also nie haben.
+#
+# Bei "einmal" wird die Chance nach hinten raus immer größer: am Anfang
+# seines Bereichs ist der Punkt selten, am Ende fast sicher. Und läuft der
+# Bereich ganz ab, wird er beim letzten Schritt erzwungen. Verlieren kannst
+# du also nichts.
+#
+#
+# DIE SCHLÜSSEL
+#
+#   while         while und do, dazu die erste Schleife
+#   for           for, dazu eine weitere Schleife
+#   if            if, dazu die erste Bedingung
+#   else          else
+#   print         print(...)
+#   prüfen        block.isThere(), isLoading(), exists(), isGone()
+#   platzieren    block.place()
+#   geteilt       shared["name"] - übersteht einen Neustart
+#   verkaufen     block.sell() - die Tasche zu Geld machen
+#   tasche        block.has("Stein") - nachschauen, was in der Tasche ist
+#   variablen     eigene Variablen (int, float, ...), dazu die erste
+#   klassen       struct und class, dazu die erste
+#   funktionen    eigene Funktionen und Methoden, dazu die erste
+#
+#   schleife+     eine Schleife mehr erlaubt
+#   bedingung+    eine Bedingung mehr erlaubt
+#   variable+     eine Variable mehr erlaubt
+#   klasse+       eine Klasse mehr erlaubt
+#   funktion+     eine Funktion mehr erlaubt
+#   konsole+      eine Konsole mehr
+#
+#   tempo         +0,5 Zeilen pro Sekunde
+#   geld          +1 Geld pro Block
+#   nachwachsen   der Block wächst 8% schneller nach
+
+
+# So viele Schritte hat der Baum. Danach ist Schluss.
+schritte    20
+
+# Je weiter weg, desto teurer: jeder Schritt kostet das 1,5-fache.
+# Deshalb macht man erst alles in der Nähe und arbeitet sich dann nach außen.
+steigerung  1.5
+
+# So viele neue Punkte macht ein Kauf auf (kleinste und größte Zahl).
+kinder      1 3
+
+# So viele Punkte stehen höchstens gleichzeitig offen. Sind schon so viele
+# offen, macht ein Kauf nur noch genau einen neuen auf.
+offen       10
+
+# Mindestabstand zwischen zwei "einmal"-Punkten, in Schritten.
+# Damit schaltest du erst eine Sache frei, spielst ein Stück weiter, und
+# erst dann kommt die nächste - statt drei Stück direkt hintereinander.
+abstand     3
+
+
+# ---- die Sprache ------------------------------------------------------
+#
+# Alles hier gibt es genau EINMAL. Wenn du es freischaltest, bekommst du
+# genau eine Verwendung dazu - mehr nur über die Erweiterungen unten.
+#
+# Die Bereiche dürfen sich überschneiden - der Abstand oben sorgt dafür,
+# dass trotzdem Luft dazwischen bleibt.
+
+verkaufen       1        6    einmal 1
+while           2        8    einmal 1
+if              4-9     18    einmal 1
+variablen       5-10    16    einmal 1
+print           6-12    12    einmal 1
+prüfen          7-13    14    einmal 1
+platzieren      8-14    14    einmal 1
+tasche          6-12    16    einmal 1   braucht if
+else            9-15    18    einmal 1   braucht if
+for            10-16    20    einmal 1   braucht while
+funktionen     11-17    20    einmal 1   braucht variablen
+klassen        13-19    22    einmal 1   braucht funktionen
+geteilt        14-20    24    einmal 1
+
+
+# ---- mehr davon -------------------------------------------------------
+#
+# Diese Punkte tauchen erst auf, wenn das Passende schon gekauft ist.
+
+schleife+       3-20    16    oft 2    braucht while
+bedingung+      5-20    16    oft 2    braucht if
+variable+       7-20    12    oft 2    braucht variablen
+funktion+      13-20    16    oft 2    braucht funktionen
+klasse+        15-20    18    oft 2    braucht klassen
+
+# Eine weitere Konsole ist ein großer Schritt - deshalb selten.
+konsole+        6-20    22    oft 1
+
+
+# ---- Werte ------------------------------------------------------------
+#
+# Das Brot-und-Butter-Zeug. Hohe Gewichte: davon soll das meiste kommen,
+# damit überhaupt Geld reinkommt.
+
+tempo           2-20    10    oft 7
+geld            2-20    12    oft 7
+nachwachsen     2-20    10    oft 5
