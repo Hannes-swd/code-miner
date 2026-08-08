@@ -15,7 +15,8 @@
 #
 #   schlüssel   was der Punkt freischaltet. Die Liste steht unten.
 #   schritt     ab wann bis wann er auftauchen darf.
-#               "4" heißt genau Schritt 4, "3-8" heißt irgendwo dazwischen.
+#               "4" heißt genau Schritt 4, "3-8" heißt irgendwo dazwischen,
+#               "3-" heißt ab Schritt 3 ohne Ende.
 #   preis       Grundpreis in Schritt 1. Weiter draußen wird alles teurer,
 #               siehe "steigerung". Der Grundpreis macht nur noch den
 #               Unterschied INNERHALB eines Schrittes aus.
@@ -68,8 +69,8 @@
 #   nachwachsen   der Block wächst 8% schneller nach
 
 
-# So viele Schritte hat der Baum. Danach ist Schluss.
-schritte    20
+# So viele Schritte hat der Baum. 0 = kein Ende, er waechst immer weiter.
+schritte    0
 
 # Je weiter weg, desto teurer: jeder Schritt kostet das 1,5-fache.
 # Deshalb macht man erst alles in der Nähe und arbeitet sich dann nach außen.
@@ -82,10 +83,14 @@ kinder      1 3
 # offen, macht ein Kauf nur noch genau einen neuen auf.
 offen       10
 
-# Mindestabstand zwischen zwei "einmal"-Punkten, in Schritten.
-# Damit schaltest du erst eine Sache frei, spielst ein Stück weiter, und
-# erst dann kommt die nächste - statt drei Stück direkt hintereinander.
-abstand     3
+# Mindestabstand zwischen zwei "einmal"-Punkten, gezählt in Punkten.
+# So viele andere Punkte müssen dazwischen liegen. Damit schaltest du erst
+# eine Sache frei, spielst ein Stück weiter, und erst dann kommt die nächste -
+# statt drei Stück direkt hintereinander.
+#
+# Punkte mit festem Schritt (z.B. "abbauen 1") halten sich nicht daran: die
+# liegen genau dort, wo sie sollen.
+abstand     6
 
 
 # ---- die Sprache ------------------------------------------------------
@@ -108,22 +113,22 @@ platzieren      9-15    14    einmal 1
 else           10-16    18    einmal 1   braucht if
 for            11-17    20    einmal 1   braucht while
 funktionen     12-18    20    einmal 1   braucht variablen
-klassen        14-20    22    einmal 1   braucht funktionen
-geteilt        15-20    24    einmal 1
+klassen        14-24    22    einmal 1   braucht funktionen
+geteilt        15-24    24    einmal 1
 
 
 # ---- mehr davon -------------------------------------------------------
 #
 # Diese Punkte tauchen erst auf, wenn das Passende schon gekauft ist.
 
-schleife+       4-20    16    oft 2    braucht while
-bedingung+      6-20    16    oft 2    braucht if
-variable+       8-20    12    oft 2    braucht variablen
-funktion+      14-20    16    oft 2    braucht funktionen
-klasse+        16-20    18    oft 2    braucht klassen
+schleife+       4-      16    oft 2    braucht while
+bedingung+      6-      16    oft 2    braucht if
+variable+       8-      12    oft 2    braucht variablen
+funktion+      14-      16    oft 2    braucht funktionen
+klasse+        16-      18    oft 2    braucht klassen
 
 # Eine weitere Konsole ist ein großer Schritt - deshalb selten.
-konsole+        7-20    22    oft 1
+konsole+        7-      22    oft 1
 
 
 # ---- Werte ------------------------------------------------------------
@@ -131,6 +136,6 @@ konsole+        7-20    22    oft 1
 # Das Brot-und-Butter-Zeug. Hohe Gewichte: davon soll das meiste kommen,
 # damit überhaupt Geld reinkommt.
 
-tempo           2-20    10    oft 7
-geld            2-20    12    oft 7
-nachwachsen     2-20    10    oft 5
+tempo           2-      10    oft 7
+geld            2-      12    oft 7
+nachwachsen     2-      10    oft 5

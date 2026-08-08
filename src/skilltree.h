@@ -97,7 +97,11 @@ struct SkillTree
     std::set<std::pair<int, int>> taken;     // belegte Rasterzellen
     std::vector<int>              branches;  // wie viele Kinder ein Knoten hat
     std::vector<bool>             usedOnce;  // welche "einmal"-Zeile schon liegt
-    int lastOnceStep = -1000;                // wo zuletzt ein einmaliger Punkt lag
+
+    // Wie viele Punkte seit dem letzten einmaligen entstanden sind. Der
+    // Abstand wird in Punkten gezaehlt und nicht in Schritten: der Baum
+    // waechst ja nicht der Reihe nach, sondern dort, wo man gerade kauft.
+    int sinceOnce = 1000;
 
     void grow(int id);  // legt die Kinder eines gekauften Knotens an
 

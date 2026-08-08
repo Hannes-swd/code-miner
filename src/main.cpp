@@ -272,8 +272,19 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplDX11_Init(g_device, g_context);
 
-    // Zum Testen gibt es Startgeld. Beim Zuruecksetzen kommt genau das wieder.
-    const int kStartGeld = 100000;  // fuer das fertige Spiel auf 0
+    // ---- Testschalter ----------------------------------------------------
+    //
+    // Solange das hier an ist, wird das Geld in jedem Bild wieder aufgefuellt:
+    // kaufen kostet damit nichts. Fuer das fertige Spiel auf false.
+    //
+    // Achtung: Geld ist ein int, mehr als rund 2 Milliarden passen da nicht
+    // rein. Eine groessere Zahl laeuft ueber und wird negativ - deshalb die
+    // Milliarde und nicht mehr.
+    const bool kUnendlichGeld = true;
+    const int  kVielGeld      = 2000000000;  // knapp unter der int-Grenze
+
+    // Startgeld. Beim Zuruecksetzen kommt genau das wieder.
+    const int kStartGeld = kUnendlichGeld ? kVielGeld : 100000;
 
     // Welche Erze es gibt, steht in data/erze.json.
     const OrePlan ores = LoadOrePlan();
@@ -405,6 +416,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
             }
         }
 
+        // Testschalter: Geld laeuft nie aus.
+        if (kUnendlichGeld)
+            world.money = kVielGeld;
+
         // Zeit vergeht auf jeder Seite: der Block waechst auch nach, waehrend
         // man im Skilltree ist.
         world.update(dt, ores);
@@ -522,6 +537,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
         {
             if (DrawSkillPage(world, tree))
                 resetAll();
+
+            // Dieselbe Ecke wie auf der Welt-Seite: was man schon hat. Beim
+            // Kaufen will man ja sehen, was man damit ueberhaupt schon kann.
+            DrawStatus(limits, world.level);
         }
 
         // Geschlossene Konsolen entfernen

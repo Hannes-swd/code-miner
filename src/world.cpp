@@ -53,6 +53,19 @@ ImU32 Mix(const Color& a, const Color& b, float t, int alpha)
     return IM_COL32(r, g, bl, alpha);
 }
 
+// Was auf der Taschen-Seite gerade in den Zaehlern steht. Beim Betreten wird
+// alles auf die volle Anzahl gesetzt - dann ist ein Klick auf "Verkaufen"
+// dasselbe wie "alles davon verkaufen".
+struct SellUi
+{
+    std::map<int, int> menge;
+    int                editing   = -1;  // in welcher Karte man gerade tippt
+    bool               focus     = false;
+    int                lastFrame = -10;
+};
+
+SellUi g_sell;
+
 }  // namespace
 
 bool World::mine()
@@ -394,6 +407,17 @@ void DrawInventory(World& world, const OrePlan& ores)
 
     if (ImGui::Begin("##tasche", nullptr, flags))
     {
+        // Kommt man neu auf die Seite, stehen alle Zaehler wieder auf voller
+        // Anzahl. Erkennen kann man das daran, dass die Seite im Bild davor
+        // nicht gezeichnet wurde.
+        const int frame = ImGui::GetFrameCount();
+        if (frame - g_sell.lastFrame > 1)
+        {
+            g_sell.menge.clear();
+            g_sell.editing = -1;
+        }
+        g_sell.lastFrame = frame;
+
         // ---- Kopfzeile ----------------------------------------------------
         int wert = 0;
         for (const auto& e : world.inventory)
@@ -426,14 +450,15 @@ void DrawInventory(World& world, const OrePlan& ores)
         }
         else
         {
-            ImGui::TextDisabled("Rechtsklick auf eine Karte zum Verkaufen.");
+            ImGui::TextDisabled(
+                "Mit den Pfeilen die Anzahl einstellen, auf die Zahl klicken zum Eintippen.");
             ImGui::Spacing();
             ImGui::Spacing();
 
             // ---- Karten, nebeneinander mit Umbruch -------------------------
-            const float kartenBreite = 170.0f;
-            const float kartenHoehe  = 200.0f;
-            const float bild         = 104.0f;
+            const float kartenBreite = 186.0f;
+            const float kartenHoehe  = 242.0f;
+            const float bild         = 96.0f;
             const float luft         = 16.0f;
 
             const float platz = ImGui::GetContentRegionAvail().x;
@@ -441,13 +466,14 @@ void DrawInventory(World& world, const OrePlan& ores)
             if (proZeile < 1)
                 proZeile = 1;
 
-            int verkaufenAlles = -1;  // erst nach der Schleife, sonst wackelt sie
-            int verkaufenEins  = -1;
-            int spalte         = 0;
+            int verkaufenErz = -1;  // erst nach der Schleife, sonst wackelt sie
+            int verkaufenWie = 0;
+            int spalte       = 0;
 
             for (const auto& e : world.inventory)
             {
-                const Ore& erz = OreOf(ores, e.first);
+                const Ore& erz    = OreOf(ores, e.first);
+                const int  anzahl = e.second;
 
                 if (spalte > 0)
                     ImGui::SameLine(0.0f, luft);
@@ -459,77 +485,135 @@ void DrawInventory(World& world, const OrePlan& ores)
                 }
 
                 ImGui::PushID(e.first);
+                ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 12.0f);
+                ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.141f, 0.157f, 0.188f, 1.0f));
+                ImGui::BeginChild("karte", ImVec2(kartenBreite, kartenHoehe),
+                                  ImGuiChildFlags_Borders,
+                                  ImGuiWindowFlags_NoScrollbar |
+                                      ImGuiWindowFlags_NoScrollWithMouse);
 
-                const ImVec2 p  = ImGui::GetCursorScreenPos();
-                ImDrawList*  dl = ImGui::GetWindowDrawList();
+                const float innen = ImGui::GetContentRegionAvail().x;
 
-                ImGui::InvisibleButton("karte", ImVec2(kartenBreite, kartenHoehe));
-                const bool drauf = ImGui::IsItemHovered();
-
-                // Karte
-                const ImVec2 a = p;
-                const ImVec2 b(p.x + kartenBreite, p.y + kartenHoehe);
-                dl->AddRectFilled(a, b, IM_COL32(36, 40, 48, 255), 12.0f);
-                dl->AddRect(a, b, drauf ? IM_COL32(150, 214, 92, 255) : IM_COL32(62, 68, 80, 255),
-                            12.0f, 0, drauf ? 2.4f : 1.6f);
-
-                // Bild vom Erz - dieselbe Musterlogik wie beim Block draussen
-                const ImVec2 ba(p.x + (kartenBreite - bild) * 0.5f, p.y + 16.0f);
-                const int    zellen = 18;
-                const float  st     = bild / (float)zellen;
-                for (int gy = 0; gy < zellen; ++gy)
-                    for (int gx = 0; gx < zellen; ++gx)
-                    {
-                        const float t = OrePixel((float)gx / (float)zellen,
-                                                 (float)gy / (float)zellen, erz.pattern,
-                                                 777u + (unsigned)e.first * 31u);
-                        const ImVec2 q(ba.x + (float)gx * st, ba.y + (float)gy * st);
-                        dl->AddRectFilled(q, ImVec2(q.x + st + 0.6f, q.y + st + 0.6f),
-                                          Mix(erz.color2, erz.color1, t, 255));
-                    }
-                dl->AddRect(ba, ImVec2(ba.x + bild, ba.y + bild), IM_COL32(16, 18, 22, 255), 5.0f,
-                            0, 2.0f);
-
-                // Name, Anzahl, Wert
-                const ImVec2 ns = ImGui::CalcTextSize(erz.name.c_str());
-                dl->AddText(ImVec2(p.x + (kartenBreite - ns.x) * 0.5f, ba.y + bild + 12.0f),
-                            IM_COL32(240, 244, 250, 255), erz.name.c_str());
-
-                char anzahl[48];
-                std::snprintf(anzahl, sizeof(anzahl), "x %d", e.second);
-                const ImVec2 as = ImGui::CalcTextSize(anzahl);
-                dl->AddText(ImVec2(p.x + (kartenBreite - as.x) * 0.5f, ba.y + bild + 34.0f),
-                            IM_COL32(178, 226, 122, 255), anzahl);
-
-                char geld[48];
-                std::snprintf(geld, sizeof(geld), "%d Geld",
-                              e.second * erz.value * world.moneyPerBlock);
-                const ImVec2 gs = ImGui::CalcTextSize(geld);
-                dl->AddText(ImVec2(p.x + (kartenBreite - gs.x) * 0.5f, ba.y + bild + 54.0f),
-                            IM_COL32(255, 214, 120, 255), geld);
-
-                if (ImGui::BeginPopupContextItem("menue"))
+                // ---- Bild vom Erz -----------------------------------------
                 {
-                    ImGui::TextDisabled("%s x%d", erz.name.c_str(), e.second);
-                    ImGui::Separator();
-                    if (ImGui::MenuItem("Alle verkaufen"))
-                        verkaufenAlles = e.first;
-                    if (e.second > 1 && ImGui::MenuItem("Einen verkaufen"))
-                        verkaufenEins = e.first;
-                    ImGui::EndPopup();
+                    const ImVec2 ba(ImGui::GetCursorScreenPos().x + (innen - bild) * 0.5f,
+                                    ImGui::GetCursorScreenPos().y);
+                    ImDrawList* dl = ImGui::GetWindowDrawList();
+
+                    const int   zellen = 18;
+                    const float st     = bild / (float)zellen;
+                    for (int gy = 0; gy < zellen; ++gy)
+                        for (int gx = 0; gx < zellen; ++gx)
+                        {
+                            const float t = OrePixel((float)gx / (float)zellen,
+                                                     (float)gy / (float)zellen, erz.pattern,
+                                                     777u + (unsigned)e.first * 31u);
+                            const ImVec2 q(ba.x + (float)gx * st, ba.y + (float)gy * st);
+                            dl->AddRectFilled(q, ImVec2(q.x + st + 0.6f, q.y + st + 0.6f),
+                                              Mix(erz.color2, erz.color1, t, 255));
+                        }
+                    dl->AddRect(ba, ImVec2(ba.x + bild, ba.y + bild), IM_COL32(16, 18, 22, 255),
+                                5.0f, 0, 2.0f);
+
+                    ImGui::Dummy(ImVec2(innen, bild));
                 }
 
-                if (drauf)
-                    ImGui::SetTooltip("%s - %d Geld pro Stück", erz.name.c_str(),
-                                      erz.value * world.moneyPerBlock);
+                // ---- Name und wie viele man hat ---------------------------
+                {
+                    const float w = ImGui::CalcTextSize(erz.name.c_str()).x;
+                    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (innen - w) * 0.5f);
+                    ImGui::TextUnformatted(erz.name.c_str());
+                }
 
+                char haben[48];
+                std::snprintf(haben, sizeof(haben), "x %d", anzahl);
+                const float hw = ImGui::CalcTextSize(haben).x;
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (innen - hw) * 0.5f);
+                ImGui::TextColored(ImVec4(0.70f, 0.89f, 0.48f, 1.0f), "%s", haben);
+
+                ImGui::Spacing();
+
+                // ---- Wie viele verkaufen? ---------------------------------
+                // Beim Betreten steht hier die volle Anzahl: einmal auf
+                // "Verkaufen" und alles ist weg.
+                auto it = g_sell.menge.find(e.first);
+                if (it == g_sell.menge.end())
+                    it = g_sell.menge.insert(std::make_pair(e.first, anzahl)).first;
+
+                int& wie = it->second;
+                if (wie > anzahl)
+                    wie = anzahl;
+                if (wie < 1)
+                    wie = 1;
+
+                const float pfeil = ImGui::GetFrameHeight();
+                const float mitte = innen - 2.0f * pfeil - 2.0f * ImGui::GetStyle().ItemSpacing.x;
+
+                ImGui::PushButtonRepeat(true);  // gedrueckt halten zaehlt weiter
+                if (ImGui::ArrowButton("weniger", ImGuiDir_Left) && wie > 1)
+                    --wie;
+                ImGui::PopButtonRepeat();
+
+                ImGui::SameLine();
+
+                if (g_sell.editing == e.first)
+                {
+                    ImGui::SetNextItemWidth(mitte);
+                    if (g_sell.focus)
+                    {
+                        ImGui::SetKeyboardFocusHere();
+                        g_sell.focus = false;
+                    }
+                    // Kein EnterReturnsTrue: das mag InputInt nicht. Enter und
+                    // Wegklicken fangen wir beide mit IsItemDeactivated ab.
+                    ImGui::InputInt("##zahl", &wie, 0, 0);
+                    if (ImGui::IsItemDeactivated())
+                        g_sell.editing = -1;
+                }
+                else
+                {
+                    char zahl[32];
+                    std::snprintf(zahl, sizeof(zahl), "%d", wie);
+                    if (ImGui::Button(zahl, ImVec2(mitte, 0.0f)))
+                    {
+                        g_sell.editing = e.first;  // Klick auf die Zahl: selbst tippen
+                        g_sell.focus   = true;
+                    }
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("Klick zum Eintippen");
+                }
+
+                ImGui::SameLine();
+
+                ImGui::PushButtonRepeat(true);
+                if (ImGui::ArrowButton("mehr", ImGuiDir_Right) && wie < anzahl)
+                    ++wie;
+                ImGui::PopButtonRepeat();
+
+                // ---- Verkaufen --------------------------------------------
+                char knopf[64];
+                std::snprintf(knopf, sizeof(knopf), "Verkaufen  %d",
+                              wie * erz.value * world.moneyPerBlock);
+
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.42f, 0.30f, 1.0f));
+                if (ImGui::Button(knopf, ImVec2(innen, 0.0f)))
+                {
+                    verkaufenErz = e.first;
+                    verkaufenWie = wie;
+                }
+                ImGui::PopStyleColor();
+
+                ImGui::EndChild();
+                ImGui::PopStyleColor();
+                ImGui::PopStyleVar();
                 ImGui::PopID();
             }
 
-            if (verkaufenAlles >= 0)
-                world.sell(ores, verkaufenAlles);
-            if (verkaufenEins >= 0)
-                world.sell(ores, OreOf(ores, verkaufenEins).name, 1);
+            if (verkaufenErz >= 0)
+            {
+                world.sell(ores, OreOf(ores, verkaufenErz).name, verkaufenWie);
+                g_sell.menge.erase(verkaufenErz);  // beim naechsten Mal wieder voll
+            }
         }
     }
     ImGui::End();

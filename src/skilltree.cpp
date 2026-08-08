@@ -8,14 +8,26 @@
 namespace
 {
 
+// Hoechster Preis, den ein Punkt haben kann. Siehe CostFor.
+const int kMaxCost = 1000000000;
+
 // Was ein Punkt in Schritt "step" kostet.
 //
 // Jeder Schritt nach aussen kostet das growth-fache. Der Grundpreis macht nur
 // noch den Unterschied INNERHALB eines Schrittes aus - dadurch ist alles weiter
 // draussen zuverlaessig teurer als das, was naeher dran liegt.
+
 int CostFor(int price, int step, float growth)
 {
-    return (int)((double)price * std::pow((double)growth, (double)(step - 1)) + 0.5);
+    const double wert = (double)price * std::pow((double)growth, (double)(step - 1)) + 0.5;
+
+    // Der Baum hat kein Ende, der Preis waechst also unbegrenzt weiter. In
+    // einen int passt er irgendwann nicht mehr - ohne Deckel wuerde er
+    // ueberlaufen und negativ werden, und dann waere alles gratis.
+    //
+    // Der Deckel liegt unter dem Testgeld, damit man beim Ausprobieren nicht
+    // ploetzlich vor einer Karte steht, die man nicht bezahlen kann.
+    return (int)(wert > (double)kMaxCost ? (double)kMaxCost : wert);
 }
 
 // ---- Raster ---------------------------------------------------------------
@@ -189,7 +201,7 @@ void SkillTree::start(const SkillPlan& aPlan, unsigned seed)
     selected = -1;
 
     usedOnce.assign(plan.rules.size(), false);
-    lastOnceStep = -1000;
+    sinceOnce = 1000;
 
     SkillNode root;
     root.id    = 0;
@@ -209,8 +221,8 @@ void SkillTree::grow(int id)
         return;
 
     const int step = nodes[(std::size_t)id].depth + 1;
-    if (step > plan.steps)
-        return;  // hier endet der Baum
+    if (plan.steps > 0 && step > plan.steps)
+        return;  // hier endet der Baum (bei "schritte 0" nie)
 
     // Wie viele Abzweigungen dieser Kauf aufmacht.
     int wanted = plan.minKids;
@@ -234,7 +246,7 @@ void SkillTree::grow(int id)
     //   ein Stueck weiterspielen, dann das naechste
     // - "braucht" muss GEKAUFT sein: eine zweite Bedingung ohne "if" waere
     //   sinnlos, und genau deshalb taucht sie vorher auch nicht auf
-    auto fits = [&](std::size_t i)
+    auto fits = [&](std::size_t i, bool ohneAbstand)
     {
         const SkillRule& r = plan.rules[i];
 
@@ -250,7 +262,11 @@ void SkillTree::grow(int id)
         if (r.once && usedOnce[i])
             return false;
 
-        if (r.once && step < lastOnceStep + plan.spacing)
+        // Ein fester Platz ("schritt 3" statt "3-8") gilt genau dort - der
+        // Abstand darf ihn nicht wegdruecken, sonst faellt er ganz aus.
+        const bool fest = (r.minStep == r.maxStep);
+
+        if (r.once && !fest && !ohneAbstand && sinceOnce < plan.spacing)
             return false;
 
         if (r.needs != Skill::None && !owns(r.needs))
@@ -271,7 +287,7 @@ void SkillTree::grow(int id)
 
     std::vector<std::size_t> forced;  // letzte Gelegenheit
     for (std::size_t i = 0; i < plan.rules.size(); ++i)
-        if (plan.rules[i].once && !usedOnce[i] && plan.rules[i].maxStep == step && fits(i))
+        if (plan.rules[i].once && !usedOnce[i] && plan.rules[i].maxStep == step && fits(i, true))
             forced.push_back(i);
 
     for (int made = 0; made < wanted; ++made)
@@ -287,7 +303,7 @@ void SkillTree::grow(int id)
         {
             int total = 0;
             for (std::size_t i = 0; i < plan.rules.size(); ++i)
-                if (fits(i))
+                if (fits(i, false))
                     total += weightOf(i);
 
             if (total <= 0)
@@ -296,7 +312,7 @@ void SkillTree::grow(int id)
             int roll = (int)(rng() % (unsigned)total);
             for (std::size_t i = 0; i < plan.rules.size(); ++i)
             {
-                if (!fits(i))
+                if (!fits(i, false))
                     continue;
                 roll -= weightOf(i);
                 if (roll < 0)
@@ -325,7 +341,11 @@ void SkillTree::grow(int id)
         if (rule.once)
         {
             usedOnce[pick] = true;
-            lastOnceStep   = step;  // ab hier gilt der Abstand
+            sinceOnce      = 0;  // ab hier zaehlt der Abstand wieder von vorn
+        }
+        else
+        {
+            ++sinceOnce;
         }
 
         nodes.push_back(n);
@@ -335,6 +355,12 @@ void SkillTree::grow(int id)
 
 void SkillTree::rebuildCells()
 {
+    // Alte Spielstaende koennen Preise enthalten, die inzwischen ueber dem
+    // Deckel liegen. Die werden hier mitgezogen.
+    for (SkillNode& n : nodes)
+        if (n.cost > kMaxCost)
+            n.cost = kMaxCost;
+
     taken.clear();
     branches.assign(nodes.size(), 0);
 

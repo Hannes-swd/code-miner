@@ -368,7 +368,8 @@ bool DrawSkillPage(World& world, SkillTree& tree)
         for (int id : shown)
         {
             const SkillNode& n = tree.nodes[(std::size_t)id];
-            if (n.owned || n.parent < 0 || n.depth >= tree.plan.steps)
+            if (n.owned || n.parent < 0 ||
+                (tree.plan.steps > 0 && n.depth >= tree.plan.steps))
                 continue;
 
             const SkillNode& p  = tree.nodes[(std::size_t)n.parent];

@@ -70,7 +70,7 @@ bool IsNeeds(const std::string& w)
     return w == "braucht";
 }
 
-// "4" oder "2-6".
+// "4", "2-6" oder "2-" (ab 2, ohne Ende).
 bool ParseRange(const std::string& text, int& lo, int& hi)
 {
     const std::size_t dash = text.find('-');
@@ -81,7 +81,9 @@ bool ParseRange(const std::string& text, int& lo, int& hi)
     }
 
     lo = std::atoi(text.substr(0, dash).c_str());
-    hi = std::atoi(text.substr(dash + 1).c_str());
+
+    const std::string rest = text.substr(dash + 1);
+    hi = rest.empty() ? 1000000000 : std::atoi(rest.c_str());  // offenes Ende
     return lo > 0 && hi >= lo;
 }
 
@@ -166,8 +168,9 @@ SkillPlan LoadSkillPlan()
         // Wie tief der Baum wird.
         if (words[0] == "schritte")
         {
-            const int n = (words.size() > 1) ? std::atoi(words[1].c_str()) : 0;
-            if (n <= 0)
+            // 0 heisst: kein Ende. Der Baum waechst weiter, solange man kauft.
+            const int n = (words.size() > 1) ? std::atoi(words[1].c_str()) : -1;
+            if (n < 0)
                 plan.problems.push_back(Where(lineNo) + "\"schritte\" braucht eine Zahl.");
             else
                 plan.steps = n;

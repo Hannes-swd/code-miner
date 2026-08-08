@@ -79,7 +79,7 @@ bool SaveGame(const World& world, const SkillTree& tree,
     rng << tree.rng;
     out << "wuerfel " << rng.str() << "\n";
 
-    out << "letzter_einmal " << tree.lastOnceStep << "\n";
+    out << "seit_einmal " << tree.sinceOnce << "\n";
 
     out << "einmal " << tree.usedOnce.size() << "\n";
     for (bool b : tree.usedOnce)
@@ -183,9 +183,9 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
         {
             in >> neuerBaum.rng;
         }
-        else if (wort == "letzter_einmal")
+        else if (wort == "seit_einmal")
         {
-            in >> neuerBaum.lastOnceStep;
+            in >> neuerBaum.sinceOnce;
         }
         else if (wort == "einmal")
         {
