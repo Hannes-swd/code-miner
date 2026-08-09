@@ -82,14 +82,14 @@ Console::Console(int aId, ImVec2 aPos, bool withStarterCode) : id(aId), startPos
         // Am Anfang ist ALLES gesperrt - auch block.mine(). Deshalb steht hier
         // nur ein leeres main(): alles andere waere sofort eine Fehlermeldung.
         editor.SetText(
-            "// Am Anfang kann dein Programm noch gar nichts.\n"
+            "// At the start your program cannot do anything yet.\n"
             "//\n"
-            "// Klick auf den Block, um ihn von Hand abzubauen.\n"
-            "// Was du abgebaut hast, liegt in der Tasche - dort\n"
-            "// kannst du es mit Rechtsklick verkaufen.\n"
+            "// Click the block to mine it by hand.\n"
+            "// What you mined goes into your bag - you can\n"
+            "// sell it there.\n"
             "//\n"
-            "// Jeden Befehl - block.mine(), item.sell(), while,\n"
-            "// if - musst du dir erst im Skilltree kaufen.\n"
+            "// Every command - block.mine(), item.sell(), while,\n"
+            "// if - has to be bought in the skill tree first.\n"
             "\n"
             "int main() {\n"
             "\n"
@@ -99,10 +99,10 @@ Console::Console(int aId, ImVec2 aPos, bool withStarterCode) : id(aId), startPos
     {
         // Weitere Konsolen sind Beiwerk zum Programm - hier gehoert kein
         // zweites main() hin.
-        editor.SetText("// Diese Konsole gehoert zum selben Programm.\n"
-                       "// Was hier steht, kann die Konsole mit main() benutzen.\n"
+        editor.SetText("// This console belongs to the same program.\n"
+                       "// The console with main() can use what you write here.\n"
                        "\n"
-                       "int zaehler = 0;\n");
+                       "int counter = 0;\n");
     }
 }
 
@@ -162,13 +162,13 @@ bool DrawConsole(Console& c, Engine& engine)
                     ui::kBorder, 1.0f);
 
         char name[32];
-        std::snprintf(name, sizeof(name), "Konsole %d", c.id);
+        std::snprintf(name, sizeof(name), "Console %d", c.id);
         dl->AddText(ImVec2(wp.x + 18.0f, wp.y + (kopfH - ImGui::GetTextLineHeight()) * 0.5f),
                     ui::kText, name);
 
         ImGui::SetCursorScreenPos(
             ImVec2(wp.x + 18.0f + ImGui::CalcTextSize(name).x + 12.0f, wp.y + 14.0f));
-        Chip(running ? "läuft" : "bereit");
+        Chip(running ? "running" : "ready");
 
         ImGui::SetCursorScreenPos(ImVec2(wp.x + ws.x - 30.0f - 14.0f, wp.y + 9.0f));
 
@@ -253,7 +253,7 @@ bool DrawConsole(Console& c, Engine& engine)
         if (!msg.empty())
             fuss = msg;
         else
-            fuss = "bereit  -  Strg+Enter startet, Strg+Alt+F formatiert";
+            fuss = "ready  -  Ctrl+Enter runs, Ctrl+Alt+F formats";
 
         const float fy = wp.y + ws.y - fussH + (fussH - ImGui::GetTextLineHeight()) * 0.5f;
         dl->PushClipRect(ImVec2(wp.x + 1.0f, wp.y + ws.y - fussH),

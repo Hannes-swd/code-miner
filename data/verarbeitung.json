@@ -1,41 +1,41 @@
 {
   "hilfe": [
-    "Verarbeiten: aus einem Zustand einen anderen machen.",
+    "Processing: turning one state into another.",
     "",
-    "Das ist KEINE feste Kette, sondern ein NETZ. Aus einem Zustand koennen",
-    "mehrere Schritte fuehren, und ein Schritt kann aus mehreren Zustaenden",
-    "heraus gehen. Genau daraus entsteht die Entscheidung: welchen Weg gehst du?",
+    "This is NOT a fixed chain, it is a NET. Several steps can lead out of one",
+    "state, and one step can start from several states. That is exactly where",
+    "the decision comes from: which way do you take?",
     "",
-    "reinheit.start   Reinheit in Prozent, mit der ein frisch abgebauter Block",
-    "                 in die Tasche wandert. Ein Erz darf in data/erze.json mit",
-    "                 \"reinheit\": 65 einen eigenen Startwert haben.",
+    "reinheit.start   Purity in percent that a freshly mined block carries into",
+    "                 your bag. An ore may set its own value in data/erze.json",
+    "                 with \"reinheit\": 65.",
     "reinheit.wert_min / wert_max",
-    "                 Was die Reinheit am Preis macht: bei 0% zaehlt wert_min,",
-    "                 bei 100% wert_max, dazwischen linear.",
+    "                 What purity does to the price: at 0% wert_min counts, at",
+    "                 100% wert_max, linear in between.",
     "",
-    "zustandswert     Faktor auf den Grundwert des Erzes, je Zustand. Er haengt",
-    "                 nur am Zustand und nicht am Weg dorthin - zwei Wege zum",
-    "                 selben Zustand geben also denselben Preis.",
+    "zustandswert     Factor on the base value of the ore, per state. It only",
+    "                 depends on the state, never on the way there - so two ways",
+    "                 to the same state give the same price.",
     "",
-    "Preis eines Stuecks = wert (aus erze.json) * zustandswert * Reinheitsfaktor",
-    "                      * Geld pro Block (aus dem Skilltree).",
+    "Price of one piece = wert (from erze.json) * zustandswert * purity factor",
+    "                     * money per block (from the skill tree).",
     "",
-    "Eine Zeile in \"schritte\":",
-    "  befehl    so heisst er im Spielercode: item.wash(\"Gold\").",
-    "            Moeglich sind wash, smelt, cast, clean, polish, harden,",
-    "            refine, press - fuer jeden gibt es einen Punkt im Skilltree.",
-    "  name      was in der Tasche im Menue steht.",
-    "  von       LISTE der Zustaende, aus denen der Schritt heraus geht.",
-    "  zu        was dabei herauskommt.",
-    "  dauer     Sekunden pro Stueck. Es laeuft immer nur EIN Auftrag.",
-    "  reinheit  Aenderung in Prozentpunkten, darf negativ sein. Am Ende wird",
-    "            auf 0..100 begrenzt.",
+    "One line in \"schritte\":",
+    "  befehl    what it is called in player code: item.wash(\"Gold\").",
+    "            Possible are wash, smelt, cast, clean, polish, harden,",
+    "            refine, press - each one has its own point in the skill tree.",
+    "  name      what the bag menu shows.",
+    "  von       LIST of states this step can start from.",
+    "  zu        what comes out of it.",
+    "  dauer     seconds per piece. Only ONE job runs at a time.",
+    "  reinheit  change in percentage points, may be negative. The result is",
+    "            clamped to 0..100.",
     "",
-    "Ein Schritt geht nur, wenn das Erz den Ziel-Zustand in seiner Liste",
-    "\"zustaende\" erlaubt - Diamant schmilzt man nicht.",
+    "A step only works if the ore allows the target state in its own list",
+    "\"zustaende\" - you do not melt a diamond.",
     "",
-    "\"oxidized\" und \"alloy\" haben mit Absicht keinen Schritt: Legieren kommt",
-    "spaeter, Oxidieren ist Verfall."
+    "\"oxidized\" and \"alloy\" have no step on purpose: alloying comes later,",
+    "oxidizing is decay."
   ],
 
   "reinheit": { "start": 70, "wert_min": 0.5, "wert_max": 1.5 },
@@ -56,42 +56,42 @@
 
   "schritte": [
     {
-      "befehl": "wash", "name": "Waschen",
+      "befehl": "wash", "name": "Wash",
       "von": ["raw"], "zu": "washed",
       "dauer": 0.6, "reinheit": 10
     },
     {
-      "befehl": "clean", "name": "Reinigen",
+      "befehl": "clean", "name": "Clean",
       "von": ["raw", "washed", "cast", "pressed"], "zu": "cleaned",
       "dauer": 1.0, "reinheit": 18
     },
     {
-      "befehl": "press", "name": "Pressen",
+      "befehl": "press", "name": "Press",
       "von": ["raw", "washed", "cleaned"], "zu": "pressed",
       "dauer": 0.8, "reinheit": -3
     },
     {
-      "befehl": "smelt", "name": "Schmelzen",
+      "befehl": "smelt", "name": "Smelt",
       "von": ["raw", "washed", "pressed"], "zu": "smelted",
       "dauer": 1.5, "reinheit": -5
     },
     {
-      "befehl": "cast", "name": "Gießen",
+      "befehl": "cast", "name": "Cast",
       "von": ["smelted"], "zu": "cast",
       "dauer": 1.2, "reinheit": 0
     },
     {
-      "befehl": "harden", "name": "Härten",
+      "befehl": "harden", "name": "Harden",
       "von": ["smelted", "cast", "pressed", "cleaned"], "zu": "hardened",
       "dauer": 2.0, "reinheit": -4
     },
     {
-      "befehl": "polish", "name": "Polieren",
+      "befehl": "polish", "name": "Polish",
       "von": ["cast", "cleaned", "hardened"], "zu": "polished",
       "dauer": 1.8, "reinheit": 8
     },
     {
-      "befehl": "refine", "name": "Veredeln",
+      "befehl": "refine", "name": "Refine",
       "von": ["cleaned", "hardened", "polished"], "zu": "refined",
       "dauer": 3.0, "reinheit": 25
     }

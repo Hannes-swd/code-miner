@@ -1,191 +1,187 @@
-# Was wird wann freigeschaltet.
-# ==============================
+# What gets unlocked, and when.
+# =============================
 #
-# Diese Datei bestimmt den ganzen Skilltree. Das Spiel liest sie beim Start.
-# Ändern, Spiel neu starten - fertig. Neu bauen musst du dafür nicht.
+# This file decides the whole skill tree. The game reads it at startup.
+# Change it, restart the game - done. No rebuild needed.
 #
-# Der Baum wird NICHT vorher gewürfelt. Du siehst immer nur einen Schritt
-# weiter. Erst wenn du etwas kaufst, wird gewürfelt, was dahinter kommt - aus
-# allem, was zu diesem Schritt passt UND was du schon hast.
-#
-#
-# EINE ZEILE PRO PUNKT
-#
-#     schlüssel     schritt   preis   wie oft      [braucht ...]
-#
-#   schlüssel   was der Punkt freischaltet. Die Liste steht unten.
-#   schritt     ab wann bis wann er auftauchen darf.
-#               "4" heißt genau Schritt 4, "3-8" heißt irgendwo dazwischen,
-#               "3-" heißt ab Schritt 3 ohne Ende.
-#   preis       Grundpreis in Schritt 1. Weiter draußen wird alles teurer,
-#               siehe "steigerung". Der Grundpreis macht nur noch den
-#               Unterschied INNERHALB eines Schrittes aus.
-#   wachstum N  optional, nur bei "oft": womit das Gewicht pro Schritt nach
-#               außen malgenommen wird. 1.2 heißt, der Punkt wird weiter
-#               draußen immer häufiger - so werden die "+1"-Punkte spät zum
-#               Normalfall, während neue Befehle seltener werden.
-#
-#   wie oft     "einmal"  = gibt es im ganzen Baum nur ein einziges Mal.
-#                           Dahinter darf eine Zahl stehen: wie stark der
-#                           Punkt gezogen wird (ohne Zahl: 2).
-#               "oft N"   = darf immer wieder kommen, N ist das Gewicht.
-#                           Je größer N, desto öfter.
-#   braucht X   der Punkt taucht erst auf, wenn X GEKAUFT ist.
-#               Damit gibt es "+1 Bedingung" erst, wenn du "if" hast.
-#
-# Alles hinter einem # ist Kommentar, leere Zeilen sind egal.
-# Umlaute darfst du weglassen: "pruefen" geht genauso wie "prüfen".
-#
-# WICHTIG: Schritt heißt Tiefe im Baum. Ein Punkt in Schritt 5 hängt hinter
-# vier anderen - früher als beim 5. Kauf kannst du ihn also nie haben.
-#
-# Bei "einmal" wird die Chance nach hinten raus immer größer: am Anfang
-# seines Bereichs ist der Punkt selten, am Ende fast sicher. Und läuft der
-# Bereich ganz ab, wird er beim letzten Schritt erzwungen. Verlieren kannst
-# du also nichts.
+# The tree is NOT rolled up front. You always see exactly one step ahead.
+# Only when you buy something is the next step rolled - out of everything
+# that fits this step AND that you already own.
 #
 #
-# DIE SCHLÜSSEL
+# ONE LINE PER POINT
 #
-#   while         while und do, dazu die erste Schleife
-#   for           for, dazu eine weitere Schleife
-#   if            if, dazu die erste Bedingung
+#     key           step      price   how often    [needs ...]
+#
+#   key         what the point unlocks. The list is below.
+#   step        from when to when it may show up.
+#               "4" means exactly step 4, "3-8" means somewhere in between,
+#               "3-" means from step 3 on with no end.
+#   price       base price at step 1. Further out everything gets more
+#               expensive, see "growth". The base price then only makes the
+#               difference WITHIN one step.
+#   rise N      optional, only with "often": what the weight is multiplied by
+#               per step outwards. 1.2 means the point gets more common the
+#               further out you go - that way the "+1" points become the
+#               normal case late on, while new commands get rarer.
+#
+#   how often   "once"    = exists exactly one single time in the whole tree.
+#                           A number may follow: how strongly the point is
+#                           drawn (without a number: 2).
+#               "often N" = may come again and again, N is the weight.
+#                           The bigger N, the more often.
+#   needs X     the point only shows up once X has been BOUGHT.
+#               That is how "+1 condition" only appears once you have "if".
+#
+# Everything after a # is a comment, empty lines do not matter.
+#
+# IMPORTANT: step means depth in the tree. A point at step 5 hangs behind
+# four others - so you can never have it earlier than your 5th purchase.
+#
+# With "once" the chance grows towards the end: at the start of its range the
+# point is rare, at the end almost certain. And if the range runs out
+# completely, it is forced on the last step. So you cannot lose anything.
+#
+#
+# THE KEYS
+#
+#   while         while and do, plus your first loop
+#   for           for, plus one more loop
+#   if            if, plus your first condition
 #   else          else
 #   print         print(...)
-#   prüfen        block.isThere(), isLoading(), exists(), isGone()
-#   geteilt       shared["name"] - übersteht einen Neustart
-#   abbauen       block.mine() - abbauen lassen statt selbst klicken
-#   verkaufen     item.sell() - die Tasche zu Geld machen
-#   tasche        item.has("Stein") - nachschauen, was in der Tasche ist
-#   variablen     eigene Variablen (int, float, ...), dazu die erste
-#   klassen       struct und class, dazu die erste
-#   funktionen    eigene Funktionen und Methoden, dazu die erste
+#   check         block.isThere(), isLoading(), exists(), isGone()
+#   shared        shared["name"] - survives a restart
+#   mine          block.mine() - let a program mine instead of clicking
+#   sell          item.sell() - turn your bag into money
+#   bag           item.has("Stone") - look at what is in your bag
+#   variables     your own variables (int, float, ...), plus the first one
+#   classes       struct and class, plus the first one
+#   functions     your own functions and methods, plus the first one
 #
-#   waschen       item.wash("Stein")   - verarbeiten
-#   reinigen      item.clean("Stein")
-#   pressen       item.press("Kohle")
-#   schmelzen     item.smelt("Kupfer")
-#   giessen       item.cast("Kupfer")
-#   härten        item.harden("Eisen")
-#   polieren      item.polish("Diamant")
-#   veredeln      item.refine("Gold")
+#   wash          item.wash("Stone")   - processing
+#   clean         item.clean("Stone")
+#   press         item.press("Coal")
+#   smelt         item.smelt("Copper")
+#   cast          item.cast("Copper")
+#   harden        item.harden("Iron")
+#   polish        item.polish("Diamond")
+#   refine        item.refine("Gold")
 #
-#   legieren      item.alloy("Elektrum") und item.canAlloy("Elektrum")
-#                 - zwei Erze zu einem neuen Stoff verschmelzen
+#   alloy         item.alloy("Electrum") and item.canAlloy("Electrum")
+#                 - melt two ores into one new material
 #
-#   Was von welchem Zustand aus geht, steht in data/verarbeitung.json - das
-#   ist ein Netz, keine feste Kette. Der Skilltree sagt nur, welche Schritte
-#   du überhaupt benutzen darfst. Welche Legierungen es gibt, steht in
-#   data/legierungen.json.
+#   What works from which state is in data/verarbeitung.json - that is a net,
+#   not a fixed chain. The skill tree only says which steps you are allowed to
+#   use at all. Which alloys exist is in data/legierungen.json.
 #
-#   schleife+     eine Schleife mehr erlaubt
-#   bedingung+    eine Bedingung mehr erlaubt
-#   variable+     eine Variable mehr erlaubt
-#   klasse+       eine Klasse mehr erlaubt
-#   funktion+     eine Funktion mehr erlaubt
-#   konsole+      eine Konsole mehr
+#   loop+         one more loop allowed
+#   condition+    one more condition allowed
+#   variable+     one more variable allowed
+#   class+        one more class allowed
+#   function+     one more function allowed
+#   console+      one more console
 #
-#   tempo         +0,5 Zeilen pro Sekunde
-#   geld          +1 Geld pro Block
-#   nachwachsen   der Block wächst 8% schneller nach
+#   speed         +0.5 lines per second
+#   money         +1 money per block
+#   regrow        the block regrows 8% faster
 
 
-# So viele Schritte hat der Baum. 0 = kein Ende, er waechst immer weiter.
-schritte    0
+# This many steps the tree has. 0 = no end, it keeps growing forever.
+steps       0
 
-# Je weiter weg, desto teurer: jeder Schritt kostet das 1,5-fache.
-# Deshalb macht man erst alles in der Nähe und arbeitet sich dann nach außen.
-steigerung  1.7
+# The further out, the more expensive: every step costs 1.7 times as much.
+# That is why you clear out the nearby points first and then work outwards.
+growth      1.7
 
-# So viele neue Punkte macht ein Kauf auf (kleinste und größte Zahl).
-kinder      1 3
+# This many new points one purchase opens up (smallest and largest number).
+children    1 3
 
-# So viele Punkte stehen höchstens gleichzeitig offen. Sind schon so viele
-# offen, macht ein Kauf nur noch genau einen neuen auf.
-offen       10
+# This many points stand open at most at the same time. If that many are
+# already open, a purchase only opens exactly one new one.
+open        10
 
-# Mindestabstand zwischen zwei "einmal"-Punkten, gezählt in Punkten.
-# So viele andere Punkte müssen dazwischen liegen. Damit schaltest du erst
-# eine Sache frei, spielst ein Stück weiter, und erst dann kommt die nächste -
-# statt drei Stück direkt hintereinander.
+# Minimum distance between two "once" points, counted in points.
+# This many other points must lie in between. That way you unlock one thing,
+# play on for a bit, and only then the next one comes - instead of three in
+# a row.
 #
-# Punkte mit festem Schritt (z.B. "abbauen 1") halten sich nicht daran: die
-# liegen genau dort, wo sie sollen.
-abstand     9
+# Points with a fixed step (e.g. "mine 1") do not follow this: those sit
+# exactly where they should.
+spacing     9
 
 
-# ---- die Sprache ------------------------------------------------------
+# ---- the language ------------------------------------------------------
 #
-# Alles hier gibt es genau EINMAL. Wenn du es freischaltest, bekommst du
-# genau eine Verwendung dazu - mehr nur über die Erweiterungen unten.
+# Everything here exists exactly ONCE. When you unlock it you get exactly one
+# use with it - more only through the extensions below.
 #
-# Die Bereiche dürfen sich überschneiden - der Abstand oben sorgt dafür,
-# dass trotzdem Luft dazwischen bleibt.
+# The ranges may overlap - the spacing above makes sure there is still air
+# in between.
 
-abbauen         1        6    einmal 1
-verkaufen       2        6    einmal 1
-while           3        8    einmal 1
-if              4-9     18    einmal 2
-variablen       6-11    16    einmal 1
-print           7-13    12    einmal 1
-tasche          6-11    16    einmal 2   braucht if
-prüfen          8-14    14    einmal 1
-else           10-16    18    einmal 1   braucht if
-for            11-17    20    einmal 1   braucht while
-funktionen     12-18    20    einmal 1   braucht variablen
-klassen        14-24    22    einmal 1   braucht funktionen
-geteilt        15-24    24    einmal 1
+mine            1        6    once 1
+sell            2        6    once 1
+while           3        8    once 1
+if              4-9     18    once 2
+variables       6-11    16    once 1
+print           7-13    12    once 1
+bag             6-11    16    once 2   needs if
+check           8-14    14    once 1
+else           10-16    18    once 1   needs if
+for            11-17    20    once 1   needs while
+functions      12-18    20    once 1   needs variables
+classes        14-24    22    once 1   needs functions
+shared         15-24    24    once 1
 
 
-# ---- Verarbeiten ------------------------------------------------------
+# ---- processing --------------------------------------------------------
 #
-# Roh verkaufen bringt wenig. Waschen steht mit Absicht auf einem festen
-# Schritt: es kommt damit früh und immer - sonst lohnt sich die Tasche zu
-# lange nicht.
+# Selling raw brings little. Washing sits on a fixed step on purpose: that
+# way it comes early and always - otherwise the bag would not pay off for
+# far too long.
 #
-# Die späteren Schritte bauen aufeinander auf, aber nicht als eine Reihe:
-# gießen braucht schmelzen, härten braucht gießen, veredeln braucht polieren.
-# Alles andere darf in beliebiger Reihenfolge kommen.
+# The later steps build on each other, but not as a single line: casting
+# needs smelting, hardening needs casting, refining needs polishing.
+# Everything else may come in any order.
 
-waschen         8-16    10    einmal 2   braucht tasche
-schmelzen      10-18    20    einmal 1   braucht waschen
-reinigen       12-20    18    einmal 1   braucht waschen
-pressen        13-21    22    einmal 1   braucht waschen
-giessen        14-22    26    einmal 1   braucht schmelzen
-polieren       16-24    28    einmal 1   braucht giessen
-haerten        18-26    32    einmal 1   braucht giessen
-veredeln       20-32    40    einmal 1   braucht polieren
+wash            8-16    10    once 2   needs bag
+smelt          10-18    20    once 1   needs wash
+clean          12-20    18    once 1   needs wash
+press          13-21    22    once 1   needs wash
+cast           14-22    26    once 1   needs smelt
+polish         16-24    28    once 1   needs cast
+harden         18-26    32    once 1   needs cast
+refine         20-32    40    once 1   needs polish
 
-# Die Verarbeitung ist eine Kette: waschen ist der Anfang, alles andere hängt
-# über "braucht" daran. Und waschen selbst braucht "tasche" - also
-# item.has(...). Denn erst wenn dein Programm nachschauen kann, was in der
-# Tasche liegt, kann es überhaupt entscheiden, WAS es verarbeitet. So bekommst du nie einen Schritt angeboten, dessen
-# Vorgänger dir noch fehlt.
+# Processing is a chain: washing is the start, everything else hangs off it
+# through "needs". And washing itself needs "bag" - that is item.has(...).
+# Because only once your program can look into the bag can it decide WHAT to
+# process. So you never get offered a step whose predecessor you are missing.
 #
-# Legieren braucht schmelzen: die Zutaten müssen geschmolzen sein, bevor man
-# sie zusammenkippen kann (siehe "von" in data/legierungen.json).
-legieren       18-28    34    einmal 1   braucht schmelzen
+# Alloying needs smelting: the ingredients have to be molten before you can
+# pour them together (see "von" in data/legierungen.json).
+alloy          18-28    34    once 1   needs smelt
 
 
-# ---- mehr davon -------------------------------------------------------
+# ---- more of it --------------------------------------------------------
 #
-# Diese Punkte tauchen erst auf, wenn das Passende schon gekauft ist.
+# These points only show up once the matching thing has been bought.
 
-schleife+       4-      16    oft 1    wachstum 1.20   braucht while
-bedingung+      6-      16    oft 1    wachstum 1.20   braucht if
-variable+       8-      12    oft 1    wachstum 1.20   braucht variablen
-funktion+      14-      16    oft 1    wachstum 1.22   braucht funktionen
-klasse+        16-      18    oft 1    wachstum 1.22   braucht klassen
+loop+           4-      16    often 1    rise 1.20   needs while
+condition+      6-      16    often 1    rise 1.20   needs if
+variable+       8-      12    often 1    rise 1.20   needs variables
+function+      14-      16    often 1    rise 1.22   needs functions
+class+         16-      18    often 1    rise 1.22   needs classes
 
-# Eine weitere Konsole ist ein großer Schritt - deshalb selten.
-konsole+        7-      22    oft 1    wachstum 1.10
+# One more console is a big step - so it is rare.
+console+        7-      22    often 1    rise 1.10
 
 
-# ---- Werte ------------------------------------------------------------
+# ---- values ------------------------------------------------------------
 #
-# Das Brot-und-Butter-Zeug. Hohe Gewichte: davon soll das meiste kommen,
-# damit überhaupt Geld reinkommt.
+# The bread-and-butter stuff. High weights: most of what comes should be
+# this, so that money comes in at all.
 
-tempo           2-      10    oft 6
-geld            2-      12    oft 6
-nachwachsen     2-      10    oft 4
+speed           2-      10    often 6
+money           2-      12    often 6
+regrow          2-      10    often 4

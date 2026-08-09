@@ -373,7 +373,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     {
         CleanupDeviceD3D();
         UnregisterClassW(wc.lpszClassName, hInstance);
-        MessageBoxW(nullptr, L"DirectX 11 konnte nicht gestartet werden.", L"Code Klicker",
+        MessageBoxW(nullptr, L"DirectX 11 could not be started.", L"Code Klicker",
                     MB_OK | MB_ICONERROR);
         return 1;
     }
@@ -643,15 +643,15 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
         if (ImGui::BeginMainMenuBar())
         {
-            if (PageTab("Welt", page == Page::Welt))
+            if (PageTab("World", page == Page::Welt))
                 page = Page::Welt;
 
             // Die Zahl im Reiter: dann sieht man auch von der Welt-Seite aus,
             // dass sich in der Tasche etwas angesammelt hat.
-            if (CountTab("Tasche", world.inventoryCount(), page == Page::Tasche))
+            if (CountTab("Bag", world.inventoryCount(), page == Page::Tasche))
                 page = Page::Tasche;
 
-            if (PageTab("Skilltree", page == Page::Skills))
+            if (PageTab("Skills", page == Page::Skills))
                 page = Page::Skills;
 
             // Das Wiki ist immer erreichbar - auch in der Vorbereitung. Wer
@@ -668,7 +668,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
             {
                 // Wie viele Konsolen erlaubt sind, steht im Skilltree.
                 const bool  moreAllowed = (int)consoles.size() < limits.maxConsoles;
-                const char* label       = "+ Neue Konsole";
+                const char* label       = "+ New Console";
                 const float breit       = ImGui::CalcTextSize(label).x + 28.0f;
 
                 ImGui::SetCursorPosX(ImGui::GetWindowWidth() - MoneyWidth(world) - 16.0f - 12.0f -
@@ -686,7 +686,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
                 ImGui::EndDisabled();
 
                 if (!moreAllowed && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                    ImGui::SetTooltip("Mehr Konsolen gibt es im Skilltree.");
+                    ImGui::SetTooltip("More consoles are in the skill tree.");
             }
 
             DrawMoney(world);
@@ -712,7 +712,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
             {
                 // Ohne laufende Runde gibt es nichts zu tun. Das gehoert
                 // gesagt - sonst haelt man den Knopf fuer kaputt.
-                engine.fail("Erst die Runde starten - oben in der Leiste.", 0, 0);
+                engine.fail("Start the round first - in the bar at the bottom.", 0, 0);
             }
             else if (trigger)
             {

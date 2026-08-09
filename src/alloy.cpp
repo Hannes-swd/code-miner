@@ -238,7 +238,7 @@ AlloyPlan LoadAlloyPlan(OrePlan& ores)
     const JsonValue* liste = wurzel.find("legierungen");
     if (liste == nullptr || liste->type != JsonValue::Type::Array)
     {
-        plan.problems.push_back("Es fehlt die Liste \"legierungen\": [ ... ].");
+        plan.problems.push_back("Missing the list \"legierungen\": [ ... ].");
         return plan;
     }
 

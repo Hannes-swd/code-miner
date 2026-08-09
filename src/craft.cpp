@@ -170,7 +170,7 @@ CraftPlan LoadCraftPlan()
     const JsonValue* liste = wurzel.find("schritte");
     if (liste == nullptr || liste->type != JsonValue::Type::Array)
     {
-        plan.problems.push_back("Es fehlt die Liste \"schritte\": [ ... ].");
+        plan.problems.push_back("Missing the list \"schritte\": [ ... ].");
         return plan;
     }
 

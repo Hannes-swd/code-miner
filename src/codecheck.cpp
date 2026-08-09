@@ -131,8 +131,8 @@ bool IsIn(const std::vector<std::string>& list, const std::string& word)
 
 std::string TooMany(const char* was, int erlaubt, int jetzt)
 {
-    return std::string("Du darfst nur ") + std::to_string(erlaubt) + " " + was +
-           " benutzen, das hier ist die " + std::to_string(jetzt) + ".";
+    return std::string("You may only use ") + std::to_string(erlaubt) + " " + was +
+           ", this is number " + std::to_string(jetzt) + ".";
 }
 
 }  // namespace
@@ -146,8 +146,8 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
     if ((int)files.size() > limits.maxConsoles)
     {
         errorConsole = files[(std::size_t)limits.maxConsoles].id;
-        return "Du darfst nur " + std::to_string(limits.maxConsoles) +
-               " Konsole(n) benutzen. Mehr gibt es im Skilltree.";
+        return "You may only use " + std::to_string(limits.maxConsoles) +
+               " console(s). More are available in the skill tree.";
     }
 
     // Ein Programm - also wird ueber alle Konsolen zusammen gezaehlt.
@@ -175,28 +175,28 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
             errorLine    = t.line;
 
             const auto locked = [&](const char* what) -> std::string
-            { return std::string("\"") + what + "\" ist noch nicht freigeschaltet - im Skilltree kaufen."; };
+            { return std::string("\"") + what + "\" is not unlocked yet - buy it in the skill tree."; };
 
             if (t.word == "while" || t.word == "do")
             {
                 if (!limits.allowWhile)
                     return locked(t.word.c_str());
                 if (++loops > limits.maxLoops)
-                    return TooMany("Schleife(n)", limits.maxLoops, loops);
+                    return TooMany("loop(s)", limits.maxLoops, loops);
             }
             else if (t.word == "for")
             {
                 if (!limits.allowFor)
                     return locked("for");
                 if (++loops > limits.maxLoops)
-                    return TooMany("Schleife(n)", limits.maxLoops, loops);
+                    return TooMany("loop(s)", limits.maxLoops, loops);
             }
             else if (t.word == "if")
             {
                 if (!limits.allowIf)
                     return locked("if");
                 if (++ifs > limits.maxIfs)
-                    return TooMany("Bedingung(en)", limits.maxIfs, ifs);
+                    return TooMany("condition(s)", limits.maxIfs, ifs);
             }
             else if (t.word == "else")
             {
@@ -287,7 +287,7 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
                 if (!limits.allowClass)
                     return locked(t.word.c_str());
                 if (++classes > limits.maxClasses)
-                    return TooMany("Klasse(n)", limits.maxClasses, classes);
+                    return TooMany("class(es)", limits.maxClasses, classes);
             }
             else if (IsTypeWord(t.word) || IsIn(classNames, t.word))
             {
@@ -310,16 +310,16 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
                         continue;
 
                     if (!limits.allowFunction)
-                        return locked("eigene Funktionen");
+                        return locked("your own functions");
                     if (++functions > limits.maxFunctions)
-                        return TooMany("Funktion(en)", limits.maxFunctions, functions);
+                        return TooMany("function(s)", limits.maxFunctions, functions);
                 }
                 else
                 {
                     if (!limits.allowVariable)
-                        return locked("eigene Variablen");
+                        return locked("your own variables");
                     if (++variables > limits.maxVariables)
-                        return TooMany("Variable(n)", limits.maxVariables, variables);
+                        return TooMany("variable(s)", limits.maxVariables, variables);
                 }
             }
         }

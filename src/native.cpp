@@ -575,7 +575,7 @@ std::string Erklaere(const std::string& roh)
     if (cut != std::string::npos)
         wort = wort.substr(cut + 2);
 
-    const std::string was = wort.empty() ? std::string("Das hier") : ("\"" + wort + "\"");
+    const std::string was = wort.empty() ? std::string("This") : ("\"" + wort + "\"");
 
     std::string text;
 
@@ -583,49 +583,49 @@ std::string Erklaere(const std::string& roh)
     // und fast immer ist es die Reihenfolge.
     if (code == "C3861" || code == "C2065" || code == "C2064" || code == "C2062")
         text = was +
-               " kennt das Programm hier noch nicht. In C++ muss alles SCHON DASTEHEN, bevor du "
-               "es benutzt: eigene Funktionen gehoeren deshalb ueber main(), nicht darunter. "
-               "Sonst: vertippt?";
+               " is not known here yet. In C++ everything must ALREADY BE THERE before you "
+               "use it: your own functions belong above main(), not below it. "
+               "Otherwise: a typo?";
 
     // Gibt es bei diesem Ding nicht.
     else if (code == "C2039")
         text = was +
-               " gibt es da nicht. block kann mine() und isThere(), alles rund um die Tasche "
-               "kann item - verkaufen, waschen, legieren.";
+               " does not exist there. block can mine() and isThere(); everything about the bag "
+               "belongs to item - selling, washing, alloying.";
     else if (code == "C2228" || code == "C2227")
-        text = "Vor dem Punkt steht etwas, das keinen Punkt vertraegt. Gemeint sind block oder "
+        text = "What is in front of the dot cannot take a dot. You mean block or "
                "item.";
 
     // Schreibweise.
     else if (code == "C2143" || code == "C2144" || code == "C2146" || code == "C2059" ||
              code == "C2238")
-        text = "Da stimmt die Schreibweise nicht. Am haeufigsten: der Strichpunkt am Ende der "
-               "Zeile DAVOR fehlt.";
+        text = "Something is written wrong. Most often: the semicolon at the end of the "
+               "line BEFORE is missing.";
     else if (code == "C1004" || code == "C1075")
-        text = "Eine geschweifte Klammer fehlt. Jede { braucht ihre }.";
+        text = "A curly brace is missing. Every { needs its }.";
     else if (code == "C2181" || code == "C2059e")
-        text = "Ein else ohne if davor. else gehoert direkt hinter die } des if.";
+        text = "An else without an if. else belongs right after the } of the if.";
     else if (code == "C2601" || code == "C2447")
-        text = "Eine Funktion in einer Funktion geht nicht. Schreib sie daneben, ueber main().";
+        text = "A function inside a function does not work. Put it next to it, above main().";
 
     // Klammern und Werte.
     else if (code == "C2660" || code == "C2661" || code == "C2198" || code == "C2668")
-        text = was + " bekommt die falsche Anzahl an Angaben in den Klammern.";
+        text = was + " gets the wrong number of values in the brackets.";
     else if (code == "C2664" || code == "C2440" || code == "C2446" || code == "C2665" ||
              code == "C2666")
-        text = "Bei " + was +
-               " steht in den Klammern die falsche Sorte Wert - eine Zahl, wo Text hingehoert, "
-               "oder umgekehrt. Text gehoert in Anfuehrungszeichen: item.wash(\"Stein\").";
+        text = "At " + was +
+               " the brackets hold the wrong kind of value - a number where text belongs, "
+               "or the other way round. Text belongs in quotes: item.wash(\"Stone\").";
     else if (code == "C4430" || code == "C2371" || code == "C2086")
-        text = was + " gibt es schon. Jeden Namen darf es nur einmal geben.";
+        text = was + " already exists. Every name may be used only once.";
 
     // Drumherum.
     else if (code == "C1083")
-        text = "Ein #include, das es nicht gibt. Schreibweise pruefen.";
+        text = "An #include that does not exist. Check the spelling.";
     else if (code == "LNK2019" || code == "LNK2001")
         text = was +
-               " hast du angekuendigt, aber nirgends hingeschrieben, was es tun soll. Es fehlt "
-               "der Rumpf mit { }.";
+               " was announced, but nowhere did you write what it should do. Missing "
+               "is the body with { }.";
 
     if (text.empty())
         return roh;  // unbekannt: dann lieber das Original als gar nichts
@@ -640,25 +640,25 @@ std::string AbsturzText(unsigned long code)
     switch (code)
     {
     case 0xC0000005ul:
-        return "Das Programm hat irgendwo hingegriffen, wo nichts ist. Meistens ein Zeiger oder "
-               "ein Index neben dem Feld - z.B. zahlen[10] bei nur 10 Plaetzen (0 bis 9).";
+        return "The program reached somewhere that does not exist. Usually a pointer or "
+               "an index past the end of an array - e.g. numbers[10] with only 10 slots (0 to 9).";
     case 0xC0000094ul:
     case 0xC0000095ul:
-        return "Durch null geteilt. Vor jedem / gehoert die Frage, ob der Teiler auch wirklich "
-               "nicht null ist.";
+        return "Divided by zero. Before every / ask whether the divisor really is "
+               "not zero.";
     case 0xC00000FDul:
-        return "Der Speicher ist uebergelaufen. Fast immer ruft sich eine Funktion endlos selbst "
-               "auf - fehlt ihr das Abbruch-if?";
+        return "The memory overflowed. Almost always a function calls itself endlessly - "
+               "is it missing its stopping if?";
     case 0xC0000409ul:
     case 3ul:
-        return "Das Programm hat sich selbst abgebrochen. Meistens ein Zugriff daneben, den C++ "
-               "noch rechtzeitig gemerkt hat.";
+        return "The program aborted itself. Usually an access out of bounds that C++ "
+               "caught just in time.";
     default:
         break;
     }
 
     char buf[96];
-    std::snprintf(buf, sizeof(buf), "Das Programm ist mittendrin gestorben (Code 0x%08lX).", code);
+    std::snprintf(buf, sizeof(buf), "The program died halfway through (code 0x%08lX).", code);
     return buf;
 }
 
@@ -703,7 +703,7 @@ void ParseCompilerError(const std::string& out, std::string& message, int& conso
         return;
     }
 
-    message = out.empty() ? "Kompilieren fehlgeschlagen." : Trim(out);
+    message = out.empty() ? "Compiling failed." : Trim(out);
     if (message.size() > 300)
         message = message.substr(0, 300) + " ...";
 }
@@ -769,7 +769,7 @@ void Native::start(const std::vector<SourceFile>& files)
     mBudget     = 0.0f;
     mAwaitingGo = false;
     mPending.clear();
-    mMsg   = "kompiliert ...";
+    mMsg   = "compiling ...";
     mPhase = Phase::Compiling;
 
     static int counter = 0;
@@ -853,7 +853,7 @@ void Native::finish(const char* reason)
     mConsole    = 0;
     mLine       = 0;
     mAwaitingGo = false;
-    if (mMsg.empty() || mMsg == "läuft" || mMsg == "kompiliert ...")
+    if (mMsg.empty() || mMsg == "running" || mMsg == "compiling ...")
         mMsg = reason;
     closeChild();
 }
@@ -962,7 +962,7 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
     }
 
     case 'M':
-        mMsg = world.mine() ? "Block abgebaut." : "Der Block ist schon abgebaut.";
+        mMsg = world.mine() ? "Block mined." : "The block is already mined.";
         break;
 
     case 'Q':
@@ -987,8 +987,8 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
         }
 
         sendChild((std::to_string(geld) + "\n").c_str());
-        mMsg = (geld > 0) ? ("Verkauft: " + std::to_string(geld) + " Geld.")
-                          : std::string("Nichts zu verkaufen.");
+        mMsg = (geld > 0) ? ("Sold: " + std::to_string(geld) + " money.")
+                          : std::string("Nothing to sell.");
         break;
     }
 
@@ -1007,8 +1007,8 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
                                    std::atoi(rest.c_str() + a + 1));
 
         sendChild((std::to_string(wie) + "\n").c_str());
-        mMsg = (wie > 0) ? (world.craftName + ": " + std::to_string(wie) + " Stück.")
-                         : std::string("Verarbeiten ging nicht.");
+        mMsg = (wie > 0) ? (world.craftName + ": " + std::to_string(wie) + " pieces.")
+                         : std::string("Processing did not work.");
         break;
     }
 
@@ -1026,8 +1026,8 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
                                    std::atoi(rest.c_str()), false);
 
         sendChild((std::to_string(wie) + "\n").c_str());
-        mMsg = (wie > 0) ? ("Legieren: " + std::to_string(wie) + " Stück.")
-                         : std::string("Legieren ging nicht.");
+        mMsg = (wie > 0) ? ("Alloying: " + std::to_string(wie) + " pieces.")
+                         : std::string("Alloying did not work.");
         break;
     }
 
@@ -1079,7 +1079,7 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
     }
 
     case 'X':
-        finish("Fertig.");
+        finish("Done.");
         break;
 
     default:
@@ -1122,7 +1122,7 @@ void Native::update(float dt, World& world, const OrePlan& ores, const CraftPlan
         mLastDir      = build.dir;
 
         mPhase  = Phase::Running;
-        mMsg    = "läuft";
+        mMsg    = "running";
         mBudget = 1.0f;  // die erste Zeile sofort freigeben
         return;
     }
@@ -1159,7 +1159,7 @@ void Native::update(float dt, World& world, const OrePlan& ores, const CraftPlan
             GetExitCodeProcess(mProcess, &code);
             if (code == 0)
             {
-                finish("Fertig.");
+                finish("Done.");
             }
             else
             {
@@ -1198,7 +1198,7 @@ static Native::Build CompileToExe(const std::vector<SourceFile>& files, int runI
 
     if (withMain.empty())
     {
-        build.error = "Keine Konsole hat ein  int main() { ... }  - dort startet das Programm.";
+        build.error = "No console has an  int main() { ... }  - that is where the program starts.";
         return build;
     }
     if (withMain.size() > 1)
@@ -1228,7 +1228,7 @@ static Native::Build CompileToExe(const std::vector<SourceFile>& files, int runI
     const std::wstring base = WorkDir();
     if (base.empty())
     {
-        build.error = "Kein Temp-Ordner verfuegbar.";
+        build.error = "No temp folder available.";
         return build;
     }
 
@@ -1242,14 +1242,14 @@ static Native::Build CompileToExe(const std::vector<SourceFile>& files, int runI
         !WriteTextFile(dir + L"klicker.cpp", kKlickerSource) ||
         !WriteTextFile(dir + L"run.cpp", build.combined))
     {
-        build.error = "Dateien konnten nicht geschrieben werden.";
+        build.error = "Files could not be written.";
         return build;
     }
 
     const Toolchain& tc = GetToolchain();
     if (tc.clExe.empty())
     {
-        build.error = tc.problem.empty() ? "Der C++-Compiler wurde nicht gefunden." : tc.problem;
+        build.error = tc.problem.empty() ? "The C++ compiler was not found." : tc.problem;
         return build;
     }
 

@@ -691,7 +691,7 @@ void DrawTimeline(const WikiPage& page, float width)
     const int   n = (int)page.steps.size();
     const float w = std::max(width, 120.0f);
 
-    if (ImGui::Button(g_wiki.playing ? "Pause" : "Abspielen", ImVec2(96.0f, 0.0f)))
+    if (ImGui::Button(g_wiki.playing ? "Pause" : "Play", ImVec2(96.0f, 0.0f)))
         g_wiki.playing = !g_wiki.playing;
 
     ImGui::SameLine();
@@ -721,7 +721,7 @@ void DrawTimeline(const WikiPage& page, float width)
     const float rest     = std::max(0.0f, gesamt - gelaufen);
 
     ImGui::SameLine();
-    ImGui::TextDisabled("Schritt %d von %d  -  noch %.0f s", g_wiki.step + 1, n, rest);
+    ImGui::TextDisabled("Step %d of %d  -  %.0f s left", g_wiki.step + 1, n, rest);
 
     ImGui::SameLine();
     ImGui::TextDisabled("   [Leertaste] Pause   [<- ->] Schritt   [R] von vorn");
@@ -844,8 +844,8 @@ void DrawOreCollection(World& world, const OrePlan& ores, const CraftPlan& craft
     if (erze.empty())
     {
         ImGui::Spacing();
-        ImGui::TextDisabled("Hier steht noch nichts. Bau einen Block ab - dann bekommt sein Erz");
-        ImGui::TextDisabled("hier eine Seite, und jeder Schritt, den du damit machst, kommt dazu.");
+        ImGui::TextDisabled("Nothing here yet. Mine a block and its ore gets a page here -");
+        ImGui::TextDisabled("and every step you take with it is added.");
         return;
     }
 
@@ -893,7 +893,7 @@ void DrawOreCollection(World& world, const OrePlan& ores, const CraftPlan& craft
     if (g_wiki.ore < 0)
     {
         ImGui::Spacing();
-        ImGui::TextDisabled("Wähle links ein Erz.");
+        ImGui::TextDisabled("Pick an ore on the left.");
         ImGui::EndChild();
         return;
     }
@@ -911,8 +911,8 @@ void DrawOreCollection(World& world, const OrePlan& ores, const CraftPlan& craft
 
         ImGui::BeginGroup();
         ImGui::TextUnformatted(erz.name.c_str());
-        ImGui::TextDisabled("Grundwert %d   -   ab Level %d", erz.value, erz.minLevel);
-        ImGui::TextDisabled("gefunden als %s mit %d %% Reinheit",
+        ImGui::TextDisabled("Base value %d   -   from level %d", erz.value, erz.minLevel);
+        ImGui::TextDisabled("found as %s at %d %% purity",
                             OreStateName((OreState)anfang.state), anfang.purity);
         ImGui::EndGroup();
     }
@@ -929,7 +929,7 @@ void DrawOreCollection(World& world, const OrePlan& ores, const CraftPlan& craft
     auto wegText = [&](const OreWay& w)
     {
         if (w.steps.empty())
-            return std::string("so hast du es gefunden");
+            return std::string("how you found it");
 
         std::string text;
         for (std::size_t k = 0; k < w.steps.size(); ++k)
@@ -948,11 +948,11 @@ void DrawOreCollection(World& world, const OrePlan& ores, const CraftPlan& craft
 
     if (ImGui::BeginTable("##wege", 5, tf))
     {
-        ImGui::TableSetupColumn("Zustand", ImGuiTableColumnFlags_WidthFixed, 120.0f);
-        ImGui::TableSetupColumn("bester Weg dorthin");
-        ImGui::TableSetupColumn("Wege", ImGuiTableColumnFlags_WidthFixed, 55.0f);
-        ImGui::TableSetupColumn("Reinheit", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-        ImGui::TableSetupColumn("Preis", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+        ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_WidthFixed, 120.0f);
+        ImGui::TableSetupColumn("best way there");
+        ImGui::TableSetupColumn("Ways", ImGuiTableColumnFlags_WidthFixed, 55.0f);
+        ImGui::TableSetupColumn("Purity", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+        ImGui::TableSetupColumn("Price", ImGuiTableColumnFlags_WidthFixed, 70.0f);
         ImGui::TableHeadersRow();
 
         for (int s : zeilen)
@@ -1019,16 +1019,16 @@ void DrawOreCollection(World& world, const OrePlan& ores, const CraftPlan& craft
         ImGui::Separator();
         ImGui::Spacing();
 
-        ImGui::Text("Alle Wege nach %s, die du kennst:",
+        ImGui::Text("Every way to %s that you know:",
                     OreStateName((OreState)g_wiki.oreState));
         ImGui::Spacing();
 
         if (ImGui::BeginTable("##allewege", 4, tf))
         {
-            ImGui::TableSetupColumn("Weg");
-            ImGui::TableSetupColumn("Schritte", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-            ImGui::TableSetupColumn("Reinheit", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-            ImGui::TableSetupColumn("Preis", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+            ImGui::TableSetupColumn("Way");
+            ImGui::TableSetupColumn("Steps", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+            ImGui::TableSetupColumn("Purity", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+            ImGui::TableSetupColumn("Price", ImGuiTableColumnFlags_WidthFixed, 70.0f);
             ImGui::TableHeadersRow();
 
             const std::size_t zeige = (liste.size() < kMaxShown) ? liste.size() : kMaxShown;
@@ -1048,7 +1048,7 @@ void DrawOreCollection(World& world, const OrePlan& ores, const CraftPlan& craft
             ImGui::EndTable();
 
             if (liste.size() > zeige)
-                ImGui::TextDisabled("... und %d weitere, die weniger bringen.",
+                ImGui::TextDisabled("... and %d more that pay less.",
                                     (int)(liste.size() - zeige));
         }
 
@@ -1061,26 +1061,26 @@ void DrawOreCollection(World& world, const OrePlan& ores, const CraftPlan& craft
 
             if (lohntSich)
                 ImGui::TextDisabled(
-                    "Gleicher Zustand, %d statt %d Geld - nur wegen der Reinheit unterwegs.", oben,
+                    "Same state, %d instead of %d money - purity along the way is the only difference.", oben,
                     unten);
             else
                 ImGui::TextDisabled(
-                    "Alle gleich teuer: hier ist der kürzeste Weg der beste.");
+                    "All worth the same: here the shortest way is the best one.");
         }
         else
         {
-            ImGui::TextDisabled("Bisher kennst du nur diesen einen. Probier einen Umweg!");
+            ImGui::TextDisabled("So far you only know this one. Try a detour!");
         }
     }
 
     ImGui::Spacing();
-    ImGui::TextDisabled("%d von %d Zuständen gefunden.  ? heißt: noch nie selbst hergestellt.",
+    ImGui::TextDisabled("%d of %d states found.  ? means: never made it yourself.",
                         gefunden, (int)zeilen.size());
-    ImGui::TextDisabled("Klick eine Zeile an: dann stehen darunter ALLE Wege dorthin.");
-    ImGui::TextDisabled("Preis für EIN Stück, mit deinen jetzigen %d Geld pro Block.",
+    ImGui::TextDisabled("Click a row: every way to get there is listed below.");
+    ImGui::TextDisabled("Price for ONE piece, at your current %d money per block.",
                         world.moneyPerBlock);
-    ImGui::TextDisabled("Der Weg zählt mit: der Zustand ist immer gleich viel wert, die Reinheit");
-    ImGui::TextDisabled("nicht. Schmelzen kostet welche, Reinigen bringt welche.");
+    ImGui::TextDisabled("The way counts: a state is always worth the same, purity is not.");
+    ImGui::TextDisabled("Smelting costs purity, cleaning adds some.");
 
     ImGui::EndChild();
 }
@@ -1128,7 +1128,7 @@ WikiBook LoadWikiBook()
     const JsonValue* kats = wurzel.find("kategorien");
     if (kats == nullptr || kats->type != JsonValue::Type::Array)
     {
-        book.problems.push_back("Es fehlt die Liste \"kategorien\": [ ... ].");
+        book.problems.push_back("Missing the list \"kategorien\": [ ... ].");
         return book;
     }
 
@@ -1155,7 +1155,7 @@ WikiBook LoadWikiBook()
     const JsonValue* seiten = wurzel.find("seiten");
     if (seiten == nullptr || seiten->type != JsonValue::Type::Array)
     {
-        book.problems.push_back("Es fehlt die Liste \"seiten\": [ ... ].");
+        book.problems.push_back("Missing the list \"seiten\": [ ... ].");
         return book;
     }
 
@@ -1563,7 +1563,7 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, World& world, cons
                     }
             };
 
-            // Eine leere Kategorie gibt es gar nicht erst. "Funktionen" taucht
+            // Eine leere Kategorie gibt es gar nicht erst. "Functions" taucht
             // also auf, sobald der erste Befehl gekauft ist, die Erze mit dem
             // ersten abgebauten Brocken - eine Karte mit "0 Seiten" waere nur
             // ein Versprechen, das man noch nicht einloesen kann.
@@ -1580,8 +1580,8 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, World& world, cons
 
             if (n == 0)
             {
-                const char* leer = "Hier steht noch nichts. Bau einen Block ab oder kauf dir "
-                                   "etwas im Skilltree.";
+                const char* leer = "Nothing here yet. Mine a block or buy something "
+                                   "in the skill tree.";
                 TextAt(dl, 15.0f,
                        ImVec2(area.x + avail.x * 0.5f - TextSize(15.0f, leer).x * 0.5f,
                               area.y + avail.y * 0.35f),
@@ -1599,7 +1599,7 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, World& world, cons
                 const float x0    = area.x + (avail.x - total) * 0.5f;
                 const float y0    = area.y + std::max(34.0f, (avail.y - cardH) * 0.33f);
 
-                const char* hallo = "Wähle ein Thema.";
+                const char* hallo = "Pick a topic.";
                 TextAt(dl, 17.0f,
                        ImVec2(area.x + avail.x * 0.5f - TextSize(17.0f, hallo).x * 0.5f,
                               y0 - 46.0f),
@@ -1657,7 +1657,7 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, World& world, cons
                     zaehle(c.key, zahl, neu);
 
                     char label[48];
-                    std::snprintf(label, sizeof(label), "%d Seite%s", zahl, (zahl == 1) ? "" : "n");
+                    std::snprintf(label, sizeof(label), "%d page%s", zahl, (zahl == 1) ? "" : "n");
                     TextAt(dl, 13.0f, ImVec2(ca.x + 18.0f, cb.y - 27.0f), kAccent, label);
 
                     // Was hier neu ist, faellt sofort auf - man soll nicht erst
@@ -1665,7 +1665,7 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, World& world, cons
                     if (neu > 0)
                     {
                         char nl[32];
-                        std::snprintf(nl, sizeof(nl), "%d neu", neu);
+                        std::snprintf(nl, sizeof(nl), "%d new", neu);
                         const ImVec2 ns = TextSize(13.0f, nl);
                         const ImVec2 np(cb.x - 18.0f - ns.x, cb.y - 27.0f);
 
@@ -1727,7 +1727,7 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, World& world, cons
 
             // Liegt IRGENDWO darunter etwas Ungelesenes? Muss ueber alle Ebenen
             // gehen: sonst bliebe ein neues item.wash() unbemerkt, solange
-            // "item" und "Verarbeiten" beide zugeklappt sind.
+            // "item" und "Process" beide zugeklappt sind.
             auto neuDarunter = [&](auto&& self, int i) -> bool
             {
                 if (seen.find(book.pages[(std::size_t)i].title) == seen.end())
@@ -1741,7 +1741,7 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, World& world, cons
             // Ein Punkt der Liste. Wer Unterseiten hat, wird zum Oberpunkt zum
             // Auf- und Zuklappen - acht Verarbeitungs-Befehle einzeln
             // untereinander waeren sonst die halbe Liste. Das geht ueber
-            // beliebig viele Ebenen: "item" > "Verarbeiten" > "item.wash()".
+            // beliebig viele Ebenen: "item" > "Process" > "item.wash()".
             auto zeichne = [&](auto&& self, int i, bool eingerueckt) -> void
             {
                 const WikiPage&        p      = book.pages[(std::size_t)i];
@@ -1816,7 +1816,7 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, World& world, cons
             float spalte = 0.0f;
             if (!verwandt.empty())
             {
-                float breit = ImGui::CalcTextSize("Passt dazu").x;
+                float breit = ImGui::CalcTextSize("Related").x;
                 for (int i : verwandt)
                     breit = std::max(breit,
                                      ImGui::CalcTextSize(book.pages[(std::size_t)i].title.c_str()).x);
@@ -1842,7 +1842,7 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, World& world, cons
                 TextAt(dl, 16.0f, ImVec2(p.x, p.y + 42.0f), kTextDim, kat->text.c_str(), wrap);
 
                 ImGui::Dummy(ImVec2(0.0f, 130.0f));
-                ImGui::TextDisabled("Links auswählen.");
+                ImGui::TextDisabled("Pick one on the left.");
             }
             else
             {
@@ -1954,7 +1954,7 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, World& world, cons
                 ImGui::SameLine();
                 ImGui::BeginChild("##verwandt", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);
 
-                ImGui::TextDisabled("Passt dazu");
+                ImGui::TextDisabled("Related");
                 ImGui::Spacing();
 
                 int springe = -1;

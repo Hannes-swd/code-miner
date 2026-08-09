@@ -94,7 +94,7 @@ const char* SkillName(Skill skill)
 {
     switch (skill)
     {
-    case Skill::Root: return "Konsole";
+    case Skill::Root: return "Console";
     case Skill::Mine: return "block.mine()";
     case Skill::Sell: return "item.sell()";
     case Skill::While: return "while";
@@ -105,9 +105,9 @@ const char* SkillName(Skill skill)
     case Skill::Check: return "block.isThere()";
     case Skill::Bag: return "item.has()";
     case Skill::Shared: return "shared[...]";
-    case Skill::Variable: return "Variablen";
-    case Skill::Class: return "Klassen";
-    case Skill::Function: return "Funktionen";
+    case Skill::Variable: return "Variables";
+    case Skill::Class: return "Classes";
+    case Skill::Function: return "Functions";
     case Skill::Wash: return "item.wash()";
     case Skill::Smelt: return "item.smelt()";
     case Skill::Cast: return "item.cast()";
@@ -117,15 +117,15 @@ const char* SkillName(Skill skill)
     case Skill::Refine: return "item.refine()";
     case Skill::Press: return "item.press()";
     case Skill::Alloy: return "item.alloy()";
-    case Skill::ExtraLoop: return "+1 Schleife";
-    case Skill::ExtraIf: return "+1 Bedingung";
-    case Skill::ExtraConsole: return "+1 Konsole";
-    case Skill::ExtraVariable: return "+1 Variable";
-    case Skill::ExtraClass: return "+1 Klasse";
-    case Skill::ExtraFunction: return "+1 Funktion";
-    case Skill::Speed: return "Tempo";
-    case Skill::MoneyPerBlock: return "Geld pro Block";
-    case Skill::FasterRespawn: return "Nachwachsen";
+    case Skill::ExtraLoop: return "+1 loop";
+    case Skill::ExtraIf: return "+1 condition";
+    case Skill::ExtraConsole: return "+1 console";
+    case Skill::ExtraVariable: return "+1 variable";
+    case Skill::ExtraClass: return "+1 class";
+    case Skill::ExtraFunction: return "+1 function";
+    case Skill::Speed: return "Speed";
+    case Skill::MoneyPerBlock: return "Money per block";
+    case Skill::FasterRespawn: return "Regrow";
     case Skill::None: return "-";
     }
     return "?";
@@ -135,38 +135,38 @@ const char* SkillInfo(Skill skill)
 {
     switch (skill)
     {
-    case Skill::Root: return "Deine erste Konsole. Abbauen kannst du am Anfang nur von Hand - klick auf den Block.";
-    case Skill::Mine: return "block.mine() - abbauen lassen, statt selbst zu klicken. Der erste Schritt zur Maschine.";
-    case Skill::Sell: return "item.sell() verkauft alles aus der Tasche auf einmal. Ohne das musst du von Hand verkaufen.";
-    case Skill::While: return "while und do. Bringt gleich die erste Schleife mit.";
-    case Skill::If: return "if. Bringt gleich die erste Bedingung mit.";
-    case Skill::Else: return "else. Braucht if.";
-    case Skill::For: return "for. Bringt eine weitere Schleife mit - alle Schleifen zählen zusammen.";
-    case Skill::Print: return "print(...) schreibt in die Zeile unter dem Editor.";
-    case Skill::Check: return "block.isThere() und block.isLoading() - nachschauen, ob der Block da ist.";
-    case Skill::Bag: return "item.has(\"Stein\") - in die Tasche schauen. Mit Anzahl: item.has(\"Stein\", 5). Braucht if.";
-    case Skill::Shared: return "shared[\"name\"] - Werte, die einen Neustart überleben.";
-    case Skill::Variable: return "Eigene Variablen: int, float, bool, auto ... Erstmal genau eine.";
-    case Skill::Class: return "struct und class. Erstmal genau eine.";
-    case Skill::Function: return "Eigene Funktionen und Methoden. Erstmal genau eine.";
-    case Skill::Wash: return "item.wash(\"Stein\") - waschen. Der erste Schritt, der einen Block mehr wert macht.";
-    case Skill::Smelt: return "item.smelt(\"Kupfer\") - schmelzen. Kostet Reinheit, bringt aber viel Wert.";
-    case Skill::Cast: return "item.cast(\"Kupfer\") - gießen. Geht nur mit Geschmolzenem.";
-    case Skill::Clean: return "item.clean(\"Stein\") - reinigen. Der große Sprung bei der Reinheit.";
-    case Skill::Polish: return "item.polish(\"Diamant\") - polieren. Braucht etwas Gegossenes, Gereinigtes oder Gehärtetes.";
-    case Skill::Harden: return "item.harden(\"Eisen\") - härten. Aus mehreren Zuständen heraus möglich.";
-    case Skill::Refine: return "item.refine(\"Gold\") - veredeln. Das Wertvollste, was ein einzelnes Erz werden kann.";
-    case Skill::Press: return "item.press(\"Kohle\") - pressen. Schnell und billig, dafür wenig Gewinn.";
-    case Skill::Alloy: return "item.alloy(\"Elektrum\") - zwei Erze zu einem neuen Stoff verschmelzen, der mehr wert ist als beide zusammen. item.canAlloy(\"Elektrum\") sagt vorher, wie viele gingen. Braucht schmelzen.";
-    case Skill::ExtraLoop: return "Eine Schleife mehr im Code erlaubt.";
-    case Skill::ExtraIf: return "Eine Bedingung mehr im Code erlaubt.";
-    case Skill::ExtraConsole: return "Eine Konsole mehr.";
-    case Skill::ExtraVariable: return "Eine Variable mehr im Code erlaubt.";
-    case Skill::ExtraClass: return "Eine Klasse mehr im Code erlaubt.";
-    case Skill::ExtraFunction: return "Eine Funktion mehr im Code erlaubt.";
-    case Skill::Speed: return "+0,5 Zeilen pro Sekunde.";
-    case Skill::MoneyPerBlock: return "+1 Geld pro abgebautem Block.";
-    case Skill::FasterRespawn: return "Der Block wächst 8% schneller nach.";
+    case Skill::Root: return "Your first console. At the start you can only mine by hand - click the block.";
+    case Skill::Mine: return "block.mine() - let a program mine instead of clicking. The first step towards a machine.";
+    case Skill::Sell: return "item.sell() sells everything in your bag at once. Without it you sell by hand.";
+    case Skill::While: return "while and do. Comes with your first loop.";
+    case Skill::If: return "if. Comes with your first condition.";
+    case Skill::Else: return "else. Needs if.";
+    case Skill::For: return "for. Comes with one more loop - all loops count together.";
+    case Skill::Print: return "print(...) writes into the line below the editor.";
+    case Skill::Check: return "block.isThere() and block.isLoading() - check whether the block is there.";
+    case Skill::Bag: return "item.has(\"Stone\") - look into your bag. With a count: item.has(\"Stone\", 5). Needs if.";
+    case Skill::Shared: return "shared[\"name\"] - values that survive a restart.";
+    case Skill::Variable: return "Your own variables: int, float, bool, auto ... exactly one for now.";
+    case Skill::Class: return "struct and class. Exactly one for now.";
+    case Skill::Function: return "Your own functions and methods. Exactly one for now.";
+    case Skill::Wash: return "item.wash(\"Stone\") - washing. The first step that makes a block worth more.";
+    case Skill::Smelt: return "item.smelt(\"Copper\") - smelting. Costs purity, but adds a lot of value.";
+    case Skill::Cast: return "item.cast(\"Copper\") - casting. Only works on smelted material.";
+    case Skill::Clean: return "item.clean(\"Stone\") - cleaning. The big jump in purity.";
+    case Skill::Polish: return "item.polish(\"Diamond\") - polishing. Needs something cast, cleaned or hardened.";
+    case Skill::Harden: return "item.harden(\"Iron\") - hardening. Possible from several states.";
+    case Skill::Refine: return "item.refine(\"Gold\") - refining. The most valuable thing a single ore can become.";
+    case Skill::Press: return "item.press(\"Coal\") - pressing. Fast and cheap, but little profit.";
+    case Skill::Alloy: return "item.alloy(\"Electrum\") - melt two ores into a new material worth more than both together. item.canAlloy(\"Electrum\") tells you beforehand how many would work. Needs smelting.";
+    case Skill::ExtraLoop: return "One more loop allowed in your code.";
+    case Skill::ExtraIf: return "One more condition allowed in your code.";
+    case Skill::ExtraConsole: return "One more console.";
+    case Skill::ExtraVariable: return "One more variable allowed in your code.";
+    case Skill::ExtraClass: return "One more class allowed in your code.";
+    case Skill::ExtraFunction: return "One more function allowed in your code.";
+    case Skill::Speed: return "+0.5 lines per second.";
+    case Skill::MoneyPerBlock: return "+1 money per mined block.";
+    case Skill::FasterRespawn: return "The block regrows 8% faster.";
     case Skill::None: return "";
     }
     return "";

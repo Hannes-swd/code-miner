@@ -4,7 +4,7 @@
 
   "erze": [
     {
-      "name": "Stein",
+      "name": "Stone",
       "reinheit": 85,
       "seltenheit": 1,
       "abbaudauer": 0.5,
@@ -17,7 +17,7 @@
       "legierbar_mit": []
     },
     {
-      "name": "Kohle",
+      "name": "Coal",
       "reinheit": 55,
       "seltenheit": 4,
       "abbaudauer": 0.7,
@@ -30,7 +30,7 @@
       "legierbar_mit": []
     },
     {
-      "name": "Granit",
+      "name": "Granite",
       "reinheit": 80,
       "seltenheit": 6,
       "abbaudauer": 0.9,
@@ -43,7 +43,7 @@
       "legierbar_mit": []
     },
     {
-      "name": "Kupfer",
+      "name": "Copper",
       "reinheit": 60,
       "seltenheit": 9,
       "abbaudauer": 1.0,
@@ -53,10 +53,10 @@
       "farbe2": "#5C3A26",
       "muster": 6,
       "zustaende": ["raw", "washed", "smelted", "cast", "polished", "hardened", "refined", "cleaned", "oxidized", "alloy"],
-      "legierbar_mit": ["Eisen", "Silber", "Gold"]
+      "legierbar_mit": ["Iron", "Silver", "Gold"]
     },
     {
-      "name": "Eisen",
+      "name": "Iron",
       "reinheit": 65,
       "seltenheit": 14,
       "abbaudauer": 1.3,
@@ -66,10 +66,10 @@
       "farbe2": "#6B6259",
       "muster": 5,
       "zustaende": ["raw", "washed", "smelted", "cast", "polished", "hardened", "refined", "cleaned", "oxidized", "alloy"],
-      "legierbar_mit": ["Kupfer", "Silber"]
+      "legierbar_mit": ["Copper", "Silver"]
     },
     {
-      "name": "Silber",
+      "name": "Silver",
       "reinheit": 50,
       "seltenheit": 24,
       "abbaudauer": 1.7,
@@ -79,7 +79,7 @@
       "farbe2": "#7C8490",
       "muster": 4,
       "zustaende": ["raw", "washed", "smelted", "cast", "polished", "refined", "cleaned", "oxidized", "alloy"],
-      "legierbar_mit": ["Gold", "Kupfer", "Eisen", "Elektrum"]
+      "legierbar_mit": ["Gold", "Copper", "Iron", "Electrum"]
     },
     {
       "name": "Gold",
@@ -92,10 +92,10 @@
       "farbe2": "#6B5320",
       "muster": 4,
       "zustaende": ["raw", "washed", "smelted", "cast", "polished", "refined", "cleaned", "alloy"],
-      "legierbar_mit": ["Silber", "Kupfer"]
+      "legierbar_mit": ["Silver", "Copper"]
     },
     {
-      "name": "Smaragd",
+      "name": "Emerald",
       "reinheit": 75,
       "seltenheit": 80,
       "abbaudauer": 2.8,
@@ -108,7 +108,7 @@
       "legierbar_mit": []
     },
     {
-      "name": "Diamant",
+      "name": "Diamond",
       "reinheit": 90,
       "seltenheit": 150,
       "abbaudauer": 3.5,

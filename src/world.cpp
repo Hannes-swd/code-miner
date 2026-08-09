@@ -862,15 +862,15 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
 
         ImGui::BeginTooltip();
         ImGui::TextUnformatted(erz.name.c_str());
-        ImGui::TextDisabled("%d Geld beim Verkaufen  -  %.1f s Abbau",
+        ImGui::TextDisabled("%d money when sold  -  %.1f s to mine",
                             StackValue(ores, craft, world.ore, (int)OreState::Raw, rein, 1,
                                        world.moneyPerBlock),
                             erz.mineSeconds);
-        ImGui::TextDisabled("Reinheit %d%%  -  verarbeitet ist er mehr wert", rein);
+        ImGui::TextDisabled("Purity %d%%  -  processing makes it worth more", rein);
         if (world.blockAlive && (!world.frozen || world.handMine))
-            ImGui::TextDisabled("Klick zum Abbauen");
+            ImGui::TextDisabled("Click to mine");
         else if (world.frozen)
-            ImGui::TextDisabled("Erst die Runde starten");
+            ImGui::TextDisabled("Start the round first");
         ImGui::EndTooltip();
     }
 
@@ -881,7 +881,7 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
     // dorthin.
     if (world.frozen && world.phase == RoundPhase::Prepare)
     {
-        const char*  hinweis = "steht still";
+        const char*  hinweis = "paused";
         const ImVec2 hs      = ImGui::CalcTextSize(hinweis);
         dl->AddText(ImVec2(c.x - hs.x * 0.5f, fb.y - hs.y - 8.0f), ui::kTextWk, hinweis);
     }
@@ -967,16 +967,16 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
                                e.second.count, world.moneyPerBlock);
 
         ImGui::PushStyleColor(ImGuiCol_Text, ui::V(ui::kText));
-        ImGui::TextUnformatted("Tasche");
+        ImGui::TextUnformatted("Bag");
         ImGui::PopStyleColor();
 
         ImGui::SameLine();
-        ImGui::TextDisabled("  %d Blöcke, zusammen %d Geld", world.inventoryCount(), wert);
+        ImGui::TextDisabled("  %d blocks, %d money in total", world.inventoryCount(), wert);
 
         if (!world.inventory.empty())
         {
             ImGui::SameLine(ImGui::GetWindowWidth() - 190.0f);
-            if (ImGui::Button("Alles verkaufen", ImVec2(160.0f, 0.0f)))
+            if (ImGui::Button("Sell everything", ImVec2(160.0f, 0.0f)))
                 world.sell(ores, craft);
         }
 
@@ -1011,25 +1011,25 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
         if (world.inventory.empty())
         {
             ImGui::Spacing();
-            ImGui::TextDisabled("Noch nichts abgebaut.");
+            ImGui::TextDisabled("Nothing mined yet.");
 
             // Von block.mine() steht hier nur etwas, wenn es gekauft ist. Wer
             // es noch nicht hat, soll klicken - und nicht nach einem Befehl
             // suchen, den es fuer ihn noch gar nicht gibt.
             if (limits.allowMine)
             {
-                ImGui::TextDisabled("Geh auf die Welt-Seite und klick auf den Block -");
-                ImGui::TextDisabled("oder lass ein Programm block.mine() machen.");
+                ImGui::TextDisabled("Go to the World page and click the block -");
+                ImGui::TextDisabled("or let a program run block.mine().");
             }
             else
             {
-                ImGui::TextDisabled("Geh auf die Welt-Seite und klick auf den Block.");
+                ImGui::TextDisabled("Go to the World page and click the block.");
             }
         }
         else
         {
             ImGui::TextDisabled(
-                "Mit den Pfeilen die Anzahl einstellen, auf die Zahl klicken zum Eintippen.");
+                "Use the arrows to set the amount, click the number to type it.");
 
             // Vom Verarbeiten steht hier nur etwas, wenn es ueberhaupt schon
             // geht. Ein Hinweis auf ein Rechtsklickmenue, das leer bleibt, ist
@@ -1041,7 +1041,7 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
 
             if (kannVerarbeiten)
                 ImGui::TextDisabled(
-                    "Rechtsklick auf eine Karte: verarbeiten - das macht den Stapel wertvoller.");
+                    "Right-click a card to process it - that makes the stack worth more.");
 
             ImGui::Spacing();
             ImGui::Spacing();
@@ -1210,7 +1210,7 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
 
                 // ---- Verkaufen --------------------------------------------
                 char knopf[64];
-                std::snprintf(knopf, sizeof(knopf), "Verkaufen  %d",
+                std::snprintf(knopf, sizeof(knopf), "Sell  %d",
                               StackValue(ores, craft, stapel.ore, stapel.state, rein, wie,
                                          world.moneyPerBlock));
 
@@ -1235,7 +1235,7 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
                 // nichts kann.
                 if (kannVerarbeiten && ImGui::BeginPopupContextWindow("verarbeiten"))
                 {
-                    ImGui::TextDisabled("Verarbeiten");
+                    ImGui::TextDisabled("Process");
                     ImGui::Separator();
 
                     int moeglich = 0;
@@ -1260,7 +1260,7 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
                         }
 
                         if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                            ImGui::SetTooltip("%d Stück, %.1f s  -  Reinheit %+d%%\nDanach %d Geld",
+                            ImGui::SetTooltip("%d pieces, %.1f s  -  purity %+d%%\nThen %d money",
                                               wie, (double)(s.seconds * (float)wie), s.purity,
                                               StackValue(ores, craft, stapel.ore, s.to,
                                                          rein + s.purity, wie,
@@ -1268,11 +1268,11 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
                     }
 
                     if (moeglich == 0)
-                        ImGui::TextDisabled("Von hier aus geht nichts.");
+                        ImGui::TextDisabled("Nothing works from here.");
                     else if (world.frozen)
-                        ImGui::TextDisabled("Erst die Runde starten.");
+                        ImGui::TextDisabled("Start the round first.");
                     else if (world.crafting)
-                        ImGui::TextDisabled("Es läuft schon ein Auftrag.");
+                        ImGui::TextDisabled("A job is already running.");
 
                     ImGui::EndPopup();
                 }

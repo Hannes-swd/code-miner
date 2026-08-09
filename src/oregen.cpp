@@ -144,15 +144,31 @@ Color MixColor(const Color& a, const Color& b, float t)
 std::string MakeName(std::mt19937& rng, const OreGenPlan& gen,
                      const std::vector<std::string>& cores)
 {
-    std::string name = Pick(rng, gen.front);
+    std::vector<std::string> teile;
+    teile.push_back(Pick(rng, gen.front));
 
     if (!gen.middle.empty() && (rng() % 100u) < 30u)
-        name += Pick(rng, gen.middle);
+        teile.push_back(Pick(rng, gen.middle));
 
-    name += Pick(rng, cores);
+    teile.push_back(Pick(rng, cores));
 
     if (!gen.back.empty() && (rng() % 100u) < 45u)
-        name += Pick(rng, gen.back);
+        teile.push_back(Pick(rng, gen.back));
+
+    // Jedes Wort gross, mit Leerzeichen dazwischen: "Ember Quartz Grain".
+    std::string name;
+    for (const std::string& w : teile)
+    {
+        if (w.empty())
+            continue;
+        if (!name.empty())
+            name += ' ';
+
+        std::string teil = w;
+        if (teil[0] >= 'a' && teil[0] <= 'z')
+            teil[0] = (char)(teil[0] - 'a' + 'A');
+        name += teil;
+    }
 
     return name;
 }

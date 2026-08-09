@@ -23,35 +23,32 @@ const KeyEntry kKeys[] = {
     {"if", Skill::If},
     {"else", Skill::Else},
     {"print", Skill::Print},
-    {"prüfen", Skill::Check},
-    {"pruefen", Skill::Check},
-    {"geteilt", Skill::Shared},
-    {"abbauen", Skill::Mine},
-    {"verkaufen", Skill::Sell},
-    {"tasche", Skill::Bag},
-    {"variablen", Skill::Variable},
-    {"klassen", Skill::Class},
-    {"funktionen", Skill::Function},
-    {"waschen", Skill::Wash},
-    {"schmelzen", Skill::Smelt},
-    {"giessen", Skill::Cast},
-    {"gießen", Skill::Cast},
-    {"reinigen", Skill::Clean},
-    {"polieren", Skill::Polish},
-    {"haerten", Skill::Harden},
-    {"härten", Skill::Harden},
-    {"veredeln", Skill::Refine},
-    {"pressen", Skill::Press},
-    {"legieren", Skill::Alloy},
-    {"schleife+", Skill::ExtraLoop},
-    {"bedingung+", Skill::ExtraIf},
-    {"konsole+", Skill::ExtraConsole},
+    {"check", Skill::Check},
+    {"shared", Skill::Shared},
+    {"mine", Skill::Mine},
+    {"sell", Skill::Sell},
+    {"bag", Skill::Bag},
+    {"variables", Skill::Variable},
+    {"classes", Skill::Class},
+    {"functions", Skill::Function},
+    {"wash", Skill::Wash},
+    {"smelt", Skill::Smelt},
+    {"cast", Skill::Cast},
+    {"clean", Skill::Clean},
+    {"polish", Skill::Polish},
+    {"harden", Skill::Harden},
+    {"refine", Skill::Refine},
+    {"press", Skill::Press},
+    {"alloy", Skill::Alloy},
+    {"loop+", Skill::ExtraLoop},
+    {"condition+", Skill::ExtraIf},
+    {"console+", Skill::ExtraConsole},
     {"variable+", Skill::ExtraVariable},
-    {"klasse+", Skill::ExtraClass},
-    {"funktion+", Skill::ExtraFunction},
-    {"tempo", Skill::Speed},
-    {"geld", Skill::MoneyPerBlock},
-    {"nachwachsen", Skill::FasterRespawn},
+    {"class+", Skill::ExtraClass},
+    {"function+", Skill::ExtraFunction},
+    {"speed", Skill::Speed},
+    {"money", Skill::MoneyPerBlock},
+    {"regrow", Skill::FasterRespawn},
 };
 
 bool LookUp(const std::string& key, Skill& out)
@@ -67,17 +64,17 @@ bool LookUp(const std::string& key, Skill& out)
 
 bool IsOnce(const std::string& w)
 {
-    return w == "einmal";
+    return w == "once";
 }
 
 bool IsOften(const std::string& w)
 {
-    return w == "oft";
+    return w == "often";
 }
 
 bool IsNeeds(const std::string& w)
 {
-    return w == "braucht";
+    return w == "needs";
 }
 
 // "4", "2-6" oder "2-" (ab 2, ohne Ende).
@@ -99,7 +96,7 @@ bool ParseRange(const std::string& text, int& lo, int& hi)
 
 std::string Where(int line)
 {
-    return "Zeile " + std::to_string(line) + ": ";
+    return "line " + std::to_string(line) + ": ";
 }
 
 // Die ueblichen Stellen, an denen die Datei liegen kann. Der Projektordner
@@ -154,9 +151,9 @@ SkillPlan LoadSkillPlan()
 
     if (!in.is_open())
     {
-        plan.problems.push_back("data/skills.txt nicht gefunden.");
-        plan.problems.push_back("Ohne diese Datei weiss das Spiel nicht,");
-        plan.problems.push_back("was es freischalten soll.");
+        plan.problems.push_back("data/skills.txt not found.");
+        plan.problems.push_back("Without this file the game does not know");
+        plan.problems.push_back("what it should unlock.");
         return plan;
     }
 
@@ -181,24 +178,24 @@ SkillPlan LoadSkillPlan()
             continue;
 
         // Wie tief der Baum wird.
-        if (words[0] == "schritte")
+        if (words[0] == "steps")
         {
             // 0 heisst: kein Ende. Der Baum waechst weiter, solange man kauft.
             const int n = (words.size() > 1) ? std::atoi(words[1].c_str()) : -1;
             if (n < 0)
-                plan.problems.push_back(Where(lineNo) + "\"schritte\" braucht eine Zahl.");
+                plan.problems.push_back(Where(lineNo) + "\"steps\" needs a number.");
             else
                 plan.steps = n;
             continue;
         }
 
         // Wie stark der Preis pro Schritt steigt.
-        if (words[0] == "steigerung")
+        if (words[0] == "growth")
         {
             const double v = (words.size() > 1) ? std::atof(words[1].c_str()) : 0.0;
             if (v < 1.0)
                 plan.problems.push_back(Where(lineNo) +
-                                        "\"steigerung\" braucht eine Zahl ab 1, z.B. 1.5.");
+                                        "\"growth\" needs a number of 1 or more, e.g. 1.5.");
             else
                 plan.growth = (float)v;
             continue;
@@ -215,11 +212,11 @@ SkillPlan LoadSkillPlan()
             };
 
             const Wert werte[] = {
-                {"tempo_start", &plan.speedStart, nullptr, 0.1f},
-                {"tempo_plus", &plan.speedPlus, nullptr, 0.0f},
-                {"geld_plus", nullptr, &plan.moneyPlus, 0.0f},
-                {"nachwachsen_start", &plan.respawnStart, nullptr, 0.05f},
-                {"nachwachsen_mal", &plan.respawnMul, nullptr, 0.1f},
+                {"speed_start", &plan.speedStart, nullptr, 0.1f},
+                {"speed_plus", &plan.speedPlus, nullptr, 0.0f},
+                {"money_plus", nullptr, &plan.moneyPlus, 0.0f},
+                {"regrow_start", &plan.respawnStart, nullptr, 0.05f},
+                {"regrow_mul", &plan.respawnMul, nullptr, 0.1f},
             };
 
             bool getroffen = false;
@@ -233,7 +230,7 @@ SkillPlan LoadSkillPlan()
 
                 if (v < (double)w.kleinster)
                     plan.problems.push_back(Where(lineNo) + "\"" + w.schluessel +
-                                            "\" braucht eine groessere Zahl.");
+                                            "\" needs a bigger number.");
                 else if (w.ziel != nullptr)
                     *w.ziel = (float)v;
                 else
@@ -245,35 +242,35 @@ SkillPlan LoadSkillPlan()
         }
 
         // Mindestabstand zwischen zwei einmaligen Punkten.
-        if (words[0] == "abstand")
+        if (words[0] == "spacing")
         {
             const int n = (words.size() > 1) ? std::atoi(words[1].c_str()) : -1;
             if (n < 0)
-                plan.problems.push_back(Where(lineNo) + "\"abstand\" braucht eine Zahl.");
+                plan.problems.push_back(Where(lineNo) + "\"spacing\" needs a number.");
             else
                 plan.spacing = n;
             continue;
         }
 
         // Wie viele Punkte hoechstens gleichzeitig offenstehen.
-        if (words[0] == "offen")
+        if (words[0] == "open")
         {
             const int n = (words.size() > 1) ? std::atoi(words[1].c_str()) : 0;
             if (n <= 0)
-                plan.problems.push_back(Where(lineNo) + "\"offen\" braucht eine Zahl.");
+                plan.problems.push_back(Where(lineNo) + "\"open\" needs a number.");
             else
                 plan.maxOpen = n;
             continue;
         }
 
         // Wie viele neue Punkte ein Kauf aufmacht.
-        if (words[0] == "kinder")
+        if (words[0] == "children")
         {
             const int lo = (words.size() > 1) ? std::atoi(words[1].c_str()) : 0;
             const int hi = (words.size() > 2) ? std::atoi(words[2].c_str()) : lo;
             if (lo <= 0 || hi < lo)
             {
-                plan.problems.push_back(Where(lineNo) + "\"kinder\" braucht zwei Zahlen, z.B. 1 3.");
+                plan.problems.push_back(Where(lineNo) + "\"children\" needs two numbers, e.g. 1 3.");
                 continue;
             }
             plan.minKids = lo;
@@ -284,14 +281,14 @@ SkillPlan LoadSkillPlan()
         if (words.size() < 4)
         {
             plan.problems.push_back(Where(lineNo) +
-                                    "es fehlt etwas (schluessel, schritt, preis, wie oft).");
+                                    "something is missing (key, step, price, how often).");
             continue;
         }
 
         SkillRule rule;
         if (!LookUp(words[0], rule.skill))
         {
-            plan.problems.push_back(Where(lineNo) + "\"" + words[0] + "\" kenne ich nicht.");
+            plan.problems.push_back(Where(lineNo) + "\"" + words[0] + "\" is not something I know.");
             continue;
         }
 
@@ -305,7 +302,7 @@ SkillPlan LoadSkillPlan()
         rule.price = std::atoi(words[2].c_str());
         if (rule.price <= 0)
         {
-            plan.problems.push_back(Where(lineNo) + "\"" + words[2] + "\" ist kein Preis.");
+            plan.problems.push_back(Where(lineNo) + "\"" + words[2] + "\" is not a price.");
             continue;
         }
 
@@ -326,7 +323,7 @@ SkillPlan LoadSkillPlan()
             rule.weight = (words.size() > 4) ? std::atoi(words[4].c_str()) : 0;
             if (rule.weight <= 0)
             {
-                plan.problems.push_back(Where(lineNo) + "nach \"oft\" fehlt das Gewicht.");
+                plan.problems.push_back(Where(lineNo) + "the weight after \"often\" is missing.");
                 continue;
             }
             next = 5;
@@ -339,11 +336,11 @@ SkillPlan LoadSkillPlan()
         }
 
         // Optional: "wachstum 1.15" - wie sich das Gewicht nach aussen aendert.
-        if (next + 1 < words.size() && words[next] == "wachstum")
+        if (next + 1 < words.size() && words[next] == "rise")
         {
             const double v = std::atof(words[next + 1].c_str());
             if (v <= 0.0)
-                plan.problems.push_back(Where(lineNo) + "\"wachstum\" braucht eine Zahl > 0.");
+                plan.problems.push_back(Where(lineNo) + "\"rise\" needs a number > 0.");
             else
                 rule.weightGrowth = (float)v;
             next += 2;
@@ -359,7 +356,7 @@ SkillPlan LoadSkillPlan()
             }
             if (next + 1 >= words.size() || !LookUp(words[next + 1], rule.needs))
             {
-                plan.problems.push_back(Where(lineNo) + "nach \"braucht\" fehlt ein Schluessel.");
+                plan.problems.push_back(Where(lineNo) + "a key after \"needs\" is missing.");
                 continue;
             }
         }
@@ -368,7 +365,7 @@ SkillPlan LoadSkillPlan()
     }
 
     if (plan.rules.empty())
-        plan.problems.push_back("Keine einzige Zeile mit einem Punkt - der Baum bleibt leer.");
+        plan.problems.push_back("Not a single line with a point - the tree stays empty.");
 
     return plan;
 }

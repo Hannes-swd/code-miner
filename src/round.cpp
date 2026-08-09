@@ -288,7 +288,7 @@ bool DrawRoundHud(const World& world, const RoundPlan& plan)
         // beim Spielen im Augenwinkel, wie beides gleichzeitig laeuft.
         // Vier Spalten: Nummer, Beschriftung, Balken, Wert. Die Breiten sind
         // aus der laengsten Aufschrift gerechnet, damit nichts uebereinander
-        // rutscht, wenn aus "Zeit" mal "Vorbereitung" wird.
+        // rutscht, wenn aus "Time" mal "Vorbereitung" wird.
         // Der Knopf steht nur in der Vorbereitung da. Dann muss ihm Platz
         // gemacht werden - sonst legt er sich ueber das Ende der Balken.
         const bool  vorbereitung = (world.phase == RoundPhase::Prepare);
@@ -297,8 +297,8 @@ bool DrawRoundHud(const World& world, const RoundPlan& plan)
         const float rechtsFrei   = vorbereitung ? (knopfB + 22.0f) : 0.0f;
 
         const float x0     = wp.x + 26.0f;
-        const float xLabel = x0 + ImGui::CalcTextSize("Runde 88").x + 26.0f;
-        const float xBar   = xLabel + ImGui::CalcTextSize("Zeit").x + 16.0f;
+        const float xLabel = x0 + ImGui::CalcTextSize("Round 88").x + 26.0f;
+        const float xBar   = xLabel + ImGui::CalcTextSize("Time").x + 16.0f;
         const float xWert  = wp.x + ws.x - 26.0f - rechtsFrei;
         const float wertW  = ImGui::CalcTextSize("00000 / 00000").x;
 
@@ -307,7 +307,7 @@ bool DrawRoundHud(const World& world, const RoundPlan& plan)
             breit = 60.0f;
 
         char nummer[32];
-        std::snprintf(nummer, sizeof(nummer), "Runde %d", world.roundNumber);
+        std::snprintf(nummer, sizeof(nummer), "Round %d", world.roundNumber);
         dl->AddText(ImVec2(x0, wp.y + (ws.y - ImGui::GetTextLineHeight()) * 0.5f), ui::kText,
                     nummer);
 
@@ -334,22 +334,22 @@ bool DrawRoundHud(const World& world, const RoundPlan& plan)
         else
             std::snprintf(geld, sizeof(geld), "%d", world.money);
 
-        zeile(y1, "Geld", (ziel > 0) ? (float)world.money / (float)ziel : 0.0f, ui::kAccent, geld);
+        zeile(y1, "Money", (ziel > 0) ? (float)world.money / (float)ziel : 0.0f, ui::kAccent, geld);
 
         if (world.phase == RoundPhase::Run)
         {
             const bool  knapp = world.roundLeft <= 60.0f;
             const float t     = (plan.seconds > 0.0f) ? (world.roundLeft / plan.seconds) : 0.0f;
-            zeile(y2, "Zeit", t, knapp ? ui::kBad : ui::kDark, RoundClock(world.roundLeft).c_str());
+            zeile(y2, "Time", t, knapp ? ui::kBad : ui::kDark, RoundClock(world.roundLeft).c_str());
         }
         else if (world.phase == RoundPhase::Report)
         {
-            zeile(y2, "Zeit", 0.0f, ui::kDark, "vorbei");
+            zeile(y2, "Time", 0.0f, ui::kDark, "over");
         }
         else
         {
             // Noch nicht gestartet: die volle Zeit steht bereit.
-            zeile(y2, "Zeit", 1.0f, ui::kDark, RoundClock(plan.seconds).c_str());
+            zeile(y2, "Time", 1.0f, ui::kDark, RoundClock(plan.seconds).c_str());
 
             // Der wichtigste Knopf im Spiel darf auch so aussehen.
             ImGui::SetCursorScreenPos(
@@ -359,13 +359,13 @@ bool DrawRoundHud(const World& world, const RoundPlan& plan)
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ui::V(ui::kAccentHot));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ui::V(ui::kAccent));
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
-            if (ImGui::Button("Runde starten", ImVec2(knopfB, knopfH)))
+            if (ImGui::Button("Start round", ImVec2(knopfB, knopfH)))
                 start = true;
             ImGui::PopStyleColor(4);
 
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("Die Runde dauert %s.\n"
-                                  "Solange du nicht startest, steht die Welt still.",
+                                  "Until you start, the world stands still.",
                                   RoundClock(plan.seconds).c_str());
         }
     }
@@ -409,11 +409,11 @@ bool DrawRoundReport(const World& world, const RoundPlan& plan)
         const bool geschafft = RoundWon(world, plan);
 
         if (ziel <= 0)
-            ImGui::TextColored(gruen, "Runde %d ist vorbei", world.roundNumber);
+            ImGui::TextColored(gruen, "Round %d is over", world.roundNumber);
         else if (geschafft)
-            ImGui::TextColored(gruen, "Runde %d geschafft", world.roundNumber);
+            ImGui::TextColored(gruen, "Round %d cleared", world.roundNumber);
         else
-            ImGui::TextColored(rot, "Runde %d nicht geschafft", world.roundNumber);
+            ImGui::TextColored(rot, "Round %d not cleared", world.roundNumber);
 
         ImGui::Spacing();
         ImGui::Separator();
@@ -436,18 +436,18 @@ bool DrawRoundReport(const World& world, const RoundPlan& plan)
 
         if (ziel > 0)
         {
-            ImGui::TextDisabled("Ziel");
+            ImGui::TextDisabled("Goal");
             ImGui::SameLine(spalte);
             ImGui::TextColored(geschafft ? gruen : rot, "%d  (%+d)", ziel,
                                world.roundMoneyEnd - ziel);
 
             if (world.roundPaid > 0)
             {
-                ImGui::TextDisabled("Ziel bezahlt");
+                ImGui::TextDisabled("Goal paid");
                 ImGui::SameLine(spalte);
                 ImGui::TextColored(rot, "-%d", world.roundPaid);
 
-                ImGui::TextDisabled("Bleibt dir");
+                ImGui::TextDisabled("You keep");
                 ImGui::SameLine(spalte);
                 ImGui::TextColored(gruen, "%d", world.roundMoneyEnd - world.roundPaid);
             }
@@ -457,17 +457,17 @@ bool DrawRoundReport(const World& world, const RoundPlan& plan)
         ImGui::Separator();
         ImGui::Spacing();
 
-        zeile("Abgebaute Blöcke", world.roundMined);
+        zeile("Blocks mined", world.roundMined);
 
         if (plan.sellAtEnd)
         {
-            ImGui::TextDisabled("Tasche verkauft");
+            ImGui::TextDisabled("Bag sold");
             ImGui::SameLine(spalte);
-            ImGui::Text("%d Stück für %d Geld", world.roundSoldCount, world.roundSoldMoney);
+            ImGui::Text("%d pieces for %d money", world.roundSoldCount, world.roundSoldMoney);
         }
         else
         {
-            ImGui::TextDisabled("Tasche");
+            ImGui::TextDisabled("Bag");
             ImGui::SameLine(spalte);
             ImGui::Text("bleibt dir");
         }
@@ -489,13 +489,13 @@ bool DrawRoundReport(const World& world, const RoundPlan& plan)
             ImGui::PopStyleColor(2);
 
             ImGui::SameLine();
-            ImGui::TextColored(rot, "Alles beginnt von vorn.");
+            ImGui::TextColored(rot, "Everything starts over.");
         }
         else
         {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.24f, 0.54f, 0.31f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.33f, 0.68f, 0.42f, 1.0f));
-            if (ImGui::Button("Weiter", ImVec2(140.0f, 0.0f)))
+            if (ImGui::Button("Continue", ImVec2(140.0f, 0.0f)))
                 weiter = true;
             ImGui::PopStyleColor(2);
 
@@ -504,9 +504,9 @@ bool DrawRoundReport(const World& world, const RoundPlan& plan)
             // Nicht geschafft, aber es geht weiter: dann kommt dieselbe Runde
             // noch einmal, nicht die naechste.
             if ((ziel > 0) && !geschafft)
-                ImGui::TextDisabled("Runde %d noch einmal", world.roundNumber);
+                ImGui::TextDisabled("Round %d once more", world.roundNumber);
             else
-                ImGui::TextDisabled("Vorbereitung für Runde %d", world.roundNumber + 1);
+                ImGui::TextDisabled("Preparation for round %d", world.roundNumber + 1);
         }
     }
     ImGui::End();

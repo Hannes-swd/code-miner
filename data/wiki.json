@@ -93,7 +93,7 @@
   ],
   "kategorien": [
     {
-      "schluessel": "funktionen",
+      "schluessel": "functions",
       "zeichen": "f()",
       "name": "Funktionen",
       "text": "Befehle, die du dem Spiel gibst. Jeder von ihnen steht in deinem Code, und dein Roboter macht ihn. Alles hier musst du vorher im Skilltree kaufen."
@@ -119,9 +119,9 @@
   ],
   "seiten": [
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "block",
-      "braucht": ["abbauen", "pruefen"],
+      "braucht": ["mine", "check"],
       "kurz": "Der Block da draußen: abbauen und nachschauen.",
       "schritte": [
         {
@@ -129,14 +129,14 @@
           "code": "block.mine();",
           "markiere": "block",
           "text": "Fast jeder Befehl fängt mit einem Namen an. block ist der eine Stein, der gerade vor dir liegt - alles, was mit IHM zu tun hat, fängt so an.",
-          "braucht": "abbauen",
+          "braucht": "mine",
           "dauer": 5.5
         },
         {
           "punkt": "Abbauen",
           "markiere": "block.mine();",
           "text": "mine heißt abbauen. Mehr passiert draußen nicht: der Stein wandert danach in deine Tasche, und dort geht es weiter.",
-          "braucht": "abbauen",
+          "braucht": "mine",
           "dauer": 5.0
         },
         {
@@ -144,7 +144,7 @@
           "code": "block.isThere();",
           "markiere": "block.isThere()",
           "text": "Das Zweite, was block kann: nachschauen, ob überhaupt einer dasteht. Er wächst ja nach und ist zwischendurch kurz weg.",
-          "braucht": "pruefen",
+          "braucht": "check",
           "dauer": 5.5
         },
         {
@@ -152,7 +152,7 @@
           "code": "if (block.isThere())\n{\n    block.mine();\n}",
           "markiere": "if (block.isThere())",
           "text": "Beides zusammen: nur abbauen, wenn auch etwas da ist. So fängt fast jedes Programm an.",
-          "braucht": ["abbauen", "pruefen", "if"],
+          "braucht": ["mine", "check", "if"],
           "dauer": 5.5
         },
         {
@@ -160,7 +160,7 @@
           "code": "while (true)\n{\n    if (block.isThere())\n    {\n        block.mine();\n    }\n}",
           "markiere": "while (true)",
           "text": "Mit while läuft das die ganze Runde durch, ohne dass du etwas tun musst.",
-          "braucht": ["abbauen", "pruefen", "if", "while"],
+          "braucht": ["mine", "check", "if", "while"],
           "dauer": 5.0
         }
       ],
@@ -171,10 +171,10 @@
       ]
     },
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "item",
-      "braucht": ["verkaufen", "tasche", "waschen", "schmelzen", "giessen", "reinigen",
-                  "polieren", "haerten", "veredeln", "pressen", "legieren"],
+      "braucht": ["sell", "bag", "wash", "smelt", "cast", "clean",
+                  "polish", "harden", "refine", "press", "alloy"],
       "kurz": "Deine Tasche: verkaufen, nachschauen, verarbeiten.",
       "schritte": [
         {
@@ -182,14 +182,14 @@
           "code": "item.sell();",
           "markiere": "item",
           "text": "Was einmal abgebaut ist, gehört nicht mehr dem Block, sondern dir. Alles, was mit deiner Tasche zu tun hat, fängt deshalb mit item an.",
-          "braucht": "verkaufen",
+          "braucht": "sell",
           "dauer": 5.5
         },
         {
           "punkt": "Zu Geld machen",
           "markiere": "item.sell()",
           "text": "sell verkauft, was in der Tasche liegt. Erst hier gibt es Geld - vom Abbauen allein wird niemand reich.",
-          "braucht": "verkaufen",
+          "braucht": "sell",
           "dauer": 5.0
         },
         {
@@ -197,7 +197,7 @@
           "code": "if (item.has(\"Stein\"))\n{\n    item.sell(\"Stein\");\n}",
           "markiere": "item.has(\"Stein\")",
           "text": "has schaut nur nach, ohne etwas herauszunehmen. So verkaufst du gezielt das, wovon du genug hast.",
-          "braucht": ["tasche", "verkaufen", "if"],
+          "braucht": ["bag", "sell", "if"],
           "dauer": 5.5
         },
         {
@@ -205,7 +205,7 @@
           "code": "item.wash(\"Stein\", 3);",
           "markiere": "item.wash(\"Stein\", 3)",
           "text": "Roh verkaufen bringt wenig. Waschen, Schmelzen, Polieren, Legieren - alle diese Schritte arbeiten in der Tasche, nie am Block.",
-          "braucht": "waschen",
+          "braucht": "wash",
           "dauer": 6.0
         }
       ],
@@ -218,10 +218,10 @@
       ]
     },
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "block.mine()",
       "unter": "block",
-      "braucht": "abbauen",
+      "braucht": "mine",
       "kurz": "Baut den Block vor dir ab.",
       "schritte": [
         {
@@ -259,10 +259,10 @@
       ]
     },
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "block.isThere()",
       "unter": "block",
-      "braucht": "pruefen",
+      "braucht": "check",
       "kurz": "Fragt nach, ob der Block gerade da ist.",
       "schritte": [
         {
@@ -308,10 +308,10 @@
       ]
     },
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "item.sell()",
       "unter": "item",
-      "braucht": "verkaufen",
+      "braucht": "sell",
       "kurz": "Macht aus deiner Tasche Geld.",
       "schritte": [
         {
@@ -357,10 +357,10 @@
       ]
     },
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "item.has(...)",
       "unter": "item",
-      "braucht": "tasche",
+      "braucht": "bag",
       "kurz": "Schaut in die Tasche, ohne etwas zu verkaufen.",
       "schritte": [
         {
@@ -399,7 +399,7 @@
       ]
     },
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "print(...)",
       "braucht": "print",
       "kurz": "Schreibt dir etwas in die Konsole.",
@@ -439,9 +439,9 @@
       ]
     },
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "shared[...]",
-      "braucht": "geteilt",
+      "braucht": "shared",
       "kurz": "Ein Zettel, den alle Konsolen lesen können.",
       "schritte": [
         {
@@ -479,7 +479,7 @@
       ]
     },
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "Verarbeiten - Überblick",
       "unter": "item",
       "kurz": "Aus einem Zustand einen besseren machen.",
@@ -526,20 +526,20 @@
         "Legieren"
       ],
       "braucht": [
-        "waschen",
-        "schmelzen",
-        "giessen",
-        "reinigen",
-        "polieren",
-        "haerten",
-        "veredeln",
-        "pressen"
+        "wash",
+        "smelt",
+        "cast",
+        "clean",
+        "polish",
+        "harden",
+        "refine",
+        "press"
       ]
     },
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "item.wash(...)",
-      "braucht": "waschen",
+      "braucht": "wash",
       "kurz": "Waschen: aus roh wird gewaschen.",
       "schritte": [
         {
@@ -571,9 +571,9 @@
       "unter": "Verarbeiten - Überblick"
     },
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "item.smelt(...)",
-      "braucht": "schmelzen",
+      "braucht": "smelt",
       "kurz": "Schmelzen: in den Ofen damit.",
       "schritte": [
         {
@@ -606,9 +606,9 @@
       "unter": "Verarbeiten - Überblick"
     },
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "item.cast(...)",
-      "braucht": "giessen",
+      "braucht": "cast",
       "kurz": "Gießen: flüssiges Metall in eine Form.",
       "schritte": [
         {
@@ -641,9 +641,9 @@
       "unter": "Verarbeiten - Überblick"
     },
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "item.clean(...)",
-      "braucht": "reinigen",
+      "braucht": "clean",
       "kurz": "Reinigen: der große Sprung bei der Reinheit.",
       "schritte": [
         {
@@ -674,9 +674,9 @@
       "unter": "Verarbeiten - Überblick"
     },
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "item.polish(...)",
-      "braucht": "polieren",
+      "braucht": "polish",
       "kurz": "Polieren: bis es glänzt.",
       "schritte": [
         {
@@ -708,9 +708,9 @@
       "unter": "Verarbeiten - Überblick"
     },
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "item.harden(...)",
-      "braucht": "haerten",
+      "braucht": "harden",
       "kurz": "Härten: hart machen im Feuer.",
       "schritte": [
         {
@@ -741,9 +741,9 @@
       "unter": "Verarbeiten - Überblick"
     },
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "item.refine(...)",
-      "braucht": "veredeln",
+      "braucht": "refine",
       "kurz": "Veredeln: der letzte und beste Schritt.",
       "schritte": [
         {
@@ -774,9 +774,9 @@
       "unter": "Verarbeiten - Überblick"
     },
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "item.press(...)",
-      "braucht": "pressen",
+      "braucht": "press",
       "kurz": "Pressen: aus billig wird brauchbar.",
       "schritte": [
         {
@@ -807,10 +807,10 @@
       "unter": "Verarbeiten - Überblick"
     },
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "item.alloy(...)",
       "unter": "item",
-      "braucht": "legieren",
+      "braucht": "alloy",
       "kurz": "Aus zwei Erzen wird ein neuer Stoff.",
       "schritte": [
         {
@@ -856,10 +856,10 @@
       ]
     },
     {
-      "kategorie": "funktionen",
+      "kategorie": "functions",
       "titel": "item.canAlloy(...)",
       "unter": "item",
-      "braucht": "legieren",
+      "braucht": "alloy",
       "kurz": "Fragt vorher, ob die Zutaten reichen.",
       "schritte": [
         {
@@ -1069,7 +1069,7 @@
     {
       "kategorie": "kontrolle",
       "titel": "Variablen",
-      "braucht": "variablen",
+      "braucht": "variables",
       "kurz": "Ein Kästchen, in dem du dir etwas merkst.",
       "schritte": [
         {
@@ -1116,7 +1116,7 @@
     {
       "kategorie": "kontrolle",
       "titel": "Eigene Funktionen",
-      "braucht": "funktionen",
+      "braucht": "functions",
       "kurz": "Ein eigener Befehl, den du selbst baust.",
       "schritte": [
         {
@@ -1175,7 +1175,7 @@
     {
       "kategorie": "kontrolle",
       "titel": "Klassen",
-      "braucht": "klassen",
+      "braucht": "classes",
       "kurz": "Ein selbst gebautes Ding mit eigenen Kästchen und Befehlen.",
       "schritte": [
         {
@@ -1354,7 +1354,7 @@
         "Zustände und Reinheit",
         "item.smelt(...)"
       ],
-      "braucht": "legieren"
+      "braucht": "alloy"
     },
     {
       "kategorie": "spiel",

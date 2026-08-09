@@ -149,7 +149,7 @@ void DrawCard(ImDrawList* dl, const SkillNode& n, State st, ImVec2 c, float z, b
         name   = kTextBright;
         glyph  = IM_COL32(255, 255, 255, 255);
         state  = IM_COL32(255, 236, 224, 255);
-        std::snprintf(label, sizeof(label), "Freigeschaltet");
+        std::snprintf(label, sizeof(label), "Unlocked");
 
         // Schein nach aussen, damit man das Gekaufte sofort sieht.
         for (int i = 3; i >= 1; --i)
@@ -161,13 +161,13 @@ void DrawCard(ImDrawList* dl, const SkillNode& n, State st, ImVec2 c, float z, b
     {
         ring  = kBuyRing;
         state = kTextGreen;
-        std::snprintf(label, sizeof(label), "Kaufen - %d", n.cost);
+        std::snprintf(label, sizeof(label), "Buy - %d", n.cost);
     }
     else
     {
         name  = ui::kTextDim;
         glyph = ui::kTextWk;
-        std::snprintf(label, sizeof(label), "Gesperrt - %d", n.cost);
+        std::snprintf(label, sizeof(label), "Locked - %d", n.cost);
     }
 
     GradientRect(dl, a, b, round, top, bottom);
@@ -417,7 +417,7 @@ bool DrawSkillPage(World& world, SkillTree& tree)
 
             if (n.owned)
             {
-                ImGui::TextColored(ImVec4(0.70f, 0.89f, 0.48f, 1.0f), "Freigeschaltet");
+                ImGui::TextColored(ImVec4(0.70f, 0.89f, 0.48f, 1.0f), "Unlocked");
             }
             else if (world.money < n.cost)
             {
@@ -452,21 +452,21 @@ bool DrawSkillPage(World& world, SkillTree& tree)
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.10f, 0.10f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.52f, 0.19f, 0.19f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.62f, 0.45f, 0.45f, 1.0f));
-        if (ImGui::Button("Alles zurücksetzen (Test)"))
+        if (ImGui::Button("Reset everything (test)"))
             ImGui::OpenPopup("wirklich?");
         ImGui::PopStyleColor(3);
 
         if (ImGui::BeginPopup("wirklich?"))
         {
-            ImGui::TextUnformatted("Geld, Baum und Code sind dann weg.");
+            ImGui::TextUnformatted("Money, tree and code will be gone.");
             ImGui::Spacing();
-            if (ImGui::Button("Ja, alles löschen"))
+            if (ImGui::Button("Yes, delete everything"))
             {
                 resetWanted = true;
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
-            if (ImGui::Button("Abbrechen"))
+            if (ImGui::Button("Cancel"))
                 ImGui::CloseCurrentPopup();
             ImGui::EndPopup();
         }
@@ -516,7 +516,7 @@ void DrawStatus(const Limits& limits, const World& world)
         ImGui::SameLine(halb + ui::kCardPad * 0.5f);
 
         ImGui::BeginGroup();
-        ImGui::TextColored(ui::V(ui::kTextDim), "GELD");
+        ImGui::TextColored(ui::V(ui::kTextDim), "MONEY");
         ImGui::PushFont(BigFont());
         ImGui::SetWindowFontScale(0.62f);
         ImGui::TextColored(ui::V(ui::kAccent), "%d", world.money);
@@ -526,7 +526,7 @@ void DrawStatus(const Limits& limits, const World& world)
 
         ImGui::Spacing();
         ImGui::Spacing();
-        ImGui::TextColored(ui::V(ui::kTextDim), "EFFIZIENZ");
+        ImGui::TextColored(ui::V(ui::kTextDim), "EFFICIENCY");
         ImGui::Spacing();
 
         // Name links, Wert rechtsbuendig - wie eine Rechnung.
@@ -556,19 +556,19 @@ void DrawStatus(const Limits& limits, const World& world)
         };
 
         char t[32];
-        std::snprintf(t, sizeof(t), "%.1f Zeilen/s", limits.linesPerSecond);
-        zeile("Tempo", t);
+        std::snprintf(t, sizeof(t), "%.1f lines/s", limits.linesPerSecond);
+        zeile("Speed", t);
         std::snprintf(t, sizeof(t), "%d", limits.moneyPerBlock);
-        zeile("Geld/Block", t);
+        zeile("Money/block", t);
         std::snprintf(t, sizeof(t), "%.2f s", limits.respawnSeconds);
-        zeile("Nachwachsen", t);
+        zeile("Regrow", t);
 
-        zahl("Schleifen", limits.maxLoops);
-        zahl("Bedingungen", limits.maxIfs);
-        zahl("Variablen", limits.maxVariables);
-        zahl("Funktionen", limits.maxFunctions);
-        zahl("Klassen", limits.maxClasses);
-        zahl("Konsolen", limits.maxConsoles);
+        zahl("Loops", limits.maxLoops);
+        zahl("Conditions", limits.maxIfs);
+        zahl("Variables", limits.maxVariables);
+        zahl("Functions", limits.maxFunctions);
+        zahl("Classes", limits.maxClasses);
+        zahl("Consoles", limits.maxConsoles);
 
         if (limits.allowWhile || limits.allowFor || limits.allowIf || limits.allowElse ||
             limits.allowPrint || limits.allowCheck || limits.allowShared ||
@@ -580,7 +580,7 @@ void DrawStatus(const Limits& limits, const World& world)
             ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
-            ImGui::TextColored(ui::V(ui::kTextDim), "FREIGESCHALTET");
+            ImGui::TextColored(ui::V(ui::kTextDim), "UNLOCKED");
             ImGui::Spacing();
 
             wort("while, do", limits.allowWhile);
@@ -604,7 +604,7 @@ void DrawStatus(const Limits& limits, const World& world)
             wort("shared[...]", limits.allowShared);
             wort("int, float, ...", limits.allowVariable);
             wort("class, struct", limits.allowClass);
-            wort("eigene Funktionen", limits.allowFunction);
+            wort("your own functions", limits.allowFunction);
         }
     }
     ImGui::End();

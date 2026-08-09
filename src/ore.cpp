@@ -210,7 +210,7 @@ OrePlan LoadOrePlan()
     const JsonValue* liste = wurzel.find("erze");
     if (liste == nullptr || liste->type != JsonValue::Type::Array)
     {
-        plan.problems.push_back("Es fehlt die Liste \"erze\": [ ... ].");
+        plan.problems.push_back("Missing the list \"erze\": [ ... ].");
         return plan;
     }
 
@@ -296,17 +296,17 @@ const char* OreStateName(OreState state)
 {
     switch (state)
     {
-    case OreState::Raw: return "Roh";
-    case OreState::Washed: return "Gewaschen";
-    case OreState::Smelted: return "Geschmolzen";
-    case OreState::Cast: return "Gegossen";
-    case OreState::Polished: return "Poliert";
-    case OreState::Hardened: return "Gehärtet";
-    case OreState::Refined: return "Veredelt";
-    case OreState::Pressed: return "Gepresst";
-    case OreState::Cleaned: return "Gereinigt";
-    case OreState::Oxidized: return "Oxidiert";
-    case OreState::Alloy: return "Legiert";
+    case OreState::Raw: return "Raw";
+    case OreState::Washed: return "Washed";
+    case OreState::Smelted: return "Smelted";
+    case OreState::Cast: return "Cast";
+    case OreState::Polished: return "Polished";
+    case OreState::Hardened: return "Hardened";
+    case OreState::Refined: return "Refined";
+    case OreState::Pressed: return "Pressed";
+    case OreState::Cleaned: return "Cleaned";
+    case OreState::Oxidized: return "Oxidized";
+    case OreState::Alloy: return "Alloyed";
     default: return "?";
     }
 }
