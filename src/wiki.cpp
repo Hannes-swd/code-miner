@@ -174,6 +174,10 @@ struct WikiView
     // Welches Erz in der Kategorie "Erze" offen ist. Eine eigene Zahl, weil
     // die Erze keine Seiten aus der Datei sind - page zeigt dort ins Leere.
     int ore = -1;
+
+    // Und welche Zeile darin aufgeklappt ist: der Zustand, zu dem gerade alle
+    // Wege untereinander stehen. -1 = keiner.
+    int oreState = -1;
 };
 
 WikiView g_wiki;
@@ -209,10 +213,23 @@ struct OreWay
     std::vector<int> steps;  // Indizes in craft.steps
 };
 
-// Alle Wege durchgehen und je Zustand den besten merken.
+// Notbremse. Bei den Daten, die mitgeliefert werden, kommen hoechstens 26 Wege
+// je Zustand heraus - das hier greift nie. Es haelt nur eine
+// data/verarbeitung.json im Zaum, in der jemand so viele Schritte kreuz und
+// quer verbindet, dass die Suche die Oberflaeche stehen laesst.
 //
-// "Bester Weg" heisst: der teuerste. Bei gleichem Preis der kuerzere - wer
-// dasselbe mit weniger Arbeit bekommt, hat den besseren Weg gefunden.
+// Gezaehlt wird ueber ALLE Zustaende zusammen, und abgeschnitten wird beim
+// Suchen - nicht beim Anzeigen. Deshalb steht die Grenze so hoch: was gesammelt
+// ist, wird erst danach sortiert, und ein zu frueh abgeschnittener Fund koennte
+// sonst genau der beste gewesen sein.
+const int kMaxWays = 4000;
+
+// So viele Wege stehen hoechstens untereinander. Mehr liest niemand.
+const std::size_t kMaxShown = 25;
+
+// ALLE Wege durchgehen und je Zustand jeden einzelnen merken - nicht nur den
+// besten. Genau darum geht es ja: dass es mehrere gibt und dass sie
+// unterschiedlich viel bringen.
 //
 // Kein Zustand wird dabei zweimal besucht. Reinigen und Pressen fuehren
 // naemlich im Kreis (gereinigt -> gepresst -> gereinigt ...) und schrauben
@@ -220,19 +237,19 @@ struct OreWay
 // zwar teurer, aber keine Antwort auf die Frage "wie komme ich dorthin".
 void SearchWays(const OrePlan& ores, const CraftPlan& craft, const Ore& erz, int oreIdx,
                 const std::set<World::OreStep>& kanten, int moneyPerBlock, int state, int purity,
-                unsigned besucht, std::vector<int>& weg, std::vector<OreWay>& out)
+                unsigned besucht, std::vector<int>& weg, std::vector<std::vector<OreWay>>& out,
+                int& gesamt)
 {
-    const int preis = StackValue(ores, craft, oreIdx, state, purity, 1, moneyPerBlock);
+    if (gesamt >= kMaxWays)
+        return;
+    ++gesamt;
 
-    OreWay& best = out[(std::size_t)state];
-    if (!best.known || preis > best.price ||
-        (preis == best.price && weg.size() < best.steps.size()))
-    {
-        best.known  = true;
-        best.purity = purity;
-        best.price  = preis;
-        best.steps  = weg;
-    }
+    OreWay w;
+    w.known  = true;
+    w.purity = purity;
+    w.price  = StackValue(ores, craft, oreIdx, state, purity, 1, moneyPerBlock);
+    w.steps  = weg;
+    out[(std::size_t)state].push_back(w);
 
     for (int i = 0; i < (int)craft.steps.size(); ++i)
     {
@@ -260,17 +277,20 @@ void SearchWays(const OrePlan& ores, const CraftPlan& craft, const Ore& erz, int
 
         weg.push_back(i);
         SearchWays(ores, craft, erz, oreIdx, kanten, moneyPerBlock, s.to, rein,
-                   besucht | (1u << (unsigned)s.to), weg, out);
+                   besucht | (1u << (unsigned)s.to), weg, out, gesamt);
         weg.pop_back();
     }
 }
 
-// Der beste bekannte Weg zu jedem Zustand. Alles, was nicht "known" ist, hat
-// der Spieler noch nicht gefunden.
-std::vector<OreWay> OreWays(const World& world, const OrePlan& ores, const CraftPlan& craft,
-                            int oreIdx)
+// Alle bekannten Wege zu jedem Zustand, der beste zuerst. Eine leere Liste
+// heisst: dorthin hat der Spieler noch nicht gefunden.
+//
+// "Bester Weg" heisst: der teuerste. Bei gleichem Preis der kuerzere - wer
+// dasselbe mit weniger Arbeit bekommt, hat den besseren Weg gefunden.
+std::vector<std::vector<OreWay>> OreWays(const World& world, const OrePlan& ores,
+                                         const CraftPlan& craft, int oreIdx)
 {
-    std::vector<OreWay> out((std::size_t)OreState::Count);
+    std::vector<std::vector<OreWay>> out((std::size_t)OreState::Count);
 
     const auto it = world.oreFirst.find(oreIdx);
     if (it == world.oreFirst.end())
@@ -281,8 +301,19 @@ std::vector<OreWay> OreWays(const World& world, const OrePlan& ores, const Craft
         return out;
 
     std::vector<int> weg;
+    int              gesamt = 0;
     SearchWays(ores, craft, OreOf(ores, oreIdx), oreIdx, world.oreSteps, world.moneyPerBlock,
-               anfang, it->second.purity, 1u << (unsigned)anfang, weg, out);
+               anfang, it->second.purity, 1u << (unsigned)anfang, weg, out, gesamt);
+
+    for (std::vector<OreWay>& liste : out)
+        std::sort(liste.begin(), liste.end(),
+                  [](const OreWay& a, const OreWay& b)
+                  {
+                      if (a.price != b.price)
+                          return a.price > b.price;
+                      return a.steps.size() < b.steps.size();
+                  });
+
     return out;
 }
 
@@ -824,7 +855,8 @@ void DrawOreCollection(World& world, const OrePlan& ores, const CraftPlan& craft
             std::snprintf(id, sizeof(id), "##erz%d", i);
             if (ImGui::Selectable(id, i == g_wiki.ore, 0, ImVec2(0.0f, 30.0f)))
             {
-                g_wiki.ore = i;
+                g_wiki.ore      = i;
+                g_wiki.oreState = -1;  // beim Erzwechsel klappt die Zeile zu
                 world.wikiSeen.insert(schluessel);
             }
 
@@ -876,75 +908,161 @@ void DrawOreCollection(World& world, const OrePlan& ores, const CraftPlan& craft
     ImGui::Spacing();
 
     // ---- die Tabelle ------------------------------------------------------
-    const std::vector<OreWay> wege   = OreWays(world, ores, craft, g_wiki.ore);
-    const std::vector<int>    zeilen = OreRows(ores, craft, world, g_wiki.ore);
+    const std::vector<std::vector<OreWay>> wege   = OreWays(world, ores, craft, g_wiki.ore);
+    const std::vector<int>                 zeilen = OreRows(ores, craft, world, g_wiki.ore);
+
+    // Der Weg als Text: "Waschen > Reinigen".
+    auto wegText = [&](const OreWay& w)
+    {
+        if (w.steps.empty())
+            return std::string("so hast du es gefunden");
+
+        std::string text;
+        for (std::size_t k = 0; k < w.steps.size(); ++k)
+        {
+            if (k > 0)
+                text += " > ";
+            text += craft.steps[(std::size_t)w.steps[k]].name;
+        }
+        return text;
+    };
 
     const ImGuiTableFlags tf = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH |
                                ImGuiTableFlags_SizingStretchProp;
 
     int gefunden = 0;
 
-    if (ImGui::BeginTable("##wege", 4, tf))
+    if (ImGui::BeginTable("##wege", 5, tf))
     {
         ImGui::TableSetupColumn("Zustand", ImGuiTableColumnFlags_WidthFixed, 120.0f);
         ImGui::TableSetupColumn("bester Weg dorthin");
+        ImGui::TableSetupColumn("Wege", ImGuiTableColumnFlags_WidthFixed, 55.0f);
         ImGui::TableSetupColumn("Reinheit", ImGuiTableColumnFlags_WidthFixed, 80.0f);
         ImGui::TableSetupColumn("Preis", ImGuiTableColumnFlags_WidthFixed, 70.0f);
         ImGui::TableHeadersRow();
 
         for (int s : zeilen)
         {
-            const OreWay& w = wege[(std::size_t)s];
-            if (w.known)
+            const std::vector<OreWay>& liste = wege[(std::size_t)s];
+            const bool                 known = !liste.empty();
+            if (known)
                 ++gefunden;
 
             ImGui::TableNextRow();
 
+            // Die ganze Zeile ist anklickbar: unten stehen dann ALLE Wege
+            // dorthin. Ohne das saehe man immer nur den Sieger - und dass es
+            // ueberhaupt mehrere gibt, waere das Geheimnis des Spiels.
             ImGui::TableNextColumn();
-            if (w.known)
+            char id[32];
+            std::snprintf(id, sizeof(id), "##zeile%d", s);
+            if (ImGui::Selectable(id, g_wiki.oreState == s, ImGuiSelectableFlags_SpanAllColumns) &&
+                known)
+                g_wiki.oreState = (g_wiki.oreState == s) ? -1 : s;
+
+            ImGui::SameLine(0.0f, 0.0f);
+            if (known)
                 ImGui::TextUnformatted(OreStateName((OreState)s));
             else
                 ImGui::TextDisabled("%s", OreStateName((OreState)s));
 
             ImGui::TableNextColumn();
-            if (!w.known)
-            {
-                ImGui::TextDisabled("?");
-            }
-            else if (w.steps.empty())
-            {
-                ImGui::TextDisabled("so hast du es gefunden");
-            }
-            else
-            {
-                std::string text;
-                for (std::size_t k = 0; k < w.steps.size(); ++k)
-                {
-                    if (k > 0)
-                        text += " > ";
-                    text += craft.steps[(std::size_t)w.steps[k]].name;
-                }
-                ImGui::TextUnformatted(text.c_str());
-            }
-
-            ImGui::TableNextColumn();
-            if (w.known)
-                ImGui::Text("%d %%", w.purity);
+            if (known)
+                ImGui::TextUnformatted(wegText(liste[0]).c_str());
             else
                 ImGui::TextDisabled("?");
 
             ImGui::TableNextColumn();
-            if (w.known)
-                ImGui::Text("%d", w.price);
+            if (!known)
+                ImGui::TextDisabled("?");
+            else if (liste.size() > 1)
+                ImGui::Text("%d", (int)liste.size());
+            else
+                ImGui::TextDisabled("1");
+
+            ImGui::TableNextColumn();
+            if (known)
+                ImGui::Text("%d %%", liste[0].purity);
+            else
+                ImGui::TextDisabled("?");
+
+            ImGui::TableNextColumn();
+            if (known)
+                ImGui::Text("%d", liste[0].price);
             else
                 ImGui::TextDisabled("?");
         }
         ImGui::EndTable();
     }
 
+    // ---- alle Wege zu dem, was gerade angeklickt ist ----------------------
+    if (g_wiki.oreState >= 0 && g_wiki.oreState < (int)wege.size() &&
+        !wege[(std::size_t)g_wiki.oreState].empty())
+    {
+        const std::vector<OreWay>& liste = wege[(std::size_t)g_wiki.oreState];
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGui::Text("Alle Wege nach %s, die du kennst:",
+                    OreStateName((OreState)g_wiki.oreState));
+        ImGui::Spacing();
+
+        if (ImGui::BeginTable("##allewege", 4, tf))
+        {
+            ImGui::TableSetupColumn("Weg");
+            ImGui::TableSetupColumn("Schritte", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+            ImGui::TableSetupColumn("Reinheit", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+            ImGui::TableSetupColumn("Preis", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+            ImGui::TableHeadersRow();
+
+            const std::size_t zeige = (liste.size() < kMaxShown) ? liste.size() : kMaxShown;
+            for (std::size_t k = 0; k < zeige; ++k)
+            {
+                const OreWay& w = liste[k];
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted(wegText(w).c_str());
+                ImGui::TableNextColumn();
+                ImGui::Text("%d", (int)w.steps.size());
+                ImGui::TableNextColumn();
+                ImGui::Text("%d %%", w.purity);
+                ImGui::TableNextColumn();
+                ImGui::Text("%d", w.price);
+            }
+            ImGui::EndTable();
+
+            if (liste.size() > zeige)
+                ImGui::TextDisabled("... und %d weitere, die weniger bringen.",
+                                    (int)(liste.size() - zeige));
+        }
+
+        ImGui::Spacing();
+        if (liste.size() > 1)
+        {
+            const int  unten     = liste.back().price;
+            const int  oben      = liste.front().price;
+            const bool lohntSich = oben > unten;
+
+            if (lohntSich)
+                ImGui::TextDisabled(
+                    "Gleicher Zustand, %d statt %d Geld - nur wegen der Reinheit unterwegs.", oben,
+                    unten);
+            else
+                ImGui::TextDisabled(
+                    "Alle gleich teuer: hier ist der kürzeste Weg der beste.");
+        }
+        else
+        {
+            ImGui::TextDisabled("Bisher kennst du nur diesen einen. Probier einen Umweg!");
+        }
+    }
+
     ImGui::Spacing();
     ImGui::TextDisabled("%d von %d Zuständen gefunden.  ? heißt: noch nie selbst hergestellt.",
                         gefunden, (int)zeilen.size());
+    ImGui::TextDisabled("Klick eine Zeile an: dann stehen darunter ALLE Wege dorthin.");
     ImGui::TextDisabled("Preis für EIN Stück, mit deinen jetzigen %d Geld pro Block.",
                         world.moneyPerBlock);
     ImGui::TextDisabled("Der Weg zählt mit: der Zustand ist immer gleich viel wert, die Reinheit");

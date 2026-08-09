@@ -97,8 +97,6 @@ void DrawOreTile(ImDrawList* dl, ImVec2 pos, float size, const Ore& erz, int ore
             dl->AddRectFilled(q, ImVec2(q.x + st + 0.6f, q.y + st + 0.6f),
                               Mix(erz.color2, erz.color1, t, 255));
         }
-
-    dl->AddRect(pos, ImVec2(pos.x + size, pos.y + size), IM_COL32(16, 18, 22, 255), 5.0f, 0, 2.0f);
 }
 
 namespace

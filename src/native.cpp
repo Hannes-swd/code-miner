@@ -520,6 +520,148 @@ bool SplitNameValue(const std::string& msg, std::string& name, int& value)
     return true;
 }
 
+// ---- Fehlermeldungen uebersetzen ------------------------------------------
+//
+// cl.exe sagt Sachen wie  error C3861: "verdoppeln": Bezeichner wurde nicht
+// gefunden.  Das stimmt, hilft aber niemandem weiter, der gerade erst anfaengt.
+// Hier steht deshalb zu jeder haeufigen Meldung ein Satz, der SAGT WAS ZU TUN
+// IST - die Nummer bleibt hinten dran, damit man sie notfalls nachschlagen
+// kann.
+//
+// Uebersetzt wird ueber die Fehlernummer und nicht ueber den Text: cl.exe
+// spricht die Sprache von Windows, die Nummer ist ueberall dieselbe.
+
+// Aus  "konsole1(7,5): error C3861: ..."  wird  C3861.
+std::string ErrorCode(const std::string& text)
+{
+    const std::size_t pos = text.find("error ");
+    if (pos == std::string::npos)
+        return std::string();
+
+    std::size_t i = pos + 6;
+    std::string code;
+    while (i < text.size() && text[i] != ':' && text[i] != ' ')
+        code += text[i++];
+
+    return code;
+}
+
+// Das erste Wort in Anfuehrungszeichen. cl.exe benutzt je nach Sprache " oder '.
+std::string FirstQuoted(const std::string& text)
+{
+    const char zeichen[] = {'"', '\''};
+    for (const char q : zeichen)
+    {
+        const std::size_t a = text.find(q);
+        if (a == std::string::npos)
+            continue;
+        const std::size_t b = text.find(q, a + 1);
+        if (b != std::string::npos && b > a + 1)
+            return text.substr(a + 1, b - a - 1);
+    }
+    return std::string();
+}
+
+std::string Erklaere(const std::string& roh)
+{
+    const std::string code = ErrorCode(roh);
+    if (code.empty())
+        return roh;
+
+    // cl.exe nennt die Innereien beim Namen: "CkItem::wash". Der Spieler kennt
+    // nur wash - alles vor dem letzten :: fliegt deshalb raus.
+    std::string       wort = FirstQuoted(roh);
+    const std::size_t cut  = wort.rfind("::");
+    if (cut != std::string::npos)
+        wort = wort.substr(cut + 2);
+
+    const std::string was = wort.empty() ? std::string("Das hier") : ("\"" + wort + "\"");
+
+    std::string text;
+
+    // Kennt das Programm nicht. Der mit Abstand haeufigste Anfaengerfehler -
+    // und fast immer ist es die Reihenfolge.
+    if (code == "C3861" || code == "C2065" || code == "C2064" || code == "C2062")
+        text = was +
+               " kennt das Programm hier noch nicht. In C++ muss alles SCHON DASTEHEN, bevor du "
+               "es benutzt: eigene Funktionen gehoeren deshalb ueber main(), nicht darunter. "
+               "Sonst: vertippt?";
+
+    // Gibt es bei diesem Ding nicht.
+    else if (code == "C2039")
+        text = was +
+               " gibt es da nicht. block kann mine() und isThere(), alles rund um die Tasche "
+               "kann item - verkaufen, waschen, legieren.";
+    else if (code == "C2228" || code == "C2227")
+        text = "Vor dem Punkt steht etwas, das keinen Punkt vertraegt. Gemeint sind block oder "
+               "item.";
+
+    // Schreibweise.
+    else if (code == "C2143" || code == "C2144" || code == "C2146" || code == "C2059" ||
+             code == "C2238")
+        text = "Da stimmt die Schreibweise nicht. Am haeufigsten: der Strichpunkt am Ende der "
+               "Zeile DAVOR fehlt.";
+    else if (code == "C1004" || code == "C1075")
+        text = "Eine geschweifte Klammer fehlt. Jede { braucht ihre }.";
+    else if (code == "C2181" || code == "C2059e")
+        text = "Ein else ohne if davor. else gehoert direkt hinter die } des if.";
+    else if (code == "C2601" || code == "C2447")
+        text = "Eine Funktion in einer Funktion geht nicht. Schreib sie daneben, ueber main().";
+
+    // Klammern und Werte.
+    else if (code == "C2660" || code == "C2661" || code == "C2198" || code == "C2668")
+        text = was + " bekommt die falsche Anzahl an Angaben in den Klammern.";
+    else if (code == "C2664" || code == "C2440" || code == "C2446" || code == "C2665" ||
+             code == "C2666")
+        text = "Bei " + was +
+               " steht in den Klammern die falsche Sorte Wert - eine Zahl, wo Text hingehoert, "
+               "oder umgekehrt. Text gehoert in Anfuehrungszeichen: item.wash(\"Stein\").";
+    else if (code == "C4430" || code == "C2371" || code == "C2086")
+        text = was + " gibt es schon. Jeden Namen darf es nur einmal geben.";
+
+    // Drumherum.
+    else if (code == "C1083")
+        text = "Ein #include, das es nicht gibt. Schreibweise pruefen.";
+    else if (code == "LNK2019" || code == "LNK2001")
+        text = was +
+               " hast du angekuendigt, aber nirgends hingeschrieben, was es tun soll. Es fehlt "
+               "der Rumpf mit { }.";
+
+    if (text.empty())
+        return roh;  // unbekannt: dann lieber das Original als gar nichts
+
+    return text + "  (" + code + ")";
+}
+
+// Warum ein laufendes Programm mittendrin gestorben ist. Windows sagt das ueber
+// den Rueckgabewert des Prozesses - eine Zahl, die niemand auswendig kann.
+std::string AbsturzText(unsigned long code)
+{
+    switch (code)
+    {
+    case 0xC0000005ul:
+        return "Das Programm hat irgendwo hingegriffen, wo nichts ist. Meistens ein Zeiger oder "
+               "ein Index neben dem Feld - z.B. zahlen[10] bei nur 10 Plaetzen (0 bis 9).";
+    case 0xC0000094ul:
+    case 0xC0000095ul:
+        return "Durch null geteilt. Vor jedem / gehoert die Frage, ob der Teiler auch wirklich "
+               "nicht null ist.";
+    case 0xC00000FDul:
+        return "Der Speicher ist uebergelaufen. Fast immer ruft sich eine Funktion endlos selbst "
+               "auf - fehlt ihr das Abbruch-if?";
+    case 0xC0000409ul:
+    case 3ul:
+        return "Das Programm hat sich selbst abgebrochen. Meistens ein Zugriff daneben, den C++ "
+               "noch rechtzeitig gemerkt hat.";
+    default:
+        break;
+    }
+
+    char buf[96];
+    std::snprintf(buf, sizeof(buf), "Das Programm ist mittendrin gestorben (Code 0x%08lX).", code);
+    return buf;
+}
+
 // Aus der Ausgabe von cl.exe die erste Fehlermeldung holen - samt der Konsole
 // und der Zeile, in der sie steht.
 //
@@ -552,11 +694,11 @@ void ParseCompilerError(const std::string& out, std::string& message, int& conso
                 line = std::atoi(entry.c_str() + paren + 1);
 
             const std::size_t close = entry.find("): ", open);
-            message = (close != std::string::npos) ? entry.substr(close + 3) : entry;
+            message = Erklaere((close != std::string::npos) ? entry.substr(close + 3) : entry);
         }
         else
         {
-            message = entry;
+            message = Erklaere(entry);
         }
         return;
     }
@@ -1021,10 +1163,18 @@ void Native::update(float dt, World& world, const OrePlan& ores, const CraftPlan
             }
             else
             {
+                // Die Zeile, an der es passiert ist, kennen wir noch: das Kind
+                // meldet ja jede Zeile, BEVOR es sie ausfuehrt. Deshalb wird
+                // sie hier gerettet, bevor die laufende Anzeige geloescht wird -
+                // sonst stuende der Spieler vor einem Absturz ohne jeden
+                // Anhaltspunkt.
+                mErrConsole = mConsole;
+                mErrLine    = mLine;
+
                 mPhase   = Phase::Failed;
                 mConsole = 0;
                 mLine    = 0;
-                mMsg = "Das Programm ist abgestürzt (Code " + std::to_string((int)code) + ").";
+                mMsg     = AbsturzText(code);
                 closeChild();
             }
         }

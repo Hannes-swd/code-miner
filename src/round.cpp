@@ -242,21 +242,27 @@ std::string RoundClock(float seconds)
     return text;
 }
 
-// Die Runde bekommt eine eigene Anzeige, oben in der Mitte.
+// Die Runde bekommt eine eigene Anzeige, unten rechts in der Ecke.
 //
 // Vorher stand das alles in der Menueleiste - Knopf, Nummer, Phase, Uhr und
 // Ziel nebeneinander als Text. Das war zu viel fuer eine Zeile: das Wichtigste
-// (wie lange noch, wie weit bin ich) ging zwischen den Reitern unter. Hier hat
-// es Platz, und die beiden Balken sagen mehr als jede Zahl.
+// (wie lange noch, wie weit bin ich) ging zwischen den Reitern unter. In einer
+// eigenen Anzeige hat es Platz, und die beiden Balken sagen mehr als jede Zahl.
+//
+// Sie schwebt ueber jeder Seite - deshalb die Ecke und nicht die Mitte: oben in
+// der Mitte lag sie quer ueber dem Kopf der Wiki-Seiten und dem Skilltree.
+// Unten rechts ist auf allen Seiten Luft, und die Konsolen kann man wegziehen.
 bool DrawRoundHud(const World& world, const RoundPlan& plan)
 {
     bool start = false;
 
     ImGuiViewport* vp    = ImGui::GetMainViewport();
     const float    breit = 380.0f;
+    const float    rand  = 14.0f;
 
-    ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + vp->WorkSize.x * 0.5f, vp->WorkPos.y + 12.0f),
-                            ImGuiCond_Always, ImVec2(0.5f, 0.0f));
+    ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + vp->WorkSize.x - rand,
+                                   vp->WorkPos.y + vp->WorkSize.y - rand),
+                            ImGuiCond_Always, ImVec2(1.0f, 1.0f));
     ImGui::SetNextWindowSize(ImVec2(breit, 0.0f), ImGuiCond_Always);
     ImGui::SetNextWindowBgAlpha(0.92f);
 

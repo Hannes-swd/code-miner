@@ -1112,6 +1112,19 @@
           "dauer": 5.5
         },
         {
+          "punkt": "main gehört nach UNTEN",
+          "markiere": "int main()",
+          "text": "Schau, wo main steht: ganz unten. C++ liest von oben nach unten und kennt immer nur das, was es schon gelesen hat. Deine Funktionen müssen also ÜBER main stehen.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "Andersherum geht es nicht",
+          "code": "int main()\n{\n    abbauen();\n}\n\nvoid abbauen()\n{\n    block.mine();\n}",
+          "markiere": "abbauen();",
+          "text": "So nicht: an dieser Stelle hat C++ das Wort abbauen noch nie gesehen. Es meckert dann \"kennt das Programm hier noch nicht\" - dreh die beiden Teile einfach um.",
+          "dauer": 6.5
+        },
+        {
           "punkt": "Aufrufen",
           "markiere": "abbauen();",
           "text": "So rufst du sie auf: der Name mit Klammern. Dann läuft alles ab, was du oben hineingeschrieben hast.",
