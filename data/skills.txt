@@ -53,25 +53,24 @@
 #   else          else
 #   print         print(...)
 #   prüfen        block.isThere(), isLoading(), exists(), isGone()
-#   platzieren    block.place()
 #   geteilt       shared["name"] - übersteht einen Neustart
 #   abbauen       block.mine() - abbauen lassen statt selbst klicken
-#   verkaufen     block.sell() - die Tasche zu Geld machen
-#   tasche        block.has("Stein") - nachschauen, was in der Tasche ist
+#   verkaufen     item.sell() - die Tasche zu Geld machen
+#   tasche        item.has("Stein") - nachschauen, was in der Tasche ist
 #   variablen     eigene Variablen (int, float, ...), dazu die erste
 #   klassen       struct und class, dazu die erste
 #   funktionen    eigene Funktionen und Methoden, dazu die erste
 #
-#   waschen       block.wash("Stein")   - verarbeiten
-#   reinigen      block.clean("Stein")
-#   pressen       block.press("Kohle")
-#   schmelzen     block.smelt("Kupfer")
-#   giessen       block.cast("Kupfer")
-#   härten        block.harden("Eisen")
-#   polieren      block.polish("Diamant")
-#   veredeln      block.refine("Gold")
+#   waschen       item.wash("Stein")   - verarbeiten
+#   reinigen      item.clean("Stein")
+#   pressen       item.press("Kohle")
+#   schmelzen     item.smelt("Kupfer")
+#   giessen       item.cast("Kupfer")
+#   härten        item.harden("Eisen")
+#   polieren      item.polish("Diamant")
+#   veredeln      item.refine("Gold")
 #
-#   legieren      block.alloy("Elektrum") und block.canAlloy("Elektrum")
+#   legieren      item.alloy("Elektrum") und item.canAlloy("Elektrum")
 #                 - zwei Erze zu einem neuen Stoff verschmelzen
 #
 #   Was von welchem Zustand aus geht, steht in data/verarbeitung.json - das
@@ -131,7 +130,6 @@ variablen       6-11    16    einmal 1
 print           7-13    12    einmal 1
 tasche          6-11    16    einmal 2   braucht if
 prüfen          8-14    14    einmal 1
-platzieren      9-15    14    einmal 1
 else           10-16    18    einmal 1   braucht if
 for            11-17    20    einmal 1   braucht while
 funktionen     12-18    20    einmal 1   braucht variablen
@@ -160,7 +158,7 @@ veredeln       20-32    40    einmal 1   braucht polieren
 
 # Die Verarbeitung ist eine Kette: waschen ist der Anfang, alles andere hängt
 # über "braucht" daran. Und waschen selbst braucht "tasche" - also
-# block.has(...). Denn erst wenn dein Programm nachschauen kann, was in der
+# item.has(...). Denn erst wenn dein Programm nachschauen kann, was in der
 # Tasche liegt, kann es überhaupt entscheiden, WAS es verarbeitet. So bekommst du nie einen Schritt angeboten, dessen
 # Vorgänger dir noch fehlt.
 #

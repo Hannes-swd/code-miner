@@ -15,7 +15,7 @@ struct OrePlan;
 //
 // Der Reiz daran ist die Entscheidung: legieren kostet beide Zutaten und Zeit.
 // Wer sich nicht sicher ist, ob beides da ist, muss vorher nachfragen - dafuer
-// gibt es block.canAlloy(...) und damit einen Grund fuer "if".
+// gibt es item.canAlloy(...) und damit einen Grund fuer "if".
 struct AlloyPart
 {
     int ore   = 0;  // Nummer in OrePlan::ores

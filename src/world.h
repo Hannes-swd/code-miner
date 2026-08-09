@@ -161,14 +161,13 @@ struct World
 
     bool mine();       // faengt an abzubauen; false = da ist nichts (mehr)
     bool mineByHand();  // dasselbe, aber per Mausklick - laeuft ohne Programm
-    bool place();      // true = jetzt hingesetzt, false = stand schon da
 
     // Verkaufen. Ohne Angabe geht alles ueber die Theke.
     // Rueckgabe: wie viel Geld es gab.
     int sell(const OrePlan& ores, const CraftPlan& craft);
     int sell(const OrePlan& ores, const CraftPlan& craft, Item was, int anzahl);  // ein Stapel
 
-    // Fuer block.sell("Stein", 3): diese Sorte in jedem Zustand, hoechstens so
+    // Fuer item.sell("Stein", 3): diese Sorte in jedem Zustand, hoechstens so
     // viele. anzahl < 0 heisst alles davon.
     int sell(const OrePlan& ores, const CraftPlan& craft, const std::string& name, int anzahl);
 
@@ -211,7 +210,7 @@ struct World
 
     int inventoryCount() const;  // wie viele Bloecke insgesamt in der Tasche
 
-    // Fuer block.has("Stein"): wie viele davon liegen in der Tasche.
+    // Fuer item.has("Stein"): wie viele davon liegen in der Tasche.
     int inventoryOf(const OrePlan& ores, const std::string& name) const;
 
     // Wie viele Stuecke dieses Erzes in einem der Zustaende liegen (ein Bit je

@@ -12,7 +12,7 @@
     "",
     "Eine Zeile in \"legierungen\":",
     "  name      wie der neue Stoff heisst. Damit ruft der Spieler ihn auf:",
-    "            block.alloy(\"Elektrum\") - und block.canAlloy(\"Elektrum\")",
+    "            item.alloy(\"Elektrum\") - und item.canAlloy(\"Elektrum\")",
     "            sagt vorher, wie viele Stueck gerade gingen. Am besten ohne",
     "            Umlaute: der Name wird im Code getippt.",
     "  aus       die Zutaten: erz und anzahl je Stueck. Mindestens zwei",

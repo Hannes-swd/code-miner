@@ -34,7 +34,6 @@ in eine richtige Programmiersprache hinein.
 | `for` | Zählschleifen |
 | `print()` | Ausgabe in die Zeile unten |
 | `block.isThere()` | nachschauen, ob der Block da ist (auch `isLoading`) |
-| `block.place()` | Block sofort hinsetzen |
 | `shared[...]` | Werte, die einen Neustart überleben |
 
 ### Mengen erhöhen (stapelbar)
@@ -152,7 +151,7 @@ bei jedem Start gleich aus — sonst könnte man so lange neu starten, bis er g�
 Schritt  1: while(23)
 Schritt  2: print()(66), Geld(77), Nachwachsen(66)
 Schritt  3: Variablen(120), if(171), block.isThere()(137), +1 Schleife(223)
-Schritt  4: block.place()(194), Tempo(121), Geld(170), Tempo, Tempo
+Schritt  4: Tasche(194), Tempo(121), Geld(170), Tempo, Tempo
 Schritt  5: else(386), Geld, +1 Konsole(643), Geld, Geld, +1 Schleife
 Schritt  6: +1 Bedingung, for(612), Geld, Tempo, Nachwachsen, Nachwachsen
 Schritt  7: Klassen(854), +1 Schleife, Geld, Tempo, +1 Bedingung, Geld, Tempo
@@ -186,8 +185,7 @@ Schritt 8 rund **500**.
 - **Gekauftes bleibt gekauft.** Es gibt keinen Knopf, der Punkte zurückgibt — sonst
   wäre jede Entscheidung im Baum belanglos.
 - Auch **„Block zurücksetzen" gibt es nicht mehr**: von Hand hätte man damit schneller
-  abgebaut als mit jedem Programm. Der Block wächst von selbst nach, `block.place()`
-  kann man sich im Baum kaufen.
+  abgebaut als mit jedem Programm. Der Block wächst von selbst nach.
 
 ---
 

@@ -536,7 +536,7 @@ void DrawStatus(const Limits& limits, const World& world)
         ImGui::TextColored(gruen, "%.2f s", limits.respawnSeconds);
 
         if (limits.allowWhile || limits.allowFor || limits.allowIf || limits.allowElse ||
-            limits.allowPrint || limits.allowCheck || limits.allowPlace || limits.allowShared ||
+            limits.allowPrint || limits.allowCheck || limits.allowShared ||
             limits.allowVariable || limits.allowClass || limits.allowFunction ||
             limits.allowSell || limits.allowBag || limits.allowMine || limits.allowWash ||
             limits.allowSmelt || limits.allowCast || limits.allowClean || limits.allowPolish ||
@@ -553,18 +553,17 @@ void DrawStatus(const Limits& limits, const World& world)
             wort("print()", limits.allowPrint);
             wort("block.isThere()", limits.allowCheck);
             wort("block.mine()", limits.allowMine);
-            wort("block.place()", limits.allowPlace);
-            wort("block.sell()", limits.allowSell);
-            wort("block.has(...)", limits.allowBag);
-            wort("block.wash(...)", limits.allowWash);
-            wort("block.clean(...)", limits.allowClean);
-            wort("block.press(...)", limits.allowPress);
-            wort("block.smelt(...)", limits.allowSmelt);
-            wort("block.cast(...)", limits.allowCast);
-            wort("block.harden(...)", limits.allowHarden);
-            wort("block.polish(...)", limits.allowPolish);
-            wort("block.refine(...)", limits.allowRefine);
-            wort("block.alloy(...)", limits.allowAlloy);
+            wort("item.sell()", limits.allowSell);
+            wort("item.has(...)", limits.allowBag);
+            wort("item.wash(...)", limits.allowWash);
+            wort("item.clean(...)", limits.allowClean);
+            wort("item.press(...)", limits.allowPress);
+            wort("item.smelt(...)", limits.allowSmelt);
+            wort("item.cast(...)", limits.allowCast);
+            wort("item.harden(...)", limits.allowHarden);
+            wort("item.polish(...)", limits.allowPolish);
+            wort("item.refine(...)", limits.allowRefine);
+            wort("item.alloy(...)", limits.allowAlloy);
             wort("shared[...]", limits.allowShared);
             wort("int, float, ...", limits.allowVariable);
             wort("class, struct", limits.allowClass);

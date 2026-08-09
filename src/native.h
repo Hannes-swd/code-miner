@@ -18,12 +18,11 @@
 //
 //   Kind  -> Spiel   L 2 12 Konsole 2, Zeile 12 (wartet dann auf Freigabe)
 //                    M      block.mine()
-//                    S      block.place()
 //                    Q      block.exists()  (wartet auf 1 oder 0)
-//                    C ...  block.wash(...) und die anderen Schritte
+//                    C ...  item.wash(...) und die anderen Schritte
 //                           (wartet auf die Anzahl, die angenommen wurde)
-//                    G ...  block.alloy(...)   - legieren
-//                    P ...  block.canAlloy(...) - wie viele gingen gerade?
+//                    G ...  item.alloy(...)   - legieren
+//                    P ...  item.canAlloy(...) - wie viele gingen gerade?
 //                    O text print("text")
 //                    X      main() ist zu Ende
 //

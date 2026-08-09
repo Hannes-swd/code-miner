@@ -49,6 +49,14 @@ struct SkillPlan
     // Dadurch macht man erst die nahen Punkte und dann die weiter draussen.
     float growth = 1.5f;
 
+    // Was die stapelbaren Punkte bringen. Steht hier, weil das reine Balance
+    // ist - im Programm hat so eine Zahl nichts verloren.
+    float speedStart   = 3.0f;   // Zeilen pro Sekunde ganz am Anfang
+    float speedPlus    = 0.25f;  // je "tempo" dazu
+    int   moneyPlus    = 1;      // je "geld" dazu
+    float respawnStart = 0.6f;   // Sekunden, bis der Block nachwaechst
+    float respawnMul   = 0.94f;  // je "nachwachsen" mal so viel
+
     // So viele Schritte Abstand halten zwei einmalige Punkte mindestens.
     // Ohne das schaltet man drei Sprachsachen direkt hintereinander frei.
     int spacing = 2;

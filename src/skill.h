@@ -14,15 +14,14 @@ enum class Skill
     // Baum, und sie bringt genau eine Verwendung mit. Mehr gibt es nur ueber
     // die Erweiterungen weiter unten.
     Mine,  // block.mine() - abbauen per Programm statt per Klick
-    Sell,  // block.sell() - die Tasche zu Geld machen
+    Sell,  // item.sell() - die Tasche zu Geld machen
     While,
     If,
     Else,
     For,
     Print,
     Check,  // block.isThere() / isLoading() / exists() / isGone()
-    Bag,    // block.has(...) - in die Tasche schauen
-    Place,
+    Bag,    // item.has(...) - in die Tasche schauen
     Shared,
     Variable,  // int, float, bool, auto, ...
     Class,     // struct und class
@@ -30,17 +29,17 @@ enum class Skill
 
     // Verarbeiten. Ein Punkt je Befehl - welche Schritte damit moeglich sind,
     // steht in data/verarbeitung.json.
-    Wash,    // block.wash()
-    Smelt,   // block.smelt()
-    Cast,    // block.cast()
-    Clean,   // block.clean()
-    Polish,  // block.polish()
-    Harden,  // block.harden()
-    Refine,  // block.refine()
-    Press,   // block.press()
+    Wash,    // item.wash()
+    Smelt,   // item.smelt()
+    Cast,    // item.cast()
+    Clean,   // item.clean()
+    Polish,  // item.polish()
+    Harden,  // item.harden()
+    Refine,  // item.refine()
+    Press,   // item.press()
 
-    // Legieren: zwei Erze werden ein neuer Stoff. block.alloy() und
-    // block.canAlloy() - welche Rezepte es gibt, steht in
+    // Legieren: zwei Erze werden ein neuer Stoff. item.alloy() und
+    // item.canAlloy() - welche Rezepte es gibt, steht in
     // data/legierungen.json.
     Alloy,
 

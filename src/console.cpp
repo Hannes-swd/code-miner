@@ -59,7 +59,7 @@ Console::Console(int aId, ImVec2 aPos, bool withStarterCode) : id(aId), startPos
             "// Was du abgebaut hast, liegt in der Tasche - dort\n"
             "// kannst du es mit Rechtsklick verkaufen.\n"
             "//\n"
-            "// Jeden Befehl - block.mine(), block.sell(), while,\n"
+            "// Jeden Befehl - block.mine(), item.sell(), while,\n"
             "// if - musst du dir erst im Skilltree kaufen.\n"
             "\n"
             "int main() {\n"
@@ -130,7 +130,21 @@ bool DrawConsole(Console& c, Engine& engine)
             errors[engine.errorLine()] = engine.message();
         c.editor.SetErrorMarkers(errors);
 
-        if (line > 0 && line != c.markedLine)
+        // Der Editor soll mitscrollen - dafuer wandert der Cursor auf die
+        // laufende Zeile. Das hat aber einen Haken: der Editor holt sich beim
+        // naechsten Zeichnen den Fokus (ImGui::SetWindowFocus), und ImGui
+        // raeumt dabei den gerade gedrueckten Knopf weg. Waehrend also ein
+        // Programm laeuft, kaeme kein einziger Klick irgendwo sonst mehr an -
+        // man haette die Seite nicht mehr wechseln koennen.
+        //
+        // Deshalb: solange die Maus gedrueckt ist oder irgendetwas angefasst
+        // wird, bleibt der Cursor stehen. Sobald losgelassen wird, springt er
+        // auf die dann aktuelle Zeile - man sieht davon nichts.
+        const bool angefasst = ImGui::IsAnyItemActive() ||
+                               ImGui::IsMouseDown(ImGuiMouseButton_Left) ||
+                               ImGui::IsMouseDown(ImGuiMouseButton_Right);
+
+        if (line > 0 && line != c.markedLine && !angefasst)
         {
             c.editor.SetCursorPosition(TextEditor::Coordinates(line - 1, 0));
             c.markedLine = line;

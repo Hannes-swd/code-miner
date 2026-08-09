@@ -124,7 +124,6 @@ bool Unlocked(Skill skill, const Limits& l)
     case Skill::Print: return l.allowPrint;
     case Skill::Check: return l.allowCheck;
     case Skill::Bag: return l.allowBag;
-    case Skill::Place: return l.allowPlace;
     case Skill::Shared: return l.allowShared;
     case Skill::Variable: return l.allowVariable;
     case Skill::Class: return l.allowClass;
@@ -863,7 +862,7 @@ WikiBook LoadWikiBook()
         book.problems.push_back("In \"seiten\" steht keine einzige Seite.");
 
     // Zeigt "unter" auf eine Seite, die es gibt?
-    for (const WikiPage& p : book.pages)
+    for (WikiPage& p : book.pages)
     {
         if (p.parent.empty())
             continue;
@@ -874,8 +873,35 @@ WikiBook LoadWikiBook()
                 gibtEs = true;
 
         if (!gibtEs)
+        {
             book.problems.push_back(p.title + ": \"unter\" zeigt auf \"" + p.parent +
                                     "\" - die Seite gibt es nicht.");
+            continue;
+        }
+
+        // Und laeuft die Kette nach oben auch irgendwann aus? Ein Ring ("a"
+        // unter "b", "b" unter "a") wuerde die Liste endlos zeichnen lassen -
+        // lieber eine Meldung und die Seite ganz oben.
+        std::string       oben     = p.parent;
+        const std::size_t grenze   = book.pages.size() + 1;
+        std::size_t       schritte = 0;
+        while (!oben.empty() && schritte++ < grenze)
+        {
+            std::string weiter;
+            for (const WikiPage& q : book.pages)
+                if (q.title == oben)
+                {
+                    weiter = q.parent;
+                    break;
+                }
+            oben = weiter;  // nichts gefunden: Kette endet hier
+        }
+
+        if (!oben.empty())
+        {
+            book.problems.push_back(p.title + ": \"unter\" dreht sich im Kreis.");
+            p.parent.clear();
+        }
     }
 
     // Jetzt, wo alle Seiten da sind: zeigen die Verweise auch irgendwohin?
@@ -1105,24 +1131,42 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, std::set<std::stri
                     ImGui::Unindent(14.0f);
             };
 
-            for (int i : sichtbar)
+            // Die Unterseiten einer Seite, in der Reihenfolge der Datei.
+            auto kinderVon = [&](const std::string& titel)
             {
-                const WikiPage& p = book.pages[(std::size_t)i];
-                if (p.category != g_wiki.category || !p.parent.empty())
-                    continue;
-
-                // Wer Unterseiten hat, wird zum Oberpunkt zum Auf- und
-                // Zuklappen. Acht Verarbeitungs-Befehle einzeln untereinander
-                // waeren sonst die halbe Liste.
-                std::vector<int> kinder;
+                std::vector<int> out;
                 for (int k : sichtbar)
-                    if (book.pages[(std::size_t)k].parent == p.title)
-                        kinder.push_back(k);
+                    if (book.pages[(std::size_t)k].parent == titel)
+                        out.push_back(k);
+                return out;
+            };
+
+            // Liegt IRGENDWO darunter etwas Ungelesenes? Muss ueber alle Ebenen
+            // gehen: sonst bliebe ein neues item.wash() unbemerkt, solange
+            // "item" und "Verarbeiten" beide zugeklappt sind.
+            auto neuDarunter = [&](auto&& self, int i) -> bool
+            {
+                if (seen.find(book.pages[(std::size_t)i].title) == seen.end())
+                    return true;
+                for (int k : kinderVon(book.pages[(std::size_t)i].title))
+                    if (self(self, k))
+                        return true;
+                return false;
+            };
+
+            // Ein Punkt der Liste. Wer Unterseiten hat, wird zum Oberpunkt zum
+            // Auf- und Zuklappen - acht Verarbeitungs-Befehle einzeln
+            // untereinander waeren sonst die halbe Liste. Das geht ueber
+            // beliebig viele Ebenen: "item" > "Verarbeiten" > "item.wash()".
+            auto zeichne = [&](auto&& self, int i, bool eingerueckt) -> void
+            {
+                const WikiPage&        p      = book.pages[(std::size_t)i];
+                const std::vector<int> kinder = kinderVon(p.title);
 
                 if (kinder.empty())
                 {
-                    eintrag(i, false);
-                    continue;
+                    eintrag(i, eingerueckt);
+                    return;
                 }
 
                 ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth |
@@ -1142,7 +1186,7 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, std::set<std::stri
                 bool neuDrin = seen.find(p.title) == seen.end();
                 if (!offen)
                     for (int k : kinder)
-                        if (seen.find(book.pages[(std::size_t)k].title) == seen.end())
+                        if (neuDarunter(neuDarunter, k))
                             neuDrin = true;
 
                 if (neuDrin)
@@ -1155,10 +1199,21 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, std::set<std::stri
 
                 if (offen)
                 {
+                    // TreeNodeEx rueckt schon selbst ein - die 14 Punkte
+                    // obendrauf gibt es nur fuer die Blaetter.
                     for (int k : kinder)
-                        eintrag(k, true);
+                        self(self, k, true);
                     ImGui::TreePop();
                 }
+            };
+
+            for (int i : sichtbar)
+            {
+                const WikiPage& p = book.pages[(std::size_t)i];
+                if (p.category != g_wiki.category || !p.parent.empty())
+                    continue;
+
+                zeichne(zeichne, i, false);
             }
             ImGui::EndChild();
 

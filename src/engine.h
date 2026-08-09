@@ -35,9 +35,9 @@ public:
     virtual void start(const std::vector<SourceFile>& files) = 0;
     virtual void togglePause()                               = 0;
     virtual void stop()                                      = 0;
-    // Die Erzliste braucht der Motor fuers Verkaufen: block.sell() muss
+    // Die Erzliste braucht der Motor fuers Verkaufen: item.sell() muss
     // wissen, was ein Block wert ist. Verarbeitung, Legierungen und Limits
-    // kommen dazu, weil block.wash() und block.alloy() beides brauchen: was
+    // kommen dazu, weil item.wash() und item.alloy() beides brauchen: was
     // moeglich ist und was gekauft ist.
     virtual void update(float dt, World& world, const OrePlan& ores, const CraftPlan& craft,
                         const AlloyPlan& alloys, const Limits& limits) = 0;

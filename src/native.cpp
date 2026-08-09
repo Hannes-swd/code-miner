@@ -26,7 +26,6 @@ const char* kKlickerHeader = R"KLICKER(#pragma once
 namespace ck {
 void line(int console, int n);
 void mine();
-void place();
 int  sell();
 int  sellSome(const char* erz, int anzahl);
 int  inBag(const char* erz);
@@ -113,16 +112,35 @@ struct CkShared
 
 static CkShared shared;
 
+// Der Block da draussen in der Welt. Hier steht nur, was mit IHM zu tun hat:
+// abbauen und nachschauen, ob er ueberhaupt da ist. Alles, was danach kommt -
+// Tasche, Verarbeiten, Verkaufen - gehoert zu "item" weiter unten.
 struct CkBlock
 {
-    void mine()  const { ck::mine(); }
-    void place() const { ck::place(); }
+    void mine() const { ck::mine(); }
 
+    // Ist der Block gerade da?
+    //   true  = da, man kann ihn abbauen
+    //   false = weg, er waechst gerade nach
+    bool isThere() const { return ck::exists(); }
+    bool exists()  const { return ck::exists(); }
+
+    // Waechst er gerade nach? Genau das Gegenteil von isThere().
+    bool isLoading() const { return !ck::exists(); }
+    bool isGone()    const { return !ck::exists(); }
+};
+
+static const CkBlock block;
+
+// Deine Tasche. Was einmal abgebaut ist, gehoert nicht mehr dem Block, sondern
+// dir - deshalb steht das alles hier und nicht bei "block".
+struct CkItem
+{
     // Verkauft alles aus der Tasche und gibt zurueck, wie viel Geld es gab.
     int sell() const { return ck::sell(); }
 
-    // Nur eine Sorte: block.sell("Stein") verkauft alle Steine,
-    // block.sell("Stein", 3) genau drei davon.
+    // Nur eine Sorte: item.sell("Stein") verkauft alle Steine,
+    // item.sell("Stein", 3) genau drei davon.
     int sell(const std::string& erz) const { return ck::sellSome(erz.c_str(), -1); }
     int sell(const std::string& erz, int anzahl) const
     {
@@ -130,8 +148,8 @@ struct CkBlock
     }
 
     // In die Tasche schauen, ohne zu verkaufen:
-    //     if (block.has("Stein")) ...        mindestens einer
-    //     if (block.has("Stein", 10)) ...    mindestens zehn
+    //     if (item.has("Stein")) ...        mindestens einer
+    //     if (item.has("Stein", 10)) ...    mindestens zehn
     bool has(const std::string& erz) const { return ck::inBag(erz.c_str()) > 0; }
     bool has(const std::string& erz, int anzahl) const
     {
@@ -141,8 +159,8 @@ struct CkBlock
     // Verarbeiten. Roh verkaufen bringt wenig - verarbeitet ist ein Block
     // deutlich mehr wert.
     //
-    //     block.wash("Gold");        alles, was gerade passt
-    //     block.smelt("Gold", 3);    genau drei Stueck
+    //     item.wash("Gold");        alles, was gerade passt
+    //     item.smelt("Gold", 3);    genau drei Stueck
     //
     // Rueckgabe: wie viele Stuecke wirklich in Arbeit gegeben wurden.
     // 0 heisst: ging nicht - falscher Zustand, nichts da, noch nicht
@@ -173,8 +191,8 @@ struct CkBlock
     // wert ist als seine Teile - und der sich danach normal weiterverarbeiten
     // laesst.
     //
-    //     block.alloy("Elektrum");       ein Stueck
-    //     block.alloy("Elektrum", 3);    drei Stueck
+    //     item.alloy("Elektrum");       ein Stueck
+    //     item.alloy("Elektrum", 3);    drei Stueck
     //
     // Rueckgabe: wie viele Stuecke wirklich in Arbeit gegeben wurden.
     // 0 heisst: ging nicht - Zutaten fehlen, falscher Zustand, noch nicht
@@ -192,22 +210,12 @@ struct CkBlock
     // Wie viele Stueck koenntest du gerade davon machen? 0 = keins.
     // Damit kannst du dich VORHER entscheiden:
     //
-    //     if (block.canAlloy("Elektrum")) block.alloy("Elektrum");
-    //     else                            block.sell("Gold");
+    //     if (item.canAlloy("Elektrum")) item.alloy("Elektrum");
+    //     else                           item.sell("Gold");
     int canAlloy(const std::string& stoff) const { return ck::canAlloy(stoff.c_str()); }
-
-    // Ist der Block gerade da?
-    //   true  = da, man kann ihn abbauen
-    //   false = weg, er waechst gerade nach
-    bool isThere() const { return ck::exists(); }
-    bool exists()  const { return ck::exists(); }
-
-    // Waechst er gerade nach? Genau das Gegenteil von isThere().
-    bool isLoading() const { return !ck::exists(); }
-    bool isGone()    const { return !ck::exists(); }
 };
 
-static const CkBlock block;
+static const CkItem item;
 
 inline void print(const char* text)        { ck::out(text); }
 inline void print(const std::string& text) { ck::out(text.c_str()); }
@@ -239,12 +247,6 @@ void line(int console, int n)
 void mine()
 {
     std::printf("M\n");
-    std::fflush(stdout);
-}
-
-void place()
-{
-    std::printf("S\n");
     std::fflush(stdout);
 }
 
@@ -821,10 +823,6 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
         mMsg = world.mine() ? "Block abgebaut." : "Der Block ist schon abgebaut.";
         break;
 
-    case 'S':
-        mMsg = world.place() ? "Block hingesetzt." : "Der Block steht schon da.";
-        break;
-
     case 'Q':
         sendChild(world.blockAlive ? "1\n" : "0\n");
         break;
@@ -891,14 +889,14 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
         break;
     }
 
-    case 'P':  // block.canAlloy(...) - wie viele gingen gerade?
+    case 'P':  // item.canAlloy(...) - wie viele gingen gerade?
     {
         const std::string name = (msg.size() > 2) ? msg.substr(2) : std::string();
         sendChild((std::to_string(world.canAlloy(ores, alloys, limits, name)) + "\n").c_str());
         break;
     }
 
-    case 'I':  // block.has(...) - in die Tasche schauen
+    case 'I':  // item.has(...) - in die Tasche schauen
     {
         const std::string erz = (msg.size() > 2) ? msg.substr(2) : std::string();
         sendChild((std::to_string(world.inventoryOf(ores, erz)) + "\n").c_str());

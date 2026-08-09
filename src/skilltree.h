@@ -40,7 +40,6 @@ struct Limits
     bool allowElse     = false;
     bool allowPrint    = false;
     bool allowCheck    = false;
-    bool allowPlace    = false;
     bool allowShared   = false;
     bool allowMine     = false;
     bool allowSell     = false;
@@ -59,7 +58,7 @@ struct Limits
     bool allowRefine = false;
     bool allowPress  = false;
 
-    // Legieren: block.alloy(...) und block.canAlloy(...).
+    // Legieren: item.alloy(...) und item.canAlloy(...).
     bool allowAlloy = false;
 
     int maxLoops     = 0;

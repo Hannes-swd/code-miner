@@ -156,8 +156,6 @@ while (true) {
 Damit bekommt `block.isThere()` einen echten Sinn. **Genau das ist auch der Startinhalt jeder
 neuen Konsole.**
 
-`block.place()` gibt es weiterhin — damit setzt man den Block sofort hin, statt zu warten.
-
 „Block zurücksetzen" setzt **nur den Block** zurück — Geld und Zähler bleiben, sonst wäre der
 Knopf ein Zurücksetzen des ganzen Spielstands.
 
@@ -206,7 +204,6 @@ int main() {
         if (block.exists()) {
             print("noch da");
         }
-        block.place();
     }
 
     print(zahlen.size());
@@ -223,7 +220,6 @@ Steht ohne `#include` bereit:
 ```cpp
 struct Block {
     void mine();   // abbauen -> +1 Geld, Block ist kurz weg
-    void place();  // sofort wieder hinsetzen, ohne zu warten
 
     // Ist der Block gerade da?
     bool isThere() const;    // true = da
@@ -235,6 +231,27 @@ struct Block {
 };
 
 const Block block;
+
+// Alles, was die Tasche betrifft. Was einmal abgebaut ist, gehoert nicht mehr
+// dem Block - deshalb steht es hier und nicht bei Block.
+struct Item {
+    int  sell();                            // alles verkaufen -> Geld
+    int  sell(const std::string& erz);      // nur eine Sorte
+    int  sell(const std::string& erz, int anzahl);
+
+    bool has(const std::string& erz);       // liegt etwas davon in der Tasche?
+    bool has(const std::string& erz, int anzahl);
+
+    // Verarbeiten. Ohne Zahl: alles, was gerade passt.
+    int wash(const std::string& erz);       // dazu smelt, cast, clean,
+    int wash(const std::string& erz, int anzahl);  // polish, harden, refine, press
+
+    int alloy(const std::string& stoff);    // legieren
+    int alloy(const std::string& stoff, int anzahl);
+    int canAlloy(const std::string& stoff); // wie viele gingen gerade?
+};
+
+const Item item;
 
 void print(const char* text);   // schreibt in die Ausgabezeile
 void print(const std::string&); // auch fuer std::string,
@@ -273,7 +290,7 @@ Der Spielercode wird mit **`/utf-8`** übersetzt, damit Umlaute in `print("Grö�
 ankommen.
 
 **Kein `#include` dafür nötig.** Der Header wird beim Kompilieren mit dem Schalter
-`/FI klicker.h` erzwungen — dadurch ist `block` verfügbar, **ohne dass eine Zeile vor dem Code
+`/FI klicker.h` erzwungen — dadurch sind `block` und `item` verfügbar, **ohne dass eine Zeile vor dem Code
 des Spielers steht**. Wichtig, weil sonst alle Zeilennummern verrutschen und
 Compiler-Fehlermeldungen auf die falsche Zeile zeigen würden.
 
@@ -328,7 +345,6 @@ liest sie einmal pro Bild und antwortet über `stdin`:
 |---|---|
 | `L 2 12` | Konsole 2, Zeile 12 beginnt gleich — **wartet dann auf Freigabe** |
 | `M` | `block.mine()` |
-| `S` | `block.place()` |
 | `Q` | `block.exists()` — wartet auf `1` oder `0` |
 | `O text` | `print("text")` |
 | `V name` | geteilte Variable lesen — wartet auf die Zahl |
@@ -352,7 +368,7 @@ Spiel das Tempo einfach dadurch, wie oft es `g` schickt.
 
 | Stufe | Ausführung | Warum |
 |---|---|---|
-| **1** ✅ erledigt | Winziger eigener Interpreter — kannte nur `block.mine()`, `block.place()`, `print()` | Konsolen, Editor, Highlighting, Formatierung und Zeilenmarkierung standen damit sofort |
+| **1** ✅ erledigt | Winziger eigener Interpreter — kannte nur `block.mine()` und `print()` | Konsolen, Editor, Highlighting, Formatierung und Zeilenmarkierung standen damit sofort |
 | **2** ✅ erledigt | Echtes C++: instrumentieren → `cl.exe` → `run.exe` starten → Pipes | Volles C++ hinter derselben Oberfläche |
 
 Dazwischen sitzt die Schnittstelle `Engine` (`src/engine.h`) mit `start()`, `togglePause()`,

@@ -240,7 +240,7 @@ int World::inventoryOf(const OrePlan& ores, const std::string& name) const
     if (nummer < 0)
         return 0;
 
-    // Ueber alle Zustaende: block.has("Stein") fragt nach dem Erz, nicht
+    // Ueber alle Zustaende: item.has("Stein") fragt nach dem Erz, nicht
     // danach, ob es gewaschen oder geschmolzen ist.
     int summe = 0;
     for (const auto& e : inventory)
@@ -309,22 +309,6 @@ int World::sell(const OrePlan& ores, const CraftPlan& craft)
         sellFx   = 1.0f;
     }
     return geld;
-}
-
-bool World::place()
-{
-    if (frozen)
-        return false;
-
-    if (blockAlive)
-        return false;
-
-    // Von Hand hinsetzen geht weiterhin - dann eben sofort.
-    blockAlive   = true;
-    respawnTimer = 0.0f;
-    mining       = false;
-    mineTimer    = 0.0f;
-    return true;
 }
 
 void World::tickMining(float dt, const OrePlan& ores, const CraftPlan& craft)

@@ -19,7 +19,7 @@
     "  kurz        ein Satz, der unter dem Titel steht.",
     "  braucht     der Schluessel eines Skilltree-Punktes - dieselben wie in",
     "              data/skills.txt: abbauen, verkaufen, tasche, pruefen,",
-    "              platzieren, print, geteilt, while, if, else, for, variablen,",
+    "              print, geteilt, while, if, else, for, variablen,",
     "              klassen, funktionen, waschen, schmelzen, giessen, reinigen,",
     "              polieren, haerten, veredeln, pressen, legieren.",
     "              Ist der Punkt nicht gekauft, taucht die Seite GAR NICHT auf.",
@@ -64,7 +64,17 @@
     "unter        Titel einer anderen Seite. Diese Seite steht dann in der Liste",
     "             links eingerückt darunter, und der Oberpunkt lässt sich zu-",
     "             klappen. So hängen die acht Verarbeitungs-Befehle unter der",
-    "             Übersicht statt die halbe Liste zu füllen."
+    "             Übersicht statt die halbe Liste zu füllen.",
+    "",
+    "             Das geht über beliebig viele Ebenen: \"item.wash(...)\" hängt",
+    "             unter \"Verarbeiten - Überblick\", und der wiederum unter",
+    "             \"item\". Nur im Kreis darf es nicht gehen - das meldet das",
+    "             Spiel und hängt die Seite wieder ganz nach oben.",
+    "",
+    "             Ganz oben stehen genau zwei Überpunkte: \"block\" ist der",
+    "             Stein draußen (abbauen, nachschauen), \"item\" ist deine",
+    "             Tasche (verkaufen, verarbeiten, legieren). Ein neuer Befehl",
+    "             gehört mit \"unter\" unter den, zu dem er passt."
   ],
   "kategorien": [
     {
@@ -86,7 +96,98 @@
   "seiten": [
     {
       "kategorie": "funktionen",
+      "titel": "block",
+      "braucht": ["abbauen", "pruefen"],
+      "kurz": "Der Block da draußen: abbauen und nachschauen.",
+      "schritte": [
+        {
+          "punkt": "Zwei Namen",
+          "code": "block.mine();\nitem.sell();",
+          "markiere": "block",
+          "text": "Fast jeder Befehl fängt mit einem von zwei Namen an: block oder item. Welcher davor steht, sagt dir, WO der Befehl arbeitet.",
+          "dauer": 5.5
+        },
+        {
+          "punkt": "block ist draußen",
+          "markiere": "block.mine();",
+          "text": "block ist der eine Stein, der gerade vor dir liegt. Alles, was mit ihm zu tun hat, fängt mit block an.",
+          "dauer": 5.0
+        },
+        {
+          "punkt": "Mehr kann er nicht",
+          "code": "block.mine();\nblock.isThere();",
+          "markiere": "block.isThere()",
+          "text": "Und das sind auch schon beide: abbauen - und nachschauen, ob überhaupt einer da ist. Draußen gibt es sonst nichts zu tun.",
+          "dauer": 5.5
+        },
+        {
+          "punkt": "Danach ist Schluss",
+          "markiere": "block.mine();",
+          "text": "Abbauen bringt kein Geld. Der Stein wandert in deine Tasche - und ab da heißt es item.",
+          "dauer": 5.0
+        },
+        {
+          "punkt": "So sieht es aus",
+          "code": "while (true)\n{\n    if (block.isThere())\n    {\n        block.mine();\n    }\n}",
+          "markiere": "if (block.isThere())",
+          "text": "Erst fragen, dann hauen: So fängt fast jedes Programm an.",
+          "dauer": 5.0
+        }
+      ],
+      "siehe_auch": [
+        "block.mine()",
+        "block.isThere()",
+        "item"
+      ]
+    },
+    {
+      "kategorie": "funktionen",
+      "titel": "item",
+      "braucht": ["verkaufen", "tasche", "waschen", "schmelzen", "giessen", "reinigen",
+                  "polieren", "haerten", "veredeln", "pressen", "legieren"],
+      "kurz": "Deine Tasche: verkaufen, nachschauen, verarbeiten.",
+      "schritte": [
+        {
+          "punkt": "Deine Tasche",
+          "code": "block.mine();\nitem.sell();",
+          "markiere": "item.sell()",
+          "text": "Was einmal abgebaut ist, gehört nicht mehr dem Block, sondern dir. Alles, was mit deiner Tasche zu tun hat, fängt deshalb mit item an.",
+          "dauer": 5.5
+        },
+        {
+          "punkt": "Hineinschauen",
+          "code": "if (item.has(\"Stein\"))\n{\n    item.sell(\"Stein\");\n}",
+          "markiere": "item.has(\"Stein\")",
+          "text": "item.has schaut nur nach, ohne etwas herauszunehmen. item.sell macht daraus Geld.",
+          "dauer": 5.0
+        },
+        {
+          "punkt": "Erst besser machen",
+          "code": "if (item.has(\"Stein\"))\n{\n    item.wash(\"Stein\", 3);\n}",
+          "markiere": "item.wash(\"Stein\", 3)",
+          "text": "Roh verkaufen bringt wenig. Waschen, Schmelzen, Polieren, Legieren - alle diese Schritte arbeiten in der Tasche, nie am Block.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "Die kurze Regel",
+          "code": "block.mine();\nitem.sell();",
+          "markiere": "item",
+          "text": "Draußen ist block, drinnen ist item. Wenn du überlegst, welcher Name davor gehört: liegt es schon in der Tasche?",
+          "dauer": 5.5
+        }
+      ],
+      "siehe_auch": [
+        "block",
+        "item.sell()",
+        "item.has(...)",
+        "Verarbeiten - Überblick",
+        "Tasche und Verkaufen"
+      ]
+    },
+    {
+      "kategorie": "funktionen",
       "titel": "block.mine()",
+      "unter": "block",
       "braucht": "abbauen",
       "kurz": "Baut den Block vor dir ab.",
       "schritte": [
@@ -126,47 +227,8 @@
     },
     {
       "kategorie": "funktionen",
-      "titel": "block.place()",
-      "braucht": "platzieren",
-      "kurz": "Setzt sofort einen neuen Block hin.",
-      "schritte": [
-        {
-          "punkt": "Der Befehl",
-          "code": "block.place();",
-          "markiere": "block.place()",
-          "text": "Setzt einen neuen Block hin. Du musst nicht warten, bis von allein einer nachwächst.",
-          "dauer": 3.5
-        },
-        {
-          "punkt": "Nur wenn keiner da ist",
-          "code": "if (block.isLoading())\n{\n    block.place();\n}",
-          "markiere": "block.isLoading()",
-          "text": "Steht schon ein Block da, bringt das Hinsetzen nichts. Also fragst du vorher: ist er gerade weg?",
-          "dauer": 4.5
-        },
-        {
-          "punkt": "Sonst abbauen",
-          "code": "if (block.isLoading())\n{\n    block.place();\n}\nelse\n{\n    block.mine();\n}",
-          "markiere": "else",
-          "text": "Ist der Block da, baust du ihn ab. Ist er weg, setzt du einen neuen hin. So steht dein Roboter nie still.",
-          "dauer": 4.5
-        },
-        {
-          "punkt": "Die Schleife drumherum",
-          "code": "while (true)\n{\n    if (block.isLoading())\n    {\n        block.place();\n    }\n    else\n    {\n        block.mine();\n    }\n}",
-          "markiere": "while (true)",
-          "text": "Mit while läuft das die ganze Runde: abbauen, neu setzen, abbauen, neu setzen.",
-          "dauer": 4.5
-        }
-      ],
-      "siehe_auch": [
-        "block.mine()",
-        "block.isThere()"
-      ]
-    },
-    {
-      "kategorie": "funktionen",
       "titel": "block.isThere()",
+      "unter": "block",
       "braucht": "pruefen",
       "kurz": "Fragt nach, ob der Block gerade da ist.",
       "schritte": [
@@ -209,96 +271,98 @@
         "if",
         "else",
         "block.mine()",
-        "block.has(...)"
+        "item.has(...)"
       ]
     },
     {
       "kategorie": "funktionen",
-      "titel": "block.sell()",
+      "titel": "item.sell()",
+      "unter": "item",
       "braucht": "verkaufen",
       "kurz": "Macht aus deiner Tasche Geld.",
       "schritte": [
         {
           "punkt": "Alles verkaufen",
-          "code": "block.sell();",
-          "markiere": "block.sell()",
+          "code": "item.sell();",
+          "markiere": "item.sell()",
           "text": "Verkauft alles, was in deiner Tasche liegt. Dafür bekommst du Geld.",
           "dauer": 3.5
         },
         {
           "punkt": "Nur eine Sorte",
-          "code": "block.sell(\"Stein\");",
+          "code": "item.sell(\"Stein\");",
           "markiere": "\"Stein\"",
           "text": "In die Klammer schreibst du einen Erznamen. Dann geht nur diese Sorte über die Theke, dein Gold bleibt liegen.",
           "dauer": 4.0
         },
         {
           "punkt": "Nur ein paar davon",
-          "code": "block.sell(\"Stein\", 3);",
+          "code": "item.sell(\"Stein\", 3);",
           "markiere": "3",
           "text": "Die Zahl sagt, wie viele Stück. Hier genau drei Steine, der Rest bleibt in der Tasche.",
           "dauer": 4.0
         },
         {
           "punkt": "Was zurückkommt",
-          "code": "int geld = block.sell(\"Stein\", 3);\nprint(geld);",
+          "code": "int geld = item.sell(\"Stein\", 3);\nprint(geld);",
           "markiere": "int geld",
           "text": "sell gibt dir zurück, wie viel Geld es gab. Das kannst du dir merken und anschauen.",
           "dauer": 4.5
         },
         {
           "punkt": "Erst verarbeiten",
-          "code": "block.wash(\"Stein\");\nint geld = block.sell(\"Stein\");",
-          "markiere": "block.wash(\"Stein\")",
+          "code": "item.wash(\"Stein\");\nint geld = item.sell(\"Stein\");",
+          "markiere": "item.wash(\"Stein\")",
           "text": "Roh ist ein Block wenig wert. Gewaschen, gepresst oder poliert bringt er ein Vielfaches. Verkaufe lieber danach.",
           "dauer": 5.0
         }
       ],
       "siehe_auch": [
-        "block.has(...)",
+        "item.has(...)",
         "Tasche und Verkaufen",
         "Zustände und Reinheit"
       ]
     },
     {
       "kategorie": "funktionen",
-      "titel": "block.has(...)",
+      "titel": "item.has(...)",
+      "unter": "item",
       "braucht": "tasche",
       "kurz": "Schaut in die Tasche, ohne etwas zu verkaufen.",
       "schritte": [
         {
           "punkt": "Der Befehl",
-          "code": "block.has(\"Stein\")",
-          "markiere": "block.has(\"Stein\")",
+          "code": "item.has(\"Stein\")",
+          "markiere": "item.has(\"Stein\")",
           "text": "Fragt: liegt mindestens ein Stein in meiner Tasche? Die Antwort ist ja oder nein.",
           "dauer": 3.5
         },
         {
           "punkt": "Mit einer Anzahl",
-          "code": "block.has(\"Stein\", 10)",
+          "code": "item.has(\"Stein\", 10)",
           "markiere": "10",
           "text": "Mit einer Zahl fragst du nach mindestens so vielen. Hier: habe ich zehn Steine oder mehr?",
           "dauer": 4.0
         },
         {
           "punkt": "Warten, bis genug da ist",
-          "code": "if (block.has(\"Stein\", 10))\n{\n    block.sell(\"Stein\");\n}",
+          "code": "if (item.has(\"Stein\", 10))\n{\n    item.sell(\"Stein\");\n}",
           "markiere": "if",
           "text": "So verkaufst du erst, wenn sich etwas angesammelt hat - und nicht jeden einzelnen Stein sofort.",
           "dauer": 4.5
         },
         {
           "punkt": "Erst sammeln, dann schmelzen",
-          "code": "if (block.has(\"Kupfer\", 5))\n{\n    block.smelt(\"Kupfer\");\n}",
-          "markiere": "block.smelt(\"Kupfer\")",
+          "code": "if (item.has(\"Kupfer\", 5))\n{\n    item.smelt(\"Kupfer\");\n}",
+          "markiere": "item.smelt(\"Kupfer\")",
           "text": "Genauso vor dem Verarbeiten: es läuft immer nur ein Auftrag, und der kostet Zeit. Fünf auf einmal lohnt sich mehr als fünfmal einer.",
           "dauer": 5.0
         }
       ],
       "siehe_auch": [
         "if",
-        "block.sell()",
-        "block.canAlloy(...)"
+        "item.sell()",
+        "item.canAlloy(...)"
       ]
     },
     {
@@ -323,7 +387,7 @@
         },
         {
           "punkt": "Nachschauen, was drin ist",
-          "code": "int geld = block.sell();\nprint(geld);",
+          "code": "int geld = item.sell();\nprint(geld);",
           "markiere": "print(geld)",
           "text": "So siehst du, was in einer Variablen steckt. Genau dafür ist print da: verstehen, was dein Programm gerade tut.",
           "dauer": 4.5
@@ -370,7 +434,7 @@
         },
         {
           "punkt": "Alle Konsolen teilen ihn",
-          "code": "// Konsole 1\nshared[\"gold\"] = 5;\n\n// Konsole 2\nif (shared[\"gold\"] > 0)\n{\n    block.sell(\"Gold\");\n}",
+          "code": "// Konsole 1\nshared[\"gold\"] = 5;\n\n// Konsole 2\nif (shared[\"gold\"] > 0)\n{\n    item.sell(\"Gold\");\n}",
           "markiere": "// Konsole 2",
           "text": "Der Zettel gehört allen Konsolen zusammen. Die eine schreibt hin, die andere liest - so reden deine Programme miteinander.",
           "dauer": 5.5
@@ -384,47 +448,48 @@
     {
       "kategorie": "funktionen",
       "titel": "Verarbeiten - Überblick",
+      "unter": "item",
       "kurz": "Aus einem Zustand einen besseren machen.",
       "schritte": [
         {
           "punkt": "Roh ist wenig wert",
-          "code": "block.sell(\"Kupfer\");",
-          "markiere": "block.sell(\"Kupfer\")",
+          "code": "item.sell(\"Kupfer\");",
+          "markiere": "item.sell(\"Kupfer\")",
           "text": "Frisch aus dem Boden ist ein Block roh. So verkauft bringt er am allerwenigsten.",
           "dauer": 4.0
         },
         {
           "punkt": "Ein Schritt dazwischen",
-          "code": "block.smelt(\"Kupfer\");\nblock.sell(\"Kupfer\");",
-          "markiere": "block.smelt(\"Kupfer\")",
+          "code": "item.smelt(\"Kupfer\");\nitem.sell(\"Kupfer\");",
+          "markiere": "item.smelt(\"Kupfer\")",
           "text": "Schmelzen macht aus rohem Kupfer geschmolzenes. Geschmolzen ist doppelt so viel wert wie roh.",
           "dauer": 4.5
         },
         {
           "punkt": "Noch weiter",
-          "code": "block.smelt(\"Kupfer\");\nblock.cast(\"Kupfer\");\nblock.polish(\"Kupfer\");\nblock.sell(\"Kupfer\");",
-          "markiere": "block.polish(\"Kupfer\")",
+          "code": "item.smelt(\"Kupfer\");\nitem.cast(\"Kupfer\");\nitem.polish(\"Kupfer\");\nitem.sell(\"Kupfer\");",
+          "markiere": "item.polish(\"Kupfer\")",
           "text": "Jeder Schritt macht den Block wertvoller: poliert bringt viereinhalbmal so viel wie roh. Aber jeder Schritt kostet auch Zeit.",
           "dauer": 5.5
         },
         {
           "punkt": "Acht Befehle gibt es",
-          "code": "block.wash(\"Kupfer\");\nblock.clean(\"Kupfer\");\nblock.smelt(\"Kupfer\");\nblock.cast(\"Kupfer\");\nblock.harden(\"Kupfer\");\nblock.polish(\"Kupfer\");\nblock.refine(\"Kupfer\");\nblock.press(\"Stein\");",
-          "markiere": "block.press(\"Stein\")",
+          "code": "item.wash(\"Kupfer\");\nitem.clean(\"Kupfer\");\nitem.smelt(\"Kupfer\");\nitem.cast(\"Kupfer\");\nitem.harden(\"Kupfer\");\nitem.polish(\"Kupfer\");\nitem.refine(\"Kupfer\");\nitem.press(\"Stein\");",
+          "markiere": "item.press(\"Stein\")",
           "text": "Nicht jeder Befehl passt zu jedem Erz. Stein kann man pressen, aber nicht schmelzen. Was gerade geht, zeigt dir die Tasche.",
           "dauer": 6.0
         },
         {
           "punkt": "Es ist ein Netz",
-          "markiere": "block.clean(\"Kupfer\")",
+          "markiere": "item.clean(\"Kupfer\")",
           "text": "Es gibt nicht nur einen Weg. Reinigen zum Beispiel geht aus roh, gewaschen, gegossen und gepresst heraus. Und: es läuft immer nur ein Auftrag, der nächste muss warten.",
           "dauer": 6.0
         }
       ],
       "siehe_auch": [
         "Zustände und Reinheit",
-        "block.wash(...)",
-        "block.smelt(...)",
+        "item.wash(...)",
+        "item.smelt(...)",
         "Legieren"
       ],
       "braucht": [
@@ -440,20 +505,20 @@
     },
     {
       "kategorie": "funktionen",
-      "titel": "block.wash(...)",
+      "titel": "item.wash(...)",
       "braucht": "waschen",
       "kurz": "Waschen: aus roh wird gewaschen.",
       "schritte": [
         {
           "punkt": "Der Befehl",
-          "code": "block.wash(\"Kupfer\");",
-          "markiere": "block.wash(\"Kupfer\")",
+          "code": "item.wash(\"Kupfer\");",
+          "markiere": "item.wash(\"Kupfer\")",
           "text": "Wäscht alles rohe Kupfer in deiner Tasche. Gewaschen ist 1,2-mal so viel wert wie roh.",
           "dauer": 4.0
         },
         {
           "punkt": "Nur ein paar",
-          "code": "block.wash(\"Kupfer\", 2);",
+          "code": "item.wash(\"Kupfer\", 2);",
           "markiere": "2",
           "text": "Mit einer Zahl wäschst du genau so viele Stück. Ohne Zahl nimmt er alles, was gerade passt.",
           "dauer": 4.0
@@ -467,91 +532,91 @@
       ],
       "siehe_auch": [
         "Verarbeiten - Überblick",
-        "block.clean(...)",
-        "block.smelt(...)"
+        "item.clean(...)",
+        "item.smelt(...)"
       ],
       "unter": "Verarbeiten - Überblick"
     },
     {
       "kategorie": "funktionen",
-      "titel": "block.smelt(...)",
+      "titel": "item.smelt(...)",
       "braucht": "schmelzen",
       "kurz": "Schmelzen: in den Ofen damit.",
       "schritte": [
         {
           "punkt": "Der Befehl",
-          "code": "block.smelt(\"Kupfer\");",
-          "markiere": "block.smelt(\"Kupfer\")",
+          "code": "item.smelt(\"Kupfer\");",
+          "markiere": "item.smelt(\"Kupfer\")",
           "text": "Schmilzt Kupfer im Ofen. Geschmolzen ist doppelt so viel wert wie roh - dafür sinkt die Reinheit um 5 Punkte.",
           "dauer": 4.5
         },
         {
           "punkt": "Woraus es geht",
-          "code": "block.smelt(\"Kupfer\", 3);",
+          "code": "item.smelt(\"Kupfer\", 3);",
           "markiere": "3",
           "text": "Schmelzen geht aus roh, gewaschen und gepresst. Mit einer Zahl nimmst du nur so viele Stück - das dauert 1,5 Sekunden pro Stück.",
           "dauer": 5.0
         },
         {
           "punkt": "Danach geht es weiter",
-          "code": "block.smelt(\"Kupfer\");\nblock.cast(\"Kupfer\");",
-          "markiere": "block.cast(\"Kupfer\")",
+          "code": "item.smelt(\"Kupfer\");\nitem.cast(\"Kupfer\");",
+          "markiere": "item.cast(\"Kupfer\")",
           "text": "Aus geschmolzen wird gegossen, gehärtet oder legiert. Gießen geht nur aus geschmolzen - deshalb kommt der Ofen zuerst.",
           "dauer": 5.5
         }
       ],
       "siehe_auch": [
         "Verarbeiten - Überblick",
-        "block.cast(...)",
-        "block.alloy(...)"
+        "item.cast(...)",
+        "item.alloy(...)"
       ],
       "unter": "Verarbeiten - Überblick"
     },
     {
       "kategorie": "funktionen",
-      "titel": "block.cast(...)",
+      "titel": "item.cast(...)",
       "braucht": "giessen",
       "kurz": "Gießen: flüssiges Metall in eine Form.",
       "schritte": [
         {
           "punkt": "Der Befehl",
-          "code": "block.cast(\"Kupfer\");",
-          "markiere": "block.cast(\"Kupfer\")",
+          "code": "item.cast(\"Kupfer\");",
+          "markiere": "item.cast(\"Kupfer\")",
           "text": "Gießt geschmolzenes Kupfer in eine Form. Gegossen ist 2,8-mal so viel wert wie roh.",
           "dauer": 4.0
         },
         {
           "punkt": "Erst der Ofen",
-          "code": "block.smelt(\"Kupfer\");\nblock.cast(\"Kupfer\");",
-          "markiere": "block.smelt(\"Kupfer\")",
+          "code": "item.smelt(\"Kupfer\");\nitem.cast(\"Kupfer\");",
+          "markiere": "item.smelt(\"Kupfer\")",
           "text": "Gießen geht nur aus geschmolzen heraus. Ohne Ofen vorher passiert gar nichts.",
           "dauer": 4.5
         },
         {
           "punkt": "Und dann?",
-          "code": "block.smelt(\"Kupfer\");\nblock.cast(\"Kupfer\");\nblock.polish(\"Kupfer\");",
-          "markiere": "block.polish(\"Kupfer\")",
+          "code": "item.smelt(\"Kupfer\");\nitem.cast(\"Kupfer\");\nitem.polish(\"Kupfer\");",
+          "markiere": "item.polish(\"Kupfer\")",
           "text": "Aus gegossen geht es zu poliert, gehärtet oder gereinigt weiter. Die Reinheit bleibt beim Gießen gleich.",
           "dauer": 5.0
         }
       ],
       "siehe_auch": [
-        "block.smelt(...)",
-        "block.polish(...)",
-        "block.harden(...)"
+        "item.smelt(...)",
+        "item.polish(...)",
+        "item.harden(...)"
       ],
       "unter": "Verarbeiten - Überblick"
     },
     {
       "kategorie": "funktionen",
-      "titel": "block.clean(...)",
+      "titel": "item.clean(...)",
       "braucht": "reinigen",
       "kurz": "Reinigen: der große Sprung bei der Reinheit.",
       "schritte": [
         {
           "punkt": "Der Befehl",
-          "code": "block.clean(\"Kupfer\");",
-          "markiere": "block.clean(\"Kupfer\")",
+          "code": "item.clean(\"Kupfer\");",
+          "markiere": "item.clean(\"Kupfer\")",
           "text": "Reinigen holt den Dreck heraus: die Reinheit steigt um 18 Punkte. Nur Veredeln schafft mehr.",
           "dauer": 4.5
         },
@@ -563,28 +628,28 @@
         },
         {
           "punkt": "Der kurze Weg nach oben",
-          "code": "block.clean(\"Kupfer\");\nblock.refine(\"Kupfer\");",
-          "markiere": "block.refine(\"Kupfer\")",
+          "code": "item.clean(\"Kupfer\");\nitem.refine(\"Kupfer\");",
+          "markiere": "item.refine(\"Kupfer\")",
           "text": "Gereinigt ist 2,4-mal so viel wert wie roh - und von dort geht es direkt zum Veredeln, dem teuersten Zustand.",
           "dauer": 5.5
         }
       ],
       "siehe_auch": [
-        "block.wash(...)",
+        "item.wash(...)",
         "Zustände und Reinheit"
       ],
       "unter": "Verarbeiten - Überblick"
     },
     {
       "kategorie": "funktionen",
-      "titel": "block.polish(...)",
+      "titel": "item.polish(...)",
       "braucht": "polieren",
       "kurz": "Polieren: bis es glänzt.",
       "schritte": [
         {
           "punkt": "Der Befehl",
-          "code": "block.polish(\"Diamant\");",
-          "markiere": "block.polish(\"Diamant\")",
+          "code": "item.polish(\"Diamant\");",
+          "markiere": "item.polish(\"Diamant\")",
           "text": "Poliert einen Block, bis er glänzt. Poliert ist 4,5-mal so viel wert wie roh.",
           "dauer": 4.0
         },
@@ -596,29 +661,29 @@
         },
         {
           "punkt": "Beim Diamanten",
-          "code": "block.clean(\"Diamant\");\nblock.polish(\"Diamant\");",
-          "markiere": "block.clean(\"Diamant\")",
+          "code": "item.clean(\"Diamant\");\nitem.polish(\"Diamant\");",
+          "markiere": "item.clean(\"Diamant\")",
           "text": "Also erst reinigen, dann polieren. Die Reinheit steigt dabei noch einmal um 8 Punkte.",
           "dauer": 5.0
         }
       ],
       "siehe_auch": [
-        "block.cast(...)",
-        "block.refine(...)",
-        "block.harden(...)"
+        "item.cast(...)",
+        "item.refine(...)",
+        "item.harden(...)"
       ],
       "unter": "Verarbeiten - Überblick"
     },
     {
       "kategorie": "funktionen",
-      "titel": "block.harden(...)",
+      "titel": "item.harden(...)",
       "braucht": "haerten",
       "kurz": "Härten: hart machen im Feuer.",
       "schritte": [
         {
           "punkt": "Der Befehl",
-          "code": "block.harden(\"Eisen\");",
-          "markiere": "block.harden(\"Eisen\")",
+          "code": "item.harden(\"Eisen\");",
+          "markiere": "item.harden(\"Eisen\")",
           "text": "Härtet Eisen im Feuer. Gehärtet ist 3,4-mal so viel wert wie roh, die Reinheit sinkt um 4 Punkte.",
           "dauer": 4.5
         },
@@ -630,28 +695,28 @@
         },
         {
           "punkt": "Ein guter Zwischenschritt",
-          "code": "block.smelt(\"Eisen\");\nblock.harden(\"Eisen\");\nblock.refine(\"Eisen\");",
-          "markiere": "block.refine(\"Eisen\")",
+          "code": "item.smelt(\"Eisen\");\nitem.harden(\"Eisen\");\nitem.refine(\"Eisen\");",
+          "markiere": "item.refine(\"Eisen\")",
           "text": "Von gehärtet geht es weiter zu poliert oder veredelt. So kommst du beim Eisen ganz nach oben.",
           "dauer": 5.5
         }
       ],
       "siehe_auch": [
-        "block.cast(...)",
-        "block.polish(...)"
+        "item.cast(...)",
+        "item.polish(...)"
       ],
       "unter": "Verarbeiten - Überblick"
     },
     {
       "kategorie": "funktionen",
-      "titel": "block.refine(...)",
+      "titel": "item.refine(...)",
       "braucht": "veredeln",
       "kurz": "Veredeln: der letzte und beste Schritt.",
       "schritte": [
         {
           "punkt": "Der Befehl",
-          "code": "block.refine(\"Gold\");",
-          "markiere": "block.refine(\"Gold\")",
+          "code": "item.refine(\"Gold\");",
+          "markiere": "item.refine(\"Gold\")",
           "text": "Veredeln ist der letzte Schritt. Veredelt ist sechsmal so viel wert wie roh - mehr geht nicht.",
           "dauer": 4.5
         },
@@ -663,28 +728,28 @@
         },
         {
           "punkt": "Langsam, aber sauber",
-          "code": "block.clean(\"Gold\");\nblock.refine(\"Gold\");",
-          "markiere": "block.clean(\"Gold\")",
+          "code": "item.clean(\"Gold\");\nitem.refine(\"Gold\");",
+          "markiere": "item.clean(\"Gold\")",
           "text": "Erst reinigen, dann veredeln. Veredeln dauert 3 Sekunden pro Stück - der langsamste Schritt. Dafür steigt die Reinheit um 25 Punkte.",
           "dauer": 6.0
         }
       ],
       "siehe_auch": [
-        "block.polish(...)",
+        "item.polish(...)",
         "Zustände und Reinheit"
       ],
       "unter": "Verarbeiten - Überblick"
     },
     {
       "kategorie": "funktionen",
-      "titel": "block.press(...)",
+      "titel": "item.press(...)",
       "braucht": "pressen",
       "kurz": "Pressen: aus billig wird brauchbar.",
       "schritte": [
         {
           "punkt": "Der Befehl",
-          "code": "block.press(\"Stein\");",
-          "markiere": "block.press(\"Stein\")",
+          "code": "item.press(\"Stein\");",
+          "markiere": "item.press(\"Stein\")",
           "text": "Presst Stein zusammen. Gepresst ist 1,8-mal so viel wert wie roh.",
           "dauer": 4.0
         },
@@ -696,28 +761,29 @@
         },
         {
           "punkt": "Wertvoller, nicht sauberer",
-          "code": "block.wash(\"Stein\");\nblock.press(\"Stein\");\nblock.sell(\"Stein\");",
-          "markiere": "block.press(\"Stein\")",
+          "code": "item.wash(\"Stein\");\nitem.press(\"Stein\");\nitem.sell(\"Stein\");",
+          "markiere": "item.press(\"Stein\")",
           "text": "Die Reinheit sinkt beim Pressen um 3 Punkte. Wasch also vorher - das bringt 10 Punkte und gleicht es aus.",
           "dauer": 5.5
         }
       ],
       "siehe_auch": [
         "Verarbeiten - Überblick",
-        "block.smelt(...)"
+        "item.smelt(...)"
       ],
       "unter": "Verarbeiten - Überblick"
     },
     {
       "kategorie": "funktionen",
-      "titel": "block.alloy(...)",
+      "titel": "item.alloy(...)",
+      "unter": "item",
       "braucht": "legieren",
       "kurz": "Aus zwei Erzen wird ein neuer Stoff.",
       "schritte": [
         {
           "punkt": "Der Befehl",
-          "code": "block.alloy(\"Bronze\");",
-          "markiere": "block.alloy(\"Bronze\")",
+          "code": "item.alloy(\"Bronze\");",
+          "markiere": "item.alloy(\"Bronze\")",
           "text": "Macht ein Stück Bronze. Bronze liegt nicht im Boden - sie entsteht nur hier.",
           "dauer": 4.0
         },
@@ -729,72 +795,73 @@
         },
         {
           "punkt": "Erst schmelzen",
-          "code": "block.smelt(\"Kupfer\");\nblock.smelt(\"Eisen\");\nblock.alloy(\"Bronze\");",
-          "markiere": "block.smelt(\"Eisen\")",
+          "code": "item.smelt(\"Kupfer\");\nitem.smelt(\"Eisen\");\nitem.alloy(\"Bronze\");",
+          "markiere": "item.smelt(\"Eisen\")",
           "text": "Also erst beide Zutaten in den Ofen, dann legieren. Es läuft immer nur ein Auftrag - einer nach dem anderen.",
           "dauer": 5.5
         },
         {
           "punkt": "Mehrere Stück",
-          "code": "block.smelt(\"Kupfer\");\nblock.smelt(\"Eisen\");\nblock.alloy(\"Bronze\", 3);",
+          "code": "item.smelt(\"Kupfer\");\nitem.smelt(\"Eisen\");\nitem.alloy(\"Bronze\", 3);",
           "markiere": "3",
           "text": "Die Zahl sagt, wie viele Stück du machen willst. Ohne Zahl macht er genau eins.",
           "dauer": 4.5
         },
         {
           "punkt": "Noch einmal legieren",
-          "code": "block.smelt(\"Gold\");\nblock.smelt(\"Silber\");\nblock.alloy(\"Elektrum\");\nblock.alloy(\"Weissgold\");",
-          "markiere": "block.alloy(\"Weissgold\")",
+          "code": "item.smelt(\"Gold\");\nitem.smelt(\"Silber\");\nitem.alloy(\"Elektrum\");\nitem.alloy(\"Weissgold\");",
+          "markiere": "item.alloy(\"Weissgold\")",
           "text": "Ein legierter Stoff kann selbst Zutat sein: Elektrum und Silber ergeben Weissgold. Gold allein ist 70 wert, Weissgold 360.",
           "dauer": 6.5
         }
       ],
       "siehe_auch": [
-        "block.canAlloy(...)",
+        "item.canAlloy(...)",
         "Legieren",
-        "block.smelt(...)",
+        "item.smelt(...)",
         "if"
       ]
     },
     {
       "kategorie": "funktionen",
-      "titel": "block.canAlloy(...)",
+      "titel": "item.canAlloy(...)",
+      "unter": "item",
       "braucht": "legieren",
       "kurz": "Fragt vorher, ob die Zutaten reichen.",
       "schritte": [
         {
           "punkt": "Der Befehl",
-          "code": "block.canAlloy(\"Bronze\")",
-          "markiere": "block.canAlloy(\"Bronze\")",
+          "code": "item.canAlloy(\"Bronze\")",
+          "markiere": "item.canAlloy(\"Bronze\")",
           "text": "Fragt: wie viele Stück Bronze könnte ich gerade machen? Die Antwort ist eine Zahl.",
           "dauer": 4.0
         },
         {
           "punkt": "Null heißt nein",
-          "code": "if (block.canAlloy(\"Bronze\"))\n{\n    block.alloy(\"Bronze\");\n}",
+          "code": "if (item.canAlloy(\"Bronze\"))\n{\n    item.alloy(\"Bronze\");\n}",
           "markiere": "if",
           "text": "0 heißt: es reicht nicht. Jede andere Zahl heißt ja. Deshalb passt die Frage direkt in ein if.",
           "dauer": 5.0
         },
         {
           "punkt": "Sonst etwas anderes tun",
-          "code": "if (block.canAlloy(\"Bronze\"))\n{\n    block.alloy(\"Bronze\");\n}\nelse\n{\n    block.smelt(\"Kupfer\");\n}",
-          "markiere": "block.smelt(\"Kupfer\")",
+          "code": "if (item.canAlloy(\"Bronze\"))\n{\n    item.alloy(\"Bronze\");\n}\nelse\n{\n    item.smelt(\"Kupfer\");\n}",
+          "markiere": "item.smelt(\"Kupfer\")",
           "text": "Reicht es nicht, schmilzt du eben nach. So wartet dein Programm nicht, sondern arbeitet weiter.",
           "dauer": 5.5
         },
         {
           "punkt": "So viele wie möglich",
-          "code": "int n = block.canAlloy(\"Bronze\");\nblock.alloy(\"Bronze\", n);",
-          "markiere": "int n = block.canAlloy(\"Bronze\")",
+          "code": "int n = item.canAlloy(\"Bronze\");\nitem.alloy(\"Bronze\", n);",
+          "markiere": "int n = item.canAlloy(\"Bronze\")",
           "text": "Du kannst die Zahl auch merken und genau so viele Stück machen, wie gerade gehen.",
           "dauer": 5.0
         }
       ],
       "siehe_auch": [
-        "block.alloy(...)",
+        "item.alloy(...)",
         "if",
-        "block.has(...)"
+        "item.has(...)"
       ]
     },
     {
@@ -876,8 +943,8 @@
         },
         {
           "punkt": "Wofür man das braucht",
-          "code": "for (int i = 0; i < 10; i++)\n{\n    block.mine();\n}\nblock.sell();",
-          "markiere": "block.sell()",
+          "code": "for (int i = 0; i < 10; i++)\n{\n    block.mine();\n}\nitem.sell();",
+          "markiere": "item.sell()",
           "text": "So baust du genau zehn Blöcke ab und verkaufst danach. Mit while müsstest du selbst mitzählen.",
           "dauer": 5.0
         }
@@ -908,14 +975,14 @@
         },
         {
           "punkt": "Zahlen vergleichen",
-          "code": "int geld = block.sell();\nif (geld > 100)\n{\n    print(\"gut gelaufen\");\n}",
+          "code": "int geld = item.sell();\nif (geld > 100)\n{\n    print(\"gut gelaufen\");\n}",
           "markiere": "geld > 100",
           "text": "Du kannst auch rechnen: > ist größer, < ist kleiner, == ist gleich. Achtung, beim Vergleichen stehen zwei Gleichheitszeichen.",
           "dauer": 6.0
         },
         {
           "punkt": "Zwei Fragen auf einmal",
-          "code": "if (block.isThere() && block.has(\"Stein\"))\n{\n    block.mine();\n}",
+          "code": "if (block.isThere() && item.has(\"Stein\"))\n{\n    block.mine();\n}",
           "markiere": "&&",
           "text": "&& heißt und: beides muss stimmen. || heißt oder - dann reicht eines von beiden.",
           "dauer": 5.0
@@ -924,7 +991,7 @@
       "siehe_auch": [
         "else",
         "block.isThere()",
-        "block.has(...)"
+        "item.has(...)"
       ]
     },
     {
@@ -942,20 +1009,20 @@
         },
         {
           "punkt": "Sonst",
-          "code": "if (block.isThere())\n{\n    block.mine();\n}\nelse\n{\n    block.place();\n}",
+          "code": "if (block.isThere())\n{\n    block.mine();\n}\nelse\n{\n    item.sell();\n}",
           "markiere": "else",
           "text": "else heißt sonst. Dieser Teil läuft genau dann, wenn die Antwort nein war.",
           "dauer": 4.5
         },
         {
           "punkt": "Immer genau einer",
-          "markiere": "block.place()",
-          "text": "Entweder das eine oder das andere. Nie beides, nie keines. Damit steht dein Roboter nie still.",
+          "markiere": "item.sell()",
+          "text": "Entweder das eine oder das andere. Nie beides, nie keines. So nutzt dein Roboter auch die Wartezeit, bis der Block nachwächst.",
           "dauer": 4.5
         },
         {
           "punkt": "Noch eine Frage hinterher",
-          "code": "if (block.has(\"Gold\"))\n{\n    block.sell(\"Gold\");\n}\nelse if (block.has(\"Stein\"))\n{\n    block.sell(\"Stein\");\n}",
+          "code": "if (item.has(\"Gold\"))\n{\n    item.sell(\"Gold\");\n}\nelse if (item.has(\"Stein\"))\n{\n    item.sell(\"Stein\");\n}",
           "markiere": "else if",
           "text": "else if hängt noch eine Frage an. Sie wird nur gestellt, wenn die erste nein war.",
           "dauer": 5.5
@@ -987,14 +1054,14 @@
         },
         {
           "punkt": "Neu füllen",
-          "code": "int geld = 0;\ngeld = block.sell();",
-          "markiere": "geld = block.sell()",
+          "code": "int geld = 0;\ngeld = item.sell();",
+          "markiere": "geld = item.sell()",
           "text": "Ein Gleichheitszeichen heißt: leg das hier hinein. Was vorher drin war, ist damit weg.",
           "dauer": 5.0
         },
         {
           "punkt": "Dazuzählen",
-          "code": "int geld = 0;\ngeld = block.sell();\ngeld = geld + 10;",
+          "code": "int geld = 0;\ngeld = item.sell();\ngeld = geld + 10;",
           "markiere": "geld = geld + 10",
           "text": "Rechts wird gerechnet, links wieder hineingelegt. Aus 5 wird 15. Kürzer schreibt man das so: geld += 10;",
           "dauer": 5.5
@@ -1230,16 +1297,16 @@
         },
         {
           "punkt": "Der neue Stapel",
-          "code": "block.smelt(\"Gold\");\nblock.smelt(\"Silber\");\nblock.alloy(\"Elektrum\");",
-          "markiere": "block.alloy(\"Elektrum\")",
+          "code": "item.smelt(\"Gold\");\nitem.smelt(\"Silber\");\nitem.alloy(\"Elektrum\");",
+          "markiere": "item.alloy(\"Elektrum\")",
           "text": "In der Tasche liegt danach ein eigener Stapel mit eigenem Namen und eigener Farbe. Verkaufen kannst du ihn wie jedes Erz.",
           "dauer": 6.0
         }
       ],
       "siehe_auch": [
-        "block.alloy(...)",
+        "item.alloy(...)",
         "Zustände und Reinheit",
-        "block.smelt(...)"
+        "item.smelt(...)"
       ],
       "braucht": "legieren"
     },
@@ -1270,20 +1337,20 @@
         },
         {
           "punkt": "Per Code verkaufen",
-          "code": "block.sell();\nblock.sell(\"Gold\");\nblock.sell(\"Gold\", 3);",
-          "markiere": "block.sell(\"Gold\", 3)",
+          "code": "item.sell();\nitem.sell(\"Gold\");\nitem.sell(\"Gold\", 3);",
+          "markiere": "item.sell(\"Gold\", 3)",
           "text": "Im Programm hast du drei Möglichkeiten: alles, nur eine Sorte, oder genau so viele Stück.",
           "dauer": 6.0
         },
         {
           "punkt": "Am Ende der Runde",
-          "markiere": "block.sell();",
+          "markiere": "item.sell();",
           "text": "Ist die Runde vorbei, wird die Tasche sowieso verkauft. Was du bis dahin verarbeitet hast, zählt dann mit.",
           "dauer": 5.5
         }
       ],
       "siehe_auch": [
-        "block.sell()",
+        "item.sell()",
         "Zustände und Reinheit",
         "Runden"
       ]

@@ -21,7 +21,7 @@
     "                      * Geld pro Block (aus dem Skilltree).",
     "",
     "Eine Zeile in \"schritte\":",
-    "  befehl    so heisst er im Spielercode: block.wash(\"Gold\").",
+    "  befehl    so heisst er im Spielercode: item.wash(\"Gold\").",
     "            Moeglich sind wash, smelt, cast, clean, polish, harden,",
     "            refine, press - fuer jeden gibt es einen Punkt im Skilltree.",
     "  name      was in der Tasche im Menue steht.",

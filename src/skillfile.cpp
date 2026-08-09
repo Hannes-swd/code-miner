@@ -25,7 +25,6 @@ const KeyEntry kKeys[] = {
     {"print", Skill::Print},
     {"prüfen", Skill::Check},
     {"pruefen", Skill::Check},
-    {"platzieren", Skill::Place},
     {"geteilt", Skill::Shared},
     {"abbauen", Skill::Mine},
     {"verkaufen", Skill::Sell},
@@ -203,6 +202,46 @@ SkillPlan LoadSkillPlan()
             else
                 plan.growth = (float)v;
             continue;
+        }
+
+        // Was die stapelbaren Punkte bringen.
+        {
+            struct Wert
+            {
+                const char* schluessel;
+                float*      ziel;
+                int*        zielGanz;
+                float       kleinster;
+            };
+
+            const Wert werte[] = {
+                {"tempo_start", &plan.speedStart, nullptr, 0.1f},
+                {"tempo_plus", &plan.speedPlus, nullptr, 0.0f},
+                {"geld_plus", nullptr, &plan.moneyPlus, 0.0f},
+                {"nachwachsen_start", &plan.respawnStart, nullptr, 0.05f},
+                {"nachwachsen_mal", &plan.respawnMul, nullptr, 0.1f},
+            };
+
+            bool getroffen = false;
+            for (const Wert& w : werte)
+            {
+                if (words[0] != w.schluessel)
+                    continue;
+
+                getroffen      = true;
+                const double v = (words.size() > 1) ? std::atof(words[1].c_str()) : -1.0;
+
+                if (v < (double)w.kleinster)
+                    plan.problems.push_back(Where(lineNo) + "\"" + w.schluessel +
+                                            "\" braucht eine groessere Zahl.");
+                else if (w.ziel != nullptr)
+                    *w.ziel = (float)v;
+                else
+                    *w.zielGanz = (int)v;
+            }
+
+            if (getroffen)
+                continue;
         }
 
         // Mindestabstand zwischen zwei einmaligen Punkten.

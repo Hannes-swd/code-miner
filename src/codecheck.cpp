@@ -214,11 +214,6 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
                 if (!limits.allowCheck)
                     return locked("block.isThere()");
             }
-            else if (t.word == "place")
-            {
-                if (!limits.allowPlace)
-                    return locked("block.place()");
-            }
             else if (t.word == "mine")
             {
                 if (!limits.allowMine)
@@ -227,12 +222,12 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
             else if (t.word == "has")
             {
                 if (!limits.allowBag)
-                    return locked("block.has(...)");
+                    return locked("item.has(...)");
             }
             else if (t.word == "sell")
             {
                 if (!limits.allowSell)
-                    return locked("block.sell()");
+                    return locked("item.sell()");
             }
             else if (t.word == "shared")
             {
@@ -243,49 +238,49 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
             else if (t.word == "wash")
             {
                 if (!limits.allowWash)
-                    return locked("block.wash(...)");
+                    return locked("item.wash(...)");
             }
             else if (t.word == "smelt")
             {
                 if (!limits.allowSmelt)
-                    return locked("block.smelt(...)");
+                    return locked("item.smelt(...)");
             }
             else if (t.word == "cast")
             {
                 if (!limits.allowCast)
-                    return locked("block.cast(...)");
+                    return locked("item.cast(...)");
             }
             else if (t.word == "clean")
             {
                 if (!limits.allowClean)
-                    return locked("block.clean(...)");
+                    return locked("item.clean(...)");
             }
             else if (t.word == "polish")
             {
                 if (!limits.allowPolish)
-                    return locked("block.polish(...)");
+                    return locked("item.polish(...)");
             }
             else if (t.word == "harden")
             {
                 if (!limits.allowHarden)
-                    return locked("block.harden(...)");
+                    return locked("item.harden(...)");
             }
             else if (t.word == "refine")
             {
                 if (!limits.allowRefine)
-                    return locked("block.refine(...)");
+                    return locked("item.refine(...)");
             }
             else if (t.word == "press")
             {
                 if (!limits.allowPress)
-                    return locked("block.press(...)");
+                    return locked("item.press(...)");
             }
             // Legieren. Nachfragen und Machen haengen am selben Punkt: ohne
             // legieren zu duerfen braucht man auch die Frage nicht.
             else if (t.word == "alloy" || t.word == "canAlloy")
             {
                 if (!limits.allowAlloy)
-                    return locked("block.alloy(...)");
+                    return locked("item.alloy(...)");
             }
             else if (t.word == "class" || t.word == "struct")
             {
