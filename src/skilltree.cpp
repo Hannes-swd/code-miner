@@ -222,7 +222,8 @@ void SkillTree::start(const SkillPlan& aPlan, unsigned seed)
     nodes.clear();
     taken.clear();
     branches.clear();
-    selected = -1;
+    selected   = -1;
+    lastBought = -1;
 
     usedOnce.assign(plan.rules.size(), false);
     sinceOnce = 1000;
@@ -454,6 +455,7 @@ bool SkillTree::buy(int id, World& world)
 
     world.money -= nodes[(std::size_t)id].cost;
     nodes[(std::size_t)id].owned = true;
+    lastBought                   = id;
 
     // Jetzt erst wird der naechste Schritt gewuerfelt - mit dem, was man ab
     // sofort besitzt.

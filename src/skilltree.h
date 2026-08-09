@@ -84,6 +84,12 @@ struct SkillTree
     std::vector<SkillNode> nodes;
     int                    selected = -1;
 
+    // Was zuletzt gekauft wurde. Nur fuer die Anzeige: die Karte bekommt einen
+    // deutlichen Rand, damit man nach dem Kauf sieht, WAS man da gerade
+    // freigeschaltet hat - im gewachsenen Baum geht das sonst unter.
+    // Gehoert nicht in den Spielstand: nach einem Neustart ist nichts mehr neu.
+    int lastBought = -1;
+
     // Was an data/skills.txt nicht gestimmt hat. Wird auf der Seite angezeigt.
     std::vector<std::string> problems;
 

@@ -29,7 +29,7 @@ constexpr float kMargin = 36.0f;
 // weisse Karte - so sieht man den gegangenen Weg auf einen Blick.
 const ImU32 kOwnedTop    = ui::kAccent;
 const ImU32 kOwnedBottom = ui::kAccent;
-const ImU32 kOwnedRing   = ui::kAccent;
+const ImU32 kOwnedRing   = IM_COL32(0x8F, 0x3C, 0x10, 255);
 const ImU32 kOwnedGlow   = IM_COL32(0xCC, 0x5B, 0x1E, 26);
 
 const ImU32 kCardTop     = ui::kCard;
@@ -127,7 +127,7 @@ State StateOf(const SkillNode& n, int money)
 }
 
 void DrawCard(ImDrawList* dl, const SkillNode& n, State st, ImVec2 c, float z, bool hovered,
-              bool selected)
+              bool selected, bool frisch)
 {
     const ImVec2 a(c.x - kCardW * 0.5f * z, c.y - kCardH * 0.5f * z);
     const ImVec2 b(c.x + kCardW * 0.5f * z, c.y + kCardH * 0.5f * z);
@@ -156,6 +156,16 @@ void DrawCard(ImDrawList* dl, const SkillNode& n, State st, ImVec2 c, float z, b
             dl->AddRect(ImVec2(a.x - (float)i * 3.0f * z, a.y - (float)i * 3.0f * z),
                         ImVec2(b.x + (float)i * 3.0f * z, b.y + (float)i * 3.0f * z), kOwnedGlow,
                         round + (float)i * 3.0f * z, 0, 3.0f * z);
+
+        // Das gerade Gekaufte bekommt einen dunklen Ring aussen herum. Im
+        // gewachsenen Baum sieht sonst alles Gekaufte gleich aus, und man
+        // findet nicht wieder, was man eben angeklickt hat.
+        if (frisch)
+        {
+            const float d = 5.0f * z;
+            dl->AddRect(ImVec2(a.x - d, a.y - d), ImVec2(b.x + d, b.y + d), ui::kText,
+                        round + d, 0, 2.5f * z);
+        }
     }
     else if (st == State::Buyable)
     {
@@ -398,7 +408,7 @@ void DrawSkillPage(World& world, SkillTree& tree)
         {
             const SkillNode& n = tree.nodes[(std::size_t)id];
             DrawCard(dl, n, StateOf(n, world.money), pos(n), z, id == hovered,
-                     id == tree.selected);
+                     id == tree.selected, id == tree.lastBought);
         }
 
         dl->PopClipRect();
