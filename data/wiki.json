@@ -67,6 +67,15 @@
     "             einer Liste reicht EINER: die Seite taucht auf, sobald du",
     "             irgendeinen davon gekauft hast. Ohne braucht ist sie immer da.",
     "",
+    "             Ein SCHRITT darf auch ein \"braucht\" haben - dort müssen aber",
+    "             ALLE genannten Punkte gekauft sein. Der Unterschied hat einen",
+    "             Grund: eine Seite ist ein Thema, ein Schritt ist ein Stück",
+    "             Code, und darin muss jeder einzelne Befehl erlaubt sein.",
+    "             Schritte, die etwas zeigen würden, das du noch nicht kaufen",
+    "             konntest, fallen einfach weg - samt ihrer Marke auf der",
+    "             Zeitleiste. So steht im Wiki nie ein Befehl, den du nirgends",
+    "             hinschreiben darfst.",
+    "",
     "unter        Titel einer anderen Seite. Diese Seite steht dann in der Liste",
     "             links eingerückt darunter, und der Oberpunkt lässt sich zu-",
     "             klappen. So hängen die acht Verarbeitungs-Befehle unter der",
@@ -85,21 +94,25 @@
   "kategorien": [
     {
       "schluessel": "funktionen",
+      "zeichen": "f()",
       "name": "Funktionen",
       "text": "Befehle, die du dem Spiel gibst. Jeder von ihnen steht in deinem Code, und dein Roboter macht ihn. Alles hier musst du vorher im Skilltree kaufen."
     },
     {
       "schluessel": "kontrolle",
+      "zeichen": "if",
       "name": "Kontrollstrukturen",
       "text": "Damit entscheidet und wiederholt dein Programm: if, else, while, for, Variablen, eigene Funktionen und Klassen. Das ist echtes C++."
     },
     {
       "schluessel": "erze",
+      "zeichen": "Er",
       "name": "Erze",
       "text": "Deine Sammlung. Jedes Erz, das du einmal abgebaut hast, bekommt hier eine Seite - und jeder Weg, den du damit gegangen bist, eine Zeile mit dem Preis. Was du noch nie gemacht hast, steht als ? da."
     },
     {
       "schluessel": "spiel",
+      "zeichen": "?",
       "name": "Spiel",
       "text": "Wie das Spiel selbst funktioniert: welche Erze es gibt, was Zustände und Reinheit bedeuten, wie Legieren, die Tasche, die Runden und der Skilltree arbeiten."
     }
@@ -112,36 +125,42 @@
       "kurz": "Der Block da draußen: abbauen und nachschauen.",
       "schritte": [
         {
-          "punkt": "Zwei Namen",
-          "code": "block.mine();\nitem.sell();",
+          "punkt": "Der Name davor",
+          "code": "block.mine();",
           "markiere": "block",
-          "text": "Fast jeder Befehl fängt mit einem von zwei Namen an: block oder item. Welcher davor steht, sagt dir, WO der Befehl arbeitet.",
+          "text": "Fast jeder Befehl fängt mit einem Namen an. block ist der eine Stein, der gerade vor dir liegt - alles, was mit IHM zu tun hat, fängt so an.",
+          "braucht": "abbauen",
           "dauer": 5.5
         },
         {
-          "punkt": "block ist draußen",
+          "punkt": "Abbauen",
           "markiere": "block.mine();",
-          "text": "block ist der eine Stein, der gerade vor dir liegt. Alles, was mit ihm zu tun hat, fängt mit block an.",
+          "text": "mine heißt abbauen. Mehr passiert draußen nicht: der Stein wandert danach in deine Tasche, und dort geht es weiter.",
+          "braucht": "abbauen",
           "dauer": 5.0
         },
         {
-          "punkt": "Mehr kann er nicht",
-          "code": "block.mine();\nblock.isThere();",
+          "punkt": "Nachschauen",
+          "code": "block.isThere();",
           "markiere": "block.isThere()",
-          "text": "Und das sind auch schon beide: abbauen - und nachschauen, ob überhaupt einer da ist. Draußen gibt es sonst nichts zu tun.",
+          "text": "Das Zweite, was block kann: nachschauen, ob überhaupt einer dasteht. Er wächst ja nach und ist zwischendurch kurz weg.",
+          "braucht": "pruefen",
           "dauer": 5.5
         },
         {
-          "punkt": "Danach ist Schluss",
-          "markiere": "block.mine();",
-          "text": "Abbauen bringt kein Geld. Der Stein wandert in deine Tasche - und ab da heißt es item.",
-          "dauer": 5.0
+          "punkt": "Erst fragen, dann hauen",
+          "code": "if (block.isThere())\n{\n    block.mine();\n}",
+          "markiere": "if (block.isThere())",
+          "text": "Beides zusammen: nur abbauen, wenn auch etwas da ist. So fängt fast jedes Programm an.",
+          "braucht": ["abbauen", "pruefen", "if"],
+          "dauer": 5.5
         },
         {
-          "punkt": "So sieht es aus",
+          "punkt": "Immer wieder",
           "code": "while (true)\n{\n    if (block.isThere())\n    {\n        block.mine();\n    }\n}",
-          "markiere": "if (block.isThere())",
-          "text": "Erst fragen, dann hauen: So fängt fast jedes Programm an.",
+          "markiere": "while (true)",
+          "text": "Mit while läuft das die ganze Runde durch, ohne dass du etwas tun musst.",
+          "braucht": ["abbauen", "pruefen", "if", "while"],
           "dauer": 5.0
         }
       ],
@@ -160,31 +179,34 @@
       "schritte": [
         {
           "punkt": "Deine Tasche",
-          "code": "block.mine();\nitem.sell();",
-          "markiere": "item.sell()",
+          "code": "item.sell();",
+          "markiere": "item",
           "text": "Was einmal abgebaut ist, gehört nicht mehr dem Block, sondern dir. Alles, was mit deiner Tasche zu tun hat, fängt deshalb mit item an.",
+          "braucht": "verkaufen",
           "dauer": 5.5
+        },
+        {
+          "punkt": "Zu Geld machen",
+          "markiere": "item.sell()",
+          "text": "sell verkauft, was in der Tasche liegt. Erst hier gibt es Geld - vom Abbauen allein wird niemand reich.",
+          "braucht": "verkaufen",
+          "dauer": 5.0
         },
         {
           "punkt": "Hineinschauen",
           "code": "if (item.has(\"Stein\"))\n{\n    item.sell(\"Stein\");\n}",
           "markiere": "item.has(\"Stein\")",
-          "text": "item.has schaut nur nach, ohne etwas herauszunehmen. item.sell macht daraus Geld.",
-          "dauer": 5.0
+          "text": "has schaut nur nach, ohne etwas herauszunehmen. So verkaufst du gezielt das, wovon du genug hast.",
+          "braucht": ["tasche", "verkaufen", "if"],
+          "dauer": 5.5
         },
         {
           "punkt": "Erst besser machen",
-          "code": "if (item.has(\"Stein\"))\n{\n    item.wash(\"Stein\", 3);\n}",
+          "code": "item.wash(\"Stein\", 3);",
           "markiere": "item.wash(\"Stein\", 3)",
           "text": "Roh verkaufen bringt wenig. Waschen, Schmelzen, Polieren, Legieren - alle diese Schritte arbeiten in der Tasche, nie am Block.",
+          "braucht": "waschen",
           "dauer": 6.0
-        },
-        {
-          "punkt": "Die kurze Regel",
-          "code": "block.mine();\nitem.sell();",
-          "markiere": "item",
-          "text": "Draußen ist block, drinnen ist item. Wenn du überlegst, welcher Name davor gehört: liegt es schon in der Tasche?",
-          "dauer": 5.5
         }
       ],
       "siehe_auch": [

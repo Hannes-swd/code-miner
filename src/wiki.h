@@ -34,6 +34,16 @@ struct WikiStep
     int markLen   = 0;
 
     float seconds = 3.5f;
+
+    // Was gekauft sein muss, damit dieser Schritt ueberhaupt gezeigt wird.
+    // Leer = immer. Hier muessen ALLE genannten Punkte da sein - anders als bei
+    // einer Seite, wo einer reicht: ein Schritt zeigt ein Stueck Code, und
+    // darin muss jeder Befehl erlaubt sein.
+    //
+    // Ohne das stuende auf der Uebersicht "block" ein block.isThere(), das man
+    // noch gar nicht kaufen konnte - erklaert bekommen, was man nicht benutzen
+    // darf, ist die schlechteste Art, etwas zu lernen.
+    std::vector<Skill> needs;
 };
 
 struct WikiPage
@@ -65,6 +75,11 @@ struct WikiCategory
     std::string key;
     std::string name;
     std::string text;  // kurzer Text, solange nichts gewaehlt ist
+
+    // Ein bis drei Zeichen fuer die Karte auf der Startseite - dasselbe
+    // Verfahren wie bei den Knoten im Skilltree. Leer = der erste Buchstabe
+    // des Namens.
+    std::string icon;
 };
 
 struct WikiBook

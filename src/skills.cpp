@@ -1,6 +1,7 @@
 #include "skills.h"
 
 #include "skilltree.h"
+#include "theme.h"
 #include "world.h"
 
 #include "imgui.h"
@@ -24,24 +25,26 @@ constexpr float kIcon   = 54.0f;
 constexpr float kMargin = 36.0f;
 
 // ---- Farben ---------------------------------------------------------------
-const ImU32 kOwnedTop    = IM_COL32(103, 158, 44, 255);
-const ImU32 kOwnedBottom = IM_COL32(63, 100, 25, 255);
-const ImU32 kOwnedRing   = IM_COL32(158, 220, 100, 255);
-const ImU32 kOwnedGlow   = IM_COL32(140, 210, 80, 30);
+// Aus theme.h. Gekaufte Punkte sind orange gefuellt, alles andere ist eine
+// weisse Karte - so sieht man den gegangenen Weg auf einen Blick.
+const ImU32 kOwnedTop    = ui::kAccent;
+const ImU32 kOwnedBottom = ui::kAccent;
+const ImU32 kOwnedRing   = ui::kAccent;
+const ImU32 kOwnedGlow   = IM_COL32(0xCC, 0x5B, 0x1E, 26);
 
-const ImU32 kCardTop     = IM_COL32(44, 48, 57, 255);
-const ImU32 kCardBottom  = IM_COL32(33, 36, 43, 255);
-const ImU32 kCardRing    = IM_COL32(62, 68, 80, 255);
-const ImU32 kBuyRing     = IM_COL32(118, 168, 78, 255);
+const ImU32 kCardTop     = ui::kCard;
+const ImU32 kCardBottom  = ui::kCard;
+const ImU32 kCardRing    = ui::kBorder;
+const ImU32 kBuyRing     = ui::kAccent;
 
-const ImU32 kLinkOpen    = IM_COL32(108, 165, 58, 235);
-const ImU32 kLinkClosed  = IM_COL32(74, 80, 94, 235);
-const ImU32 kLinkHidden  = IM_COL32(50, 55, 66, 220);
+const ImU32 kLinkOpen    = ui::kAccent;
+const ImU32 kLinkClosed  = ui::kBorderS;
+const ImU32 kLinkHidden  = ui::kBorder;
 
-const ImU32 kTextBright  = IM_COL32(246, 249, 252, 255);
-const ImU32 kTextCard    = IM_COL32(214, 220, 229, 255);
-const ImU32 kTextGreen   = IM_COL32(178, 226, 122, 255);
-const ImU32 kTextDim     = IM_COL32(128, 136, 150, 255);
+const ImU32 kTextBright  = IM_COL32(255, 255, 255, 255);  // auf gekauftem Orange
+const ImU32 kTextCard    = ui::kText;
+const ImU32 kTextGreen   = ui::kAccent;
+const ImU32 kTextDim     = ui::kTextDim;
 
 enum class State
 {
@@ -134,7 +137,7 @@ void DrawCard(ImDrawList* dl, const SkillNode& n, State st, ImVec2 c, float z, b
     ImU32 bottom = kCardBottom;
     ImU32 ring   = kCardRing;
     ImU32 name   = kTextCard;
-    ImU32 glyph  = IM_COL32(206, 213, 224, 255);
+    ImU32 glyph  = ui::kText;
     ImU32 state  = kTextDim;
 
     char label[48];
@@ -144,8 +147,8 @@ void DrawCard(ImDrawList* dl, const SkillNode& n, State st, ImVec2 c, float z, b
         bottom = kOwnedBottom;
         ring   = kOwnedRing;
         name   = kTextBright;
-        glyph  = IM_COL32(198, 240, 150, 255);
-        state  = IM_COL32(203, 243, 152, 255);
+        glyph  = IM_COL32(255, 255, 255, 255);
+        state  = IM_COL32(255, 236, 224, 255);
         std::snprintf(label, sizeof(label), "Freigeschaltet");
 
         // Schein nach aussen, damit man das Gekaufte sofort sieht.
@@ -162,8 +165,8 @@ void DrawCard(ImDrawList* dl, const SkillNode& n, State st, ImVec2 c, float z, b
     }
     else
     {
-        name = IM_COL32(168, 175, 188, 255);
-        glyph = IM_COL32(150, 157, 170, 255);
+        name  = ui::kTextDim;
+        glyph = ui::kTextWk;
         std::snprintf(label, sizeof(label), "Gesperrt - %d", n.cost);
     }
 
@@ -183,7 +186,10 @@ void DrawCard(ImDrawList* dl, const SkillNode& n, State st, ImVec2 c, float z, b
     const float  box = kIcon * z;
     const ImVec2 ia(c.x - box * 0.5f, a.y + 15.0f * z);
     const ImVec2 ib(ia.x + box, ia.y + box);
-    dl->AddRectFilled(ia, ib, IM_COL32(14, 16, 20, 210), 10.0f * z);
+    // Das Kaestchen hinter dem Zeichen: auf gekauften Karten hell durchsichtig,
+    // sonst die eingelassene Flaeche.
+    dl->AddRectFilled(ia, ib,
+                      (st == State::Owned) ? IM_COL32(255, 255, 255, 46) : ui::kSunken, 10.0f * z);
 
     ImFont*     font = BigFont();
     const float gs   = 27.0f * z;
@@ -219,7 +225,7 @@ bool DrawSkillPage(World& world, SkillTree& tree)
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus |
         ImGuiWindowFlags_NoSavedSettings;
 
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.043f, 0.047f, 0.058f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ui::V(ui::kPage));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 
     if (ImGui::Begin("##skilltree", nullptr, flags))
@@ -476,64 +482,93 @@ void DrawStatus(const Limits& limits, const World& world)
 {
     ImGuiViewport* vp = ImGui::GetMainViewport();
 
-    ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + vp->WorkSize.x - 14.0f, vp->WorkPos.y + 14.0f),
+    // Zweite Karte der rechten Spalte, direkt unter der Mine. Die Zahlen, auf
+    // die es ankommt, stehen gross oben; die Feinheiten als Liste darunter.
+    ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + vp->WorkSize.x - ui::kRightMargin,
+                                   vp->WorkPos.y + ui::kMineTop + ui::kMineHeight + 16.0f),
                             ImGuiCond_Always, ImVec2(1.0f, 0.0f));
-    ImGui::SetNextWindowBgAlpha(0.88f);
+    ImGui::SetNextWindowSize(ImVec2(ui::kRightWidth, 0.0f), ImGuiCond_Always);
 
     const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
                                    ImGuiWindowFlags_AlwaysAutoResize |
                                    ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoInputs |
                                    ImGuiWindowFlags_NoFocusOnAppearing;
 
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.075f, 0.082f, 0.100f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.20f, 0.23f, 0.28f, 1.0f));
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(14.0f, 12.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(ui::kCardPad, ui::kCardPad));
 
     if (ImGui::Begin("##status", nullptr, flags))
     {
         // Nur was da ist. Eine Zeile "Klassen: 0" wuerde verraten, dass es
         // Klassen ueberhaupt gibt - das soll der Baum machen, nicht diese Ecke.
-        const ImVec4 gruen(0.72f, 0.90f, 0.50f, 1.0f);
 
-        ImGui::TextDisabled("Was du kannst");
+        // ---- Die zwei grossen Zahlen -------------------------------------
+        const float halb = ImGui::GetContentRegionAvail().x * 0.5f;
+
+        ImGui::BeginGroup();
+        ImGui::TextColored(ui::V(ui::kTextDim), "LEVEL");
+        ImGui::PushFont(BigFont());
+        ImGui::SetWindowFontScale(0.62f);
+        ImGui::TextColored(ui::V(ui::kText), "%d", world.level);
+        ImGui::SetWindowFontScale(1.0f);
+        ImGui::PopFont();
+        ImGui::EndGroup();
+
+        ImGui::SameLine(halb + ui::kCardPad * 0.5f);
+
+        ImGui::BeginGroup();
+        ImGui::TextColored(ui::V(ui::kTextDim), "GELD");
+        ImGui::PushFont(BigFont());
+        ImGui::SetWindowFontScale(0.62f);
+        ImGui::TextColored(ui::V(ui::kAccent), "%d", world.money);
+        ImGui::SetWindowFontScale(1.0f);
+        ImGui::PopFont();
+        ImGui::EndGroup();
+
         ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::TextColored(ui::V(ui::kTextDim), "EFFIZIENZ");
+        ImGui::Spacing();
+
+        // Name links, Wert rechtsbuendig - wie eine Rechnung.
+        auto zeile = [&](const char* name, const char* wert)
+        {
+            ImGui::TextColored(ui::V(ui::kText), "%s", name);
+            const float w = ImGui::CalcTextSize(wert).x;
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x - w + ImGui::GetCursorPosX() -
+                            ImGui::GetStyle().ItemSpacing.x);
+            ImGui::TextColored(ui::V(ui::kText), "%s", wert);
+        };
 
         auto zahl = [&](const char* name, int wert)
         {
             if (wert <= 0)
                 return;
-            ImGui::TextDisabled("%-12s", name);
-            ImGui::SameLine(140.0f);
-            ImGui::TextColored(gruen, "%d", wert);
+            char t[24];
+            std::snprintf(t, sizeof(t), "%d", wert);
+            zeile(name, t);
         };
 
         auto wort = [&](const char* name, bool on)
         {
             if (!on)
                 return;
-            ImGui::TextColored(gruen, "%s", name);
+            ImGui::TextColored(ui::V(ui::kTextDim), "%s", name);
         };
 
-        zahl("Level", world.level);
+        char t[32];
+        std::snprintf(t, sizeof(t), "%.1f Zeilen/s", limits.linesPerSecond);
+        zeile("Tempo", t);
+        std::snprintf(t, sizeof(t), "%d", limits.moneyPerBlock);
+        zeile("Geld/Block", t);
+        std::snprintf(t, sizeof(t), "%.2f s", limits.respawnSeconds);
+        zeile("Nachwachsen", t);
+
         zahl("Schleifen", limits.maxLoops);
         zahl("Bedingungen", limits.maxIfs);
         zahl("Variablen", limits.maxVariables);
         zahl("Funktionen", limits.maxFunctions);
         zahl("Klassen", limits.maxClasses);
         zahl("Konsolen", limits.maxConsoles);
-
-        ImGui::Spacing();
-        ImGui::TextDisabled("%-12s", "Tempo");
-        ImGui::SameLine(140.0f);
-        ImGui::TextColored(gruen, "%.1f Zeilen/s", limits.linesPerSecond);
-        ImGui::TextDisabled("%-12s", "Geld/Block");
-        ImGui::SameLine(140.0f);
-        ImGui::TextColored(gruen, "%d", limits.moneyPerBlock);
-        ImGui::TextDisabled("%-12s", "Nachwachsen");
-        ImGui::SameLine(140.0f);
-        ImGui::TextColored(gruen, "%.2f s", limits.respawnSeconds);
 
         if (limits.allowWhile || limits.allowFor || limits.allowIf || limits.allowElse ||
             limits.allowPrint || limits.allowCheck || limits.allowShared ||
@@ -544,6 +579,8 @@ void DrawStatus(const Limits& limits, const World& world)
         {
             ImGui::Spacing();
             ImGui::Separator();
+            ImGui::Spacing();
+            ImGui::TextColored(ui::V(ui::kTextDim), "FREIGESCHALTET");
             ImGui::Spacing();
 
             wort("while, do", limits.allowWhile);
@@ -572,6 +609,5 @@ void DrawStatus(const Limits& limits, const World& world)
     }
     ImGui::End();
 
-    ImGui::PopStyleVar(3);
-    ImGui::PopStyleColor(2);
+    ImGui::PopStyleVar();
 }

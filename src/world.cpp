@@ -4,6 +4,7 @@
 #include "craft.h"
 #include "ore.h"
 #include "skilltree.h"
+#include "theme.h"
 
 #include "imgui.h"
 
@@ -710,8 +711,32 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
     ImGuiViewport* vp = ImGui::GetMainViewport();
     ImDrawList*    dl = ImGui::GetBackgroundDrawList();
 
-    const ImVec2 c(vp->WorkPos.x + vp->WorkSize.x * 0.5f,
-                   vp->WorkPos.y + vp->WorkSize.y * 0.5f);
+    // ---- Die Mine: eine Karte oben rechts ---------------------------------
+    //
+    // Frueher schwebte der Block frei in der Bildmitte und die Konsolen lagen
+    // darueber. Jetzt hat er sein eigenes Feld: Karte, Ueberschrift, Raster,
+    // Block in der Mitte, darunter der Balken fuers Nachwachsen.
+    const ImVec2 ka(vp->WorkPos.x + vp->WorkSize.x - ui::kRightMargin - ui::kRightWidth,
+                    vp->WorkPos.y + ui::kMineTop);
+    const ImVec2 kb(ka.x + ui::kRightWidth, ka.y + ui::kMineHeight);
+
+    ui::Card(dl, ka, kb);
+    dl->AddText(ImVec2(ka.x + ui::kCardPad, ka.y + ui::kCardPad), ui::kTextDim, "MINE");
+
+    // Das Feld, in dem der Block sitzt - mit feinem Raster, damit die Flaeche
+    // nicht leer wirkt, wenn gerade nichts dasteht.
+    const ImVec2 fa(ka.x + ui::kCardPad, ka.y + 46.0f);
+    const ImVec2 fb(kb.x - ui::kCardPad, kb.y - 30.0f);
+
+    dl->AddRect(fa, fb, ui::kBorder, ui::kRoundS, 0, 1.0f);
+    dl->PushClipRect(fa, fb, true);
+    for (float x = fa.x + 26.0f; x < fb.x; x += 26.0f)
+        dl->AddLine(ImVec2(x, fa.y), ImVec2(x, fb.y), ui::kGrid, 1.0f);
+    for (float y = fa.y + 26.0f; y < fb.y; y += 26.0f)
+        dl->AddLine(ImVec2(fa.x, y), ImVec2(fb.x, y), ui::kGrid, 1.0f);
+    dl->PopClipRect();
+
+    const ImVec2 c((fa.x + fb.x) * 0.5f, (fa.y + fb.y) * 0.5f);
     const ImVec2 a(c.x - kHalf, c.y - kHalf);
     const ImVec2 b(c.x + kHalf, c.y + kHalf);
 
@@ -738,17 +763,12 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
         // ein Block aus und nicht wie ein Aufkleber.
         dl->AddRectFilled(a, ImVec2(b.x, a.y + 10.0f), IM_COL32(255, 255, 255, 34));
         dl->AddRectFilled(ImVec2(a.x, b.y - 12.0f), b, IM_COL32(0, 0, 0, 60));
-        dl->AddRect(a, b, IM_COL32(18, 20, 24, 255), 6.0f, 0, 3.0f);
 
         // Abbau laeuft: ein Balken unter dem Block zeigt, wie weit.
         if (world.mining && erz.mineSeconds > 0.0f)
         {
             const float t = world.mineTimer / erz.mineSeconds;
-            const ImVec2 pa(a.x, b.y + 10.0f);
-            const ImVec2 pb(b.x, b.y + 16.0f);
-            dl->AddRectFilled(pa, pb, IM_COL32(40, 44, 52, 220), 3.0f);
-            dl->AddRectFilled(pa, ImVec2(pa.x + (pb.x - pa.x) * t, pb.y),
-                              IM_COL32(150, 214, 92, 255), 3.0f);
+            ui::Bar(dl, ImVec2(a.x, b.y + 12.0f), b.x - a.x, 6.0f, t, ui::kAccent);
         }
     }
     else
@@ -762,7 +782,31 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
         if (progress > 0.0f)
             dl->AddRectFilled(ImVec2(a.x, top), b, Mix(erz.color2, erz.color1, 0.35f, 120), 6.0f);
 
-        dl->AddRect(a, b, IM_COL32(96, 102, 116, 90), 6.0f, 0, 2.0f);
+        // Gestrichelter Umriss: hier kommt gleich wieder einer.
+        const float schritt = 7.0f;
+        for (float x = a.x; x < b.x; x += schritt * 2.0f)
+        {
+            dl->AddLine(ImVec2(x, a.y), ImVec2(x + schritt, a.y), ui::kBorderS, 1.5f);
+            dl->AddLine(ImVec2(x, b.y), ImVec2(x + schritt, b.y), ui::kBorderS, 1.5f);
+        }
+        for (float y = a.y; y < b.y; y += schritt * 2.0f)
+        {
+            dl->AddLine(ImVec2(a.x, y), ImVec2(a.x, y + schritt), ui::kBorderS, 1.5f);
+            dl->AddLine(ImVec2(b.x, y), ImVec2(b.x, y + schritt), ui::kBorderS, 1.5f);
+        }
+    }
+
+    // Der Balken ganz unten in der Karte. Er zeigt, was gerade laeuft: den
+    // Abbau oder das Nachwachsen. Steht der Block einfach nur da, bleibt die
+    // Rille leer - ein dauerhaft voller Balken saehe aus, als passiere etwas.
+    {
+        float t = 0.0f;
+        if (!world.blockAlive && world.respawnSeconds > 0.0f)
+            t = 1.0f - (world.respawnTimer / world.respawnSeconds);
+        else if (world.mining && erz.mineSeconds > 0.0f)
+            t = world.mineTimer / erz.mineSeconds;
+
+        ui::Bar(dl, ImVec2(fa.x, kb.y - 20.0f), fb.x - fa.x, 5.0f, t, ui::kAccent);
     }
 
     // Abbau-Effekt: aufgehender Rahmen plus "+1 Stein" in der Farbe des Erzes.
@@ -794,7 +838,7 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
         std::snprintf(text, sizeof(text), "+%d Geld", world.lastSold);
         const ImVec2 ts = ImGui::CalcTextSize(text);
         dl->AddText(ImVec2(c.x - ts.x * 0.5f, c.y + kHalf + 24.0f - t * 40.0f),
-                    IM_COL32(255, 214, 120, alpha), text);
+                    IM_COL32(0xCC, 0x5B, 0x1E, alpha), text);
     }
 
     // ---- Von Hand abbauen -------------------------------------------------
@@ -807,7 +851,8 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
     {
         if (world.blockAlive)
         {
-            dl->AddRect(a, b, IM_COL32(255, 255, 255, 90), 6.0f, 0, 2.0f);
+            dl->AddRect(ImVec2(a.x - 3.0f, a.y - 3.0f), ImVec2(b.x + 3.0f, b.y + 3.0f),
+                        ui::kAccent, 8.0f, 0, 2.0f);
 
             if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
                 world.mineByHand();
@@ -831,21 +876,14 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
 
     // Die Welt steht still. Das muss man sofort sehen - sonst wartet man
     // darauf, dass der Block nachwaechst, und versteht nicht, warum nichts
-    // passiert.
+    // passiert. Es steht IN der Karte, mittig unter dem Block: die Leiste ganz
+    // unten sagt es zwar auch, aber wer auf den Block starrt, schaut nicht
+    // dorthin.
     if (world.frozen && world.phase == RoundPhase::Prepare)
     {
-        const char* zeile1 = "Vorbereitung  -  die Welt steht still";
-        const char* zeile2 = world.handMine
-                                 ? "Oben \"Runde starten\". Auf den Block klicken darfst du auch so."
-                                 : "Oben \"Runde starten\".";
-
-        const ImVec2 s1 = ImGui::CalcTextSize(zeile1);
-        const ImVec2 s2 = ImGui::CalcTextSize(zeile2);
-        const float  y0 = b.y + 40.0f;
-
-        dl->AddText(ImVec2(c.x - s1.x * 0.5f, y0), IM_COL32(150, 165, 200, 235), zeile1);
-        dl->AddText(ImVec2(c.x - s2.x * 0.5f, y0 + ImGui::GetTextLineHeight() + 4.0f),
-                    IM_COL32(120, 130, 152, 235), zeile2);
+        const char*  hinweis = "steht still";
+        const ImVec2 hs      = ImGui::CalcTextSize(hinweis);
+        dl->AddText(ImVec2(c.x - hs.x * 0.5f, fb.y - hs.y - 8.0f), ui::kTextWk, hinweis);
     }
 
     // Ein Auftrag laeuft: man soll auch hier sehen, wie weit er ist - sonst
@@ -865,7 +903,7 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
         const ImVec2 pb(c.x + 90.0f, b.y + 50.0f);
         dl->AddText(ImVec2(c.x - ts.x * 0.5f, pa.y - ImGui::GetTextLineHeight() - 4.0f),
                     IM_COL32(180, 200, 240, 235), text);
-        dl->AddRectFilled(pa, pb, IM_COL32(40, 44, 52, 220), 3.0f);
+        dl->AddRectFilled(pa, pb, ui::kSunken, 3.0f);
         dl->AddRectFilled(pa, ImVec2(pa.x + (pb.x - pa.x) * t, pb.y), IM_COL32(120, 170, 240, 255),
                           3.0f);
     }
@@ -905,7 +943,7 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus |
         ImGuiWindowFlags_NoSavedSettings;
 
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.043f, 0.047f, 0.058f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ui::V(ui::kPage));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(24.0f, 18.0f));
 
@@ -928,7 +966,7 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
             wert += StackValue(ores, craft, e.first.ore, e.first.state, e.second.purity,
                                e.second.count, world.moneyPerBlock);
 
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.97f, 0.99f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, ui::V(ui::kText));
         ImGui::TextUnformatted("Tasche");
         ImGui::PopStyleColor();
 
@@ -954,11 +992,11 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
             const float t =
                 (world.craftSeconds > 0.0f) ? world.craftTimer / world.craftSeconds : 1.0f;
 
-            ImGui::TextColored(ImVec4(0.62f, 0.74f, 0.96f, 1.0f), "%s: %d x %s",
-                               world.craftName.c_str(), world.craftCount,
+            ImGui::TextColored(ui::V(ui::kText), "%s: %d x %s", world.craftName.c_str(),
+                               world.craftCount,
                                OreOf(ores, world.craftItem.ore).name.c_str());
 
-            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.47f, 0.67f, 0.94f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ui::V(ui::kAccent));
             char rest[48];
             std::snprintf(rest, sizeof(rest), "noch %.1f s",
                           (double)(world.craftSeconds - world.craftTimer));
@@ -974,15 +1012,37 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
         {
             ImGui::Spacing();
             ImGui::TextDisabled("Noch nichts abgebaut.");
-            ImGui::TextDisabled("Geh auf die Welt-Seite und klick auf den Block -");
-            ImGui::TextDisabled("oder lass ein Programm block.mine() machen.");
+
+            // Von block.mine() steht hier nur etwas, wenn es gekauft ist. Wer
+            // es noch nicht hat, soll klicken - und nicht nach einem Befehl
+            // suchen, den es fuer ihn noch gar nicht gibt.
+            if (limits.allowMine)
+            {
+                ImGui::TextDisabled("Geh auf die Welt-Seite und klick auf den Block -");
+                ImGui::TextDisabled("oder lass ein Programm block.mine() machen.");
+            }
+            else
+            {
+                ImGui::TextDisabled("Geh auf die Welt-Seite und klick auf den Block.");
+            }
         }
         else
         {
             ImGui::TextDisabled(
                 "Mit den Pfeilen die Anzahl einstellen, auf die Zahl klicken zum Eintippen.");
-            ImGui::TextDisabled(
-                "Rechtsklick auf eine Karte: verarbeiten - das macht den Stapel wertvoller.");
+
+            // Vom Verarbeiten steht hier nur etwas, wenn es ueberhaupt schon
+            // geht. Ein Hinweis auf ein Rechtsklickmenue, das leer bleibt, ist
+            // schlimmer als gar keiner.
+            bool kannVerarbeiten = false;
+            for (const CraftStep& s : craft.steps)
+                if (CraftUnlocked(s, limits))
+                    kannVerarbeiten = true;
+
+            if (kannVerarbeiten)
+                ImGui::TextDisabled(
+                    "Rechtsklick auf eine Karte: verarbeiten - das macht den Stapel wertvoller.");
+
             ImGui::Spacing();
             ImGui::Spacing();
 
@@ -1040,7 +1100,7 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
 
                 ImGui::PushID(stapel.ore * 100 + stapel.state);
                 ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 12.0f);
-                ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.141f, 0.157f, 0.188f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ChildBg, ui::V(ui::kCard));
                 ImGui::BeginChild("karte", ImVec2(kartenBreite, kartenHoehe),
                                   ImGuiChildFlags_Borders,
                                   ImGuiWindowFlags_NoScrollbar |
@@ -1077,16 +1137,15 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
                     std::snprintf(text, sizeof(text), "Reinheit %d%%", rein);
                     const float w = ImGui::CalcTextSize(text).x;
                     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (innen - w) * 0.5f);
-                    ImGui::TextColored(rein >= 70 ? ImVec4(0.62f, 0.82f, 0.96f, 1.0f)
-                                                  : ImVec4(0.62f, 0.64f, 0.70f, 1.0f),
-                                       "%s", text);
+                    ImGui::TextColored(rein >= 70 ? ui::V(ui::kText) : ui::V(ui::kTextDim), "%s",
+                                       text);
                 }
 
                 char haben[48];
                 std::snprintf(haben, sizeof(haben), "x %d", anzahl);
                 const float hw = ImGui::CalcTextSize(haben).x;
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (innen - hw) * 0.5f);
-                ImGui::TextColored(ImVec4(0.70f, 0.89f, 0.48f, 1.0f), "%s", haben);
+                ImGui::TextColored(ui::V(ui::kAccent), "%s", haben);
 
                 ImGui::Spacing();
 
@@ -1155,19 +1214,26 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
                               StackValue(ores, craft, stapel.ore, stapel.state, rein, wie,
                                          world.moneyPerBlock));
 
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.42f, 0.30f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_Button, ui::V(ui::kAccent));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ui::V(ui::kAccentHot));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ui::V(ui::kAccent));
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
                 if (ImGui::Button(knopf, ImVec2(innen, 0.0f)))
                 {
                     verkaufen    = stapel;
                     verkaufenWie = wie;
                     verkaufenJa  = true;
                 }
-                ImGui::PopStyleColor();
+                ImGui::PopStyleColor(4);
 
                 // Verarbeiten. Angeboten wird genau das, was von hier aus
                 // wirklich geht: der Zustand muss passen, das Erz muss das Ziel
                 // erlauben, und gekauft sein muss der Schritt auch.
-                if (ImGui::BeginPopupContextWindow("verarbeiten"))
+                //
+                // Solange gar kein Schritt gekauft ist, gibt es das Menue nicht
+                // einmal - sonst klappt eines auf, das nur sagen kann, dass es
+                // nichts kann.
+                if (kannVerarbeiten && ImGui::BeginPopupContextWindow("verarbeiten"))
                 {
                     ImGui::TextDisabled("Verarbeiten");
                     ImGui::Separator();

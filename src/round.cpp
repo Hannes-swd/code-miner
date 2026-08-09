@@ -1,9 +1,15 @@
 #include "round.h"
 
 #include "json.h"
+#include "theme.h"
 #include "world.h"
 
 #include "imgui.h"
+
+// Wegen BeginViewportSideBar: die Leiste am unteren Rand zieht sich ihren Platz
+// vom freien Bereich ab, genau wie die Menueleiste oben. Die Funktion steht bei
+// ImGui in den Innereien - benutzt wird sie dort fuer BeginMainMenuBar selbst.
+#include "imgui_internal.h"
 
 #include <windows.h>
 
@@ -242,144 +248,130 @@ std::string RoundClock(float seconds)
     return text;
 }
 
-// Die Runde bekommt eine eigene Anzeige, unten rechts in der Ecke.
+// Die Runde bekommt eine eigene Leiste, unten quer ueber die Seite.
 //
 // Vorher stand das alles in der Menueleiste - Knopf, Nummer, Phase, Uhr und
 // Ziel nebeneinander als Text. Das war zu viel fuer eine Zeile: das Wichtigste
-// (wie lange noch, wie weit bin ich) ging zwischen den Reitern unter. In einer
-// eigenen Anzeige hat es Platz, und die beiden Balken sagen mehr als jede Zahl.
+// (wie lange noch, wie weit bin ich) ging zwischen den Reitern unter.
 //
-// Sie schwebt ueber jeder Seite - deshalb die Ecke und nicht die Mitte: oben in
-// der Mitte lag sie quer ueber dem Kopf der Wiki-Seiten und dem Skilltree.
-// Unten rechts ist auf allen Seiten Luft, und die Konsolen kann man wegziehen.
+// Zwei Leisten, immer dieselben: oben das Geld mit dem Ziel dahinter, unten die
+// Zeit. Sie stehen auf jeder Seite und in jeder Phase an derselben Stelle -
+// beim Spielen schaut man nicht hin, man sieht nur, wie voll sie sind.
 bool DrawRoundHud(const World& world, const RoundPlan& plan)
 {
     bool start = false;
 
-    ImGuiViewport* vp    = ImGui::GetMainViewport();
-    const float    breit = 380.0f;
-    const float    rand  = 14.0f;
-
-    ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + vp->WorkSize.x - rand,
-                                   vp->WorkPos.y + vp->WorkSize.y - rand),
-                            ImGuiCond_Always, ImVec2(1.0f, 1.0f));
-    ImGui::SetNextWindowSize(ImVec2(breit, 0.0f), ImGuiCond_Always);
-    ImGui::SetNextWindowBgAlpha(0.92f);
+    ImGuiViewport* vp = ImGui::GetMainViewport();
 
     const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
                                    ImGuiWindowFlags_NoSavedSettings |
-                                   ImGuiWindowFlags_NoFocusOnAppearing |
-                                   ImGuiWindowFlags_AlwaysAutoResize;
+                                   ImGuiWindowFlags_NoFocusOnAppearing;
 
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.075f, 0.082f, 0.100f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.20f, 0.23f, 0.28f, 1.0f));
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 12.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(16.0f, 12.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 
-    if (ImGui::Begin("##runde", nullptr, flags))
+    // Eine Leiste am unteren Rand - dieselbe Sorte Fenster wie die Menueleiste
+    // oben. Der Witz daran: sie zieht sich ihren Platz vom freien Bereich ab.
+    // Alles andere richtet sich danach und legt sich nicht mehr darueber.
+    if (ImGui::BeginViewportSideBar("##runde", vp, ImGuiDir_Down, ui::kFooterHeight, flags))
     {
-        const int   ziel   = RoundTarget(plan, world.roundNumber);
-        const float innen  = ImGui::GetContentRegionAvail().x;
-        ImDrawList* dl     = ImGui::GetWindowDrawList();
+        const int    ziel = RoundTarget(plan, world.roundNumber);
+        ImDrawList*  dl   = ImGui::GetWindowDrawList();
+        const ImVec2 wp   = ImGui::GetWindowPos();
+        const ImVec2 ws   = ImGui::GetWindowSize();
 
-        // Ein Balken, der ohne Zahl schon alles sagt.
-        auto balken = [&](float anteil, ImU32 farbe, const char* text)
+        dl->AddLine(wp, ImVec2(wp.x + ws.x, wp.y), ui::kBorder, 1.0f);
+
+        // Ganz links die Nummer, dann zwei beschriftete Balken quer ueber die
+        // Breite, rechts der Wert. Zwei Zeilen statt einer Kachel: so sieht man
+        // beim Spielen im Augenwinkel, wie beides gleichzeitig laeuft.
+        // Vier Spalten: Nummer, Beschriftung, Balken, Wert. Die Breiten sind
+        // aus der laengsten Aufschrift gerechnet, damit nichts uebereinander
+        // rutscht, wenn aus "Zeit" mal "Vorbereitung" wird.
+        // Der Knopf steht nur in der Vorbereitung da. Dann muss ihm Platz
+        // gemacht werden - sonst legt er sich ueber das Ende der Balken.
+        const bool  vorbereitung = (world.phase == RoundPhase::Prepare);
+        const float knopfB       = 150.0f;
+        const float knopfH       = 34.0f;
+        const float rechtsFrei   = vorbereitung ? (knopfB + 22.0f) : 0.0f;
+
+        const float x0     = wp.x + 26.0f;
+        const float xLabel = x0 + ImGui::CalcTextSize("Runde 88").x + 26.0f;
+        const float xBar   = xLabel + ImGui::CalcTextSize("Zeit").x + 16.0f;
+        const float xWert  = wp.x + ws.x - 26.0f - rechtsFrei;
+        const float wertW  = ImGui::CalcTextSize("00000 / 00000").x;
+
+        float breit = xWert - wertW - 16.0f - xBar;
+        if (breit < 60.0f)
+            breit = 60.0f;
+
+        char nummer[32];
+        std::snprintf(nummer, sizeof(nummer), "Runde %d", world.roundNumber);
+        dl->AddText(ImVec2(x0, wp.y + (ws.y - ImGui::GetTextLineHeight()) * 0.5f), ui::kText,
+                    nummer);
+
+        auto zeile = [&](float y, const char* name, float anteil, ImU32 farbe, const char* wert)
         {
-            if (anteil < 0.0f)
-                anteil = 0.0f;
-            if (anteil > 1.0f)
-                anteil = 1.0f;
+            const float th = ImGui::GetTextLineHeight();
+            dl->AddText(ImVec2(xLabel, y - th * 0.5f), ui::kTextDim, name);
+            ui::Bar(dl, ImVec2(xBar, y - 3.0f), breit, 6.0f, anteil, farbe);
 
-            const ImVec2 p = ImGui::GetCursorScreenPos();
-            const float  h = 8.0f;
-
-            dl->AddRectFilled(p, ImVec2(p.x + innen, p.y + h), IM_COL32(38, 42, 50, 255), 4.0f);
-            if (anteil > 0.0f)
-                dl->AddRectFilled(p, ImVec2(p.x + innen * anteil, p.y + h), farbe, 4.0f);
-
-            ImGui::Dummy(ImVec2(innen, h));
-
-            if (text != nullptr)
-                ImGui::TextDisabled("%s", text);
+            const float w = ImGui::CalcTextSize(wert).x;
+            dl->AddText(ImVec2(xWert - w, y - th * 0.5f), ui::kText, wert);
         };
+
+        const float y1 = wp.y + ws.y * 0.34f;
+        const float y2 = wp.y + ws.y * 0.68f;
+
+        // IMMER dieselben zwei Leisten: oben das Geld, unten die Zeit. Sie
+        // wandern nicht und sie verschwinden nicht - man soll im Augenwinkel
+        // sehen koennen, wie beides steht, ohne erst hinsehen zu muessen, was
+        // die Zeile diesmal bedeutet.
+        char geld[48];
+        if (ziel > 0)
+            std::snprintf(geld, sizeof(geld), "%d / %d", world.money, ziel);
+        else
+            std::snprintf(geld, sizeof(geld), "%d", world.money);
+
+        zeile(y1, "Geld", (ziel > 0) ? (float)world.money / (float)ziel : 0.0f, ui::kAccent, geld);
 
         if (world.phase == RoundPhase::Run)
         {
             const bool  knapp = world.roundLeft <= 60.0f;
-            const ImU32 zeitF = knapp ? IM_COL32(255, 115, 97, 255) : IM_COL32(184, 230, 128, 255);
-
-            // Kopfzeile: Nummer links, Uhr gross rechts.
-            ImGui::TextDisabled("Runde %d", world.roundNumber);
-
-            const std::string uhr = RoundClock(world.roundLeft);
-            ImFont*           gf  = (ImGui::GetIO().Fonts->Fonts.Size > 1)
-                                        ? ImGui::GetIO().Fonts->Fonts[1]
-                                        : ImGui::GetFont();
-            const float  us = 30.0f;
-            const ImVec2 um = gf->CalcTextSizeA(us, FLT_MAX, 0.0f, uhr.c_str());
-            const ImVec2 up = ImGui::GetCursorScreenPos();
-
-            dl->AddText(gf, us, ImVec2(up.x + innen - um.x, up.y - ImGui::GetTextLineHeight() - 6.0f),
-                        zeitF, uhr.c_str());
-
-            const float anteil =
-                (plan.seconds > 0.0f) ? (world.roundLeft / plan.seconds) : 0.0f;
-            balken(anteil, zeitF, nullptr);
-
-            if (ziel > 0)
-            {
-                ImGui::Spacing();
-
-                const bool  reicht = world.money >= ziel;
-                const ImU32 zf     = reicht ? IM_COL32(150, 214, 92, 255)
-                                            : IM_COL32(226, 158, 70, 255);
-
-                char text[96];
-                std::snprintf(text, sizeof(text), "Ziel %d  -  du hast %d", ziel, world.money);
-                balken((float)world.money / (float)ziel, zf, text);
-            }
+            const float t     = (plan.seconds > 0.0f) ? (world.roundLeft / plan.seconds) : 0.0f;
+            zeile(y2, "Zeit", t, knapp ? ui::kBad : ui::kDark, RoundClock(world.roundLeft).c_str());
         }
         else if (world.phase == RoundPhase::Report)
         {
-            ImGui::TextDisabled("Runde %d", world.roundNumber);
-            ImGui::TextUnformatted("Abrechnung");
+            zeile(y2, "Zeit", 0.0f, ui::kDark, "vorbei");
         }
         else
         {
-            ImGui::TextDisabled("Runde %d  -  Vorbereitung", world.roundNumber);
-            ImGui::Spacing();
+            // Noch nicht gestartet: die volle Zeit steht bereit.
+            zeile(y2, "Zeit", 1.0f, ui::kDark, RoundClock(plan.seconds).c_str());
 
             // Der wichtigste Knopf im Spiel darf auch so aussehen.
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.24f, 0.54f, 0.31f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.33f, 0.68f, 0.42f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.19f, 0.44f, 0.26f, 1.0f));
-            if (ImGui::Button("Runde starten", ImVec2(innen, ImGui::GetFrameHeight() * 1.5f)))
+            ImGui::SetCursorScreenPos(
+                ImVec2(wp.x + ws.x - 26.0f - knopfB, wp.y + (ws.y - knopfH) * 0.5f));
+
+            ImGui::PushStyleColor(ImGuiCol_Button, ui::V(ui::kAccent));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ui::V(ui::kAccentHot));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ui::V(ui::kAccent));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+            if (ImGui::Button("Runde starten", ImVec2(knopfB, knopfH)))
                 start = true;
-            ImGui::PopStyleColor(3);
+            ImGui::PopStyleColor(4);
 
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("Die Runde dauert %s.\n"
                                   "Solange du nicht startest, steht die Welt still.",
                                   RoundClock(plan.seconds).c_str());
-
-            if (ziel > 0)
-            {
-                ImGui::Spacing();
-
-                char text[96];
-                std::snprintf(text, sizeof(text), "Ziel %d  -  du hast %d", ziel, world.money);
-                balken((float)world.money / (float)ziel,
-                       (world.money >= ziel) ? IM_COL32(150, 214, 92, 255)
-                                             : IM_COL32(226, 158, 70, 255),
-                       text);
-            }
         }
     }
     ImGui::End();
 
     ImGui::PopStyleVar(3);
-    ImGui::PopStyleColor(2);
     return start;
 }
 
@@ -398,7 +390,7 @@ bool DrawRoundReport(const World& world, const RoundPlan& plan)
     const ImGuiWindowFlags flags =
         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings;
 
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.075f, 0.082f, 0.100f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ui::V(ui::kCard));
     ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.26f, 0.34f, 0.28f, 1.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);

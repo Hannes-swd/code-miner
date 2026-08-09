@@ -15,6 +15,7 @@
 #include "skillfile.h"
 #include "skills.h"
 #include "skilltree.h"
+#include "theme.h"
 #include "wiki.h"
 #include "world.h"
 
@@ -139,26 +140,78 @@ static LRESULT WINAPI WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 static void ApplyStyle()
 {
-    ImGui::StyleColorsDark();
+    ImGui::StyleColorsLight();
 
-    ImGuiStyle& s      = ImGui::GetStyle();
-    s.WindowRounding   = 6.0f;
-    s.ChildRounding    = 4.0f;
-    s.FrameRounding    = 4.0f;
-    s.GrabRounding     = 4.0f;
-    s.WindowBorderSize = 1.0f;
-    s.WindowPadding    = ImVec2(8.0f, 8.0f);
-    s.ItemSpacing      = ImVec2(8.0f, 6.0f);
-    s.WindowTitleAlign = ImVec2(0.02f, 0.5f);
+    ImGuiStyle& s        = ImGui::GetStyle();
+    s.WindowRounding     = ui::kRound;
+    s.ChildRounding      = ui::kRound;
+    s.FrameRounding      = ui::kRoundS;
+    s.GrabRounding       = ui::kRoundS;
+    s.PopupRounding      = ui::kRound;
+    s.ScrollbarRounding  = 6.0f;
+    s.WindowBorderSize   = 1.0f;
+    s.FrameBorderSize    = 0.0f;
+    s.ChildBorderSize    = 1.0f;
+    s.WindowPadding      = ImVec2(ui::kCardPad, 14.0f);
+    s.FramePadding       = ImVec2(10.0f, 6.0f);
+    s.ItemSpacing        = ImVec2(10.0f, 8.0f);
+    s.ItemInnerSpacing   = ImVec2(8.0f, 6.0f);
+    s.ScrollbarSize      = 11.0f;
+    s.WindowTitleAlign   = ImVec2(0.0f, 0.5f);
+    s.SeparatorTextAlign = ImVec2(0.0f, 0.5f);
 
-    ImVec4* c                      = s.Colors;
-    c[ImGuiCol_WindowBg]           = ImVec4(0.11f, 0.12f, 0.15f, 0.97f);
-    c[ImGuiCol_TitleBg]            = ImVec4(0.14f, 0.15f, 0.19f, 1.00f);
-    c[ImGuiCol_TitleBgActive]      = ImVec4(0.20f, 0.23f, 0.30f, 1.00f);
-    c[ImGuiCol_Button]             = ImVec4(0.22f, 0.42f, 0.30f, 1.00f);
-    c[ImGuiCol_ButtonHovered]      = ImVec4(0.28f, 0.54f, 0.38f, 1.00f);
-    c[ImGuiCol_ButtonActive]       = ImVec4(0.18f, 0.34f, 0.25f, 1.00f);
-    c[ImGuiCol_MenuBarBg]          = ImVec4(0.09f, 0.10f, 0.13f, 1.00f);
+    // Die Palette steht in theme.h - hier wird sie nur an ImGui gereicht.
+    ImVec4* c = s.Colors;
+
+    c[ImGuiCol_WindowBg]        = ui::V(ui::kCard);
+    c[ImGuiCol_ChildBg]         = ui::V(ui::kCard);
+    c[ImGuiCol_PopupBg]         = ui::V(ui::kCard);
+    c[ImGuiCol_MenuBarBg]       = ui::V(ui::kCard);
+    c[ImGuiCol_Border]          = ui::V(ui::kBorder);
+    c[ImGuiCol_BorderShadow]    = ImVec4(0, 0, 0, 0);
+
+    c[ImGuiCol_Text]            = ui::V(ui::kText);
+    c[ImGuiCol_TextDisabled]    = ui::V(ui::kTextDim);
+    c[ImGuiCol_TextSelectedBg]  = ui::V(ui::kAccentDim);
+
+    c[ImGuiCol_FrameBg]         = ui::V(ui::kSunken);
+    c[ImGuiCol_FrameBgHovered]  = ui::V(ui::kAccentDim);
+    c[ImGuiCol_FrameBgActive]   = ui::V(ui::kAccentDim);
+
+    c[ImGuiCol_TitleBg]         = ui::V(ui::kCard);
+    c[ImGuiCol_TitleBgActive]   = ui::V(ui::kCard);
+    c[ImGuiCol_TitleBgCollapsed]= ui::V(ui::kCard);
+
+    c[ImGuiCol_Button]          = ui::V(ui::kSunken);
+    c[ImGuiCol_ButtonHovered]   = ui::V(ui::kAccentDim);
+    c[ImGuiCol_ButtonActive]    = ui::V(ui::kBorderS);
+
+    c[ImGuiCol_Header]          = ui::V(ui::kSunken);
+    c[ImGuiCol_HeaderHovered]   = ui::V(ui::kAccentDim);
+    c[ImGuiCol_HeaderActive]    = ui::V(ui::kAccentDim);
+
+    c[ImGuiCol_Separator]       = ui::V(ui::kBorder);
+    c[ImGuiCol_SeparatorHovered]= ui::V(ui::kBorderS);
+    c[ImGuiCol_SeparatorActive] = ui::V(ui::kAccent);
+
+    c[ImGuiCol_ScrollbarBg]     = ImVec4(0, 0, 0, 0);
+    c[ImGuiCol_ScrollbarGrab]   = ui::V(ui::kBorder);
+    c[ImGuiCol_ScrollbarGrabHovered] = ui::V(ui::kBorderS);
+    c[ImGuiCol_ScrollbarGrabActive]  = ui::V(ui::kTextWk);
+
+    c[ImGuiCol_TableHeaderBg]   = ui::V(ui::kCard);
+    c[ImGuiCol_TableBorderLight]= ui::V(ui::kBorder);
+    c[ImGuiCol_TableBorderStrong] = ui::V(ui::kBorderS);
+    c[ImGuiCol_TableRowBg]      = ImVec4(0, 0, 0, 0);
+    c[ImGuiCol_TableRowBgAlt]   = ui::V(IM_COL32(0xFA, 0xF8, 0xF5, 255));
+
+    c[ImGuiCol_ResizeGrip]        = ui::V(ui::kBorder);
+    c[ImGuiCol_ResizeGripHovered] = ui::V(ui::kBorderS);
+    c[ImGuiCol_ResizeGripActive]  = ui::V(ui::kAccent);
+
+    c[ImGuiCol_CheckMark]       = ui::V(ui::kAccent);
+    c[ImGuiCol_SliderGrab]      = ui::V(ui::kAccent);
+    c[ImGuiCol_SliderGrabActive]= ui::V(ui::kAccentHot);
 }
 
 // Welche Seite ist gerade offen? Die Seiten ersetzen einander, sie liegen
@@ -177,21 +230,21 @@ enum class Page
 // geben eine feste Breite mit - siehe CountTab weiter unten.
 static bool PageTab(const char* label, bool active, float breite = 0.0f)
 {
-    if (active)
-    {
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.26f, 0.30f, 0.40f, 1.00f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.30f, 0.35f, 0.46f, 1.00f));
-    }
-    else
-    {
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.00f, 0.00f, 0.00f, 0.00f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.20f, 0.22f, 0.28f, 1.00f));
-    }
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.22f, 0.26f, 0.34f, 1.00f));
+    // Der offene Reiter ist eine helle Pille mit Rand, die anderen sind nur
+    // Text. Kein Farbklecks - die kraeftige Farbe bleibt dem Wichtigen
+    // vorbehalten (Geld, Startknopf).
+    ImGui::PushStyleColor(ImGuiCol_Button, active ? ui::V(ui::kCard) : ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
+                          active ? ui::V(ui::kCard) : ui::V(ui::kSunken));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ui::V(ui::kSunken));
+    ImGui::PushStyleColor(ImGuiCol_Text, active ? ui::V(ui::kText) : ui::V(ui::kTextDim));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, active ? 1.0f : 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(14.0f, 7.0f));
 
     const bool clicked = ImGui::Button(label, ImVec2(breite, 0.0f));
 
-    ImGui::PopStyleColor(3);
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor(4);
     return clicked;
 }
 
@@ -238,28 +291,41 @@ static bool CountTab(const char* name, int count, bool active)
     return PageTab(label, active, CountWidth(name));
 }
 
-// Geldanzeige oben rechts: kleine Muenze plus Zahl.
+// Wie breit die Geldanzeige wird. Der Knopf daneben muss das vorher wissen,
+// um sich davor zu setzen - deshalb steht die Rechnung an einer Stelle.
+static float MoneyWidth(const World& world)
+{
+    char text[32];
+    std::snprintf(text, sizeof(text), "%d", world.money);
+    return 14.0f * 2.0f + 5.0f * 2.0f + 9.0f + ImGui::CalcTextSize(text).x;
+}
+
+// Geldanzeige oben rechts: eine Pille mit Muenze und Zahl.
 static void DrawMoney(const World& world)
 {
     char text[32];
     std::snprintf(text, sizeof(text), "%d", world.money);
 
-    const float coin    = ImGui::GetFontSize() * 0.62f;
-    const float textW   = ImGui::CalcTextSize(text).x;
-    const float total   = coin * 2.0f + 8.0f + textW;
-    const float padding = 14.0f;
+    const float punkt = 5.0f;
+    const float textW = ImGui::CalcTextSize(text).x;
+    const float innen = 14.0f;
+    const float breit = MoneyWidth(world);
+    const float hoch  = ImGui::GetTextLineHeight() + 12.0f;
 
-    ImGui::SetCursorPosX(ImGui::GetWindowWidth() - total - padding);
+    ImGui::SetCursorPosX(ImGui::GetWindowWidth() - breit - 16.0f);
 
     const ImVec2 p  = ImGui::GetCursorScreenPos();
-    const float  cy = p.y + ImGui::GetTextLineHeight() * 0.5f;
+    const float  y0 = p.y + (ImGui::GetTextLineHeight() - hoch) * 0.5f;
     ImDrawList*  dl = ImGui::GetWindowDrawList();
-    dl->AddCircleFilled(ImVec2(p.x + coin, cy), coin, IM_COL32(224, 176, 62, 255));
-    dl->AddCircle(ImVec2(p.x + coin, cy), coin, IM_COL32(150, 112, 30, 255), 0, 1.5f);
 
-    ImGui::Dummy(ImVec2(coin * 2.0f + 8.0f, 0.0f));
-    ImGui::SameLine(0.0f, 0.0f);
-    ImGui::TextColored(ImVec4(1.00f, 0.83f, 0.44f, 1.00f), "%s", text);
+    ui::Card(dl, ImVec2(p.x, y0), ImVec2(p.x + breit, y0 + hoch));
+
+    const float cy = y0 + hoch * 0.5f;
+    dl->AddCircleFilled(ImVec2(p.x + innen + punkt, cy), punkt, ui::kCoin);
+    dl->AddText(ImVec2(p.x + innen + punkt * 2.0f + 9.0f, cy - ImGui::GetTextLineHeight() * 0.5f),
+                ui::kText, text);
+
+    ImGui::Dummy(ImVec2(breit, 0.0f));
 }
 
 // Consolas liegt auf jedem Windows - damit braucht das Programm keine
@@ -595,18 +661,28 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
             if (CountTab("Wiki", WikiUnseen(wiki, limits, world, ores), page == Page::Wiki))
                 page = Page::Wiki;
 
-            // Diese Knoepfe gehoeren zur Welt-Seite.
+            // Rechts stehen die Sachen, die zur Seite gehoeren - Geld ganz
+            // aussen, davor der Knopf fuer eine weitere Konsole. Links die
+            // Reiter, rechts das Handwerkszeug: so faellt beides auseinander.
             if (page == Page::Welt)
             {
-                ImGui::Spacing();
-                ImGui::TextDisabled("|");
-                ImGui::Spacing();
-
                 // Wie viele Konsolen erlaubt sind, steht im Skilltree.
-                const bool moreAllowed = (int)consoles.size() < limits.maxConsoles;
+                const bool  moreAllowed = (int)consoles.size() < limits.maxConsoles;
+                const char* label       = "+ Neue Konsole";
+                const float breit       = ImGui::CalcTextSize(label).x + 28.0f;
+
+                ImGui::SetCursorPosX(ImGui::GetWindowWidth() - MoneyWidth(world) - 16.0f - 12.0f -
+                                     breit);
+
                 ImGui::BeginDisabled(!moreAllowed);
-                if (ImGui::Button("+ Neue Konsole"))
+                ImGui::PushStyleColor(ImGuiCol_Button, ui::V(ui::kCard));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ui::V(ui::kAccentDim));
+                ImGui::PushStyleColor(ImGuiCol_Text, ui::V(ui::kAccent));
+                ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+                if (ImGui::Button(label, ImVec2(breit, 0.0f)))
                     addConsole();
+                ImGui::PopStyleVar();
+                ImGui::PopStyleColor(3);
                 ImGui::EndDisabled();
 
                 if (!moreAllowed && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
@@ -716,7 +792,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
         ImGui::Render();
 
-        const float clear[4] = {0.075f, 0.082f, 0.102f, 1.0f};
+        // Der Seitengrund. Alles andere sind Karten darauf.
+        const ImVec4 grund   = ui::V(ui::kPage);
+        const float  clear[4] = {grund.x, grund.y, grund.z, 1.0f};
         g_context->OMSetRenderTargets(1, &g_renderTarget, nullptr);
         g_context->ClearRenderTargetView(g_renderTarget, clear);
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());

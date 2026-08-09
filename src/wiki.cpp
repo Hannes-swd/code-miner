@@ -5,6 +5,7 @@
 #include "ore.h"
 #include "skillfile.h"
 #include "skilltree.h"
+#include "theme.h"
 #include "world.h"
 
 #include "imgui.h"
@@ -26,16 +27,18 @@ namespace
 {
 
 // ---- Farben ---------------------------------------------------------------
-const ImU32 kPanelTop = IM_COL32(44, 48, 57, 255);
-const ImU32 kPanelBot = IM_COL32(30, 33, 40, 255);
-const ImU32 kRing     = IM_COL32(62, 68, 80, 255);
-const ImU32 kAccent   = IM_COL32(118, 198, 255, 255);
-const ImU32 kAccentBg = IM_COL32(28, 58, 82, 255);
-const ImU32 kFresh    = IM_COL32(178, 226, 122, 255);
-const ImU32 kTextHead = IM_COL32(238, 243, 249, 255);
-const ImU32 kTextBody = IM_COL32(206, 214, 226, 255);
-const ImU32 kTextDim  = IM_COL32(130, 139, 154, 255);
-const ImU32 kCodeText = IM_COL32(214, 222, 232, 255);
+// Alles aus theme.h - die Namen hier bleiben, damit der Zeichencode unveraendert
+// bleibt. Ein Farbwert steht im ganzen Spiel nur noch an einer Stelle.
+const ImU32 kPanelTop = ui::kCard;
+const ImU32 kPanelBot = ui::kCard;
+const ImU32 kRing     = ui::kBorder;
+const ImU32 kAccent   = ui::kAccent;
+const ImU32 kAccentBg = ui::kAccentDim;
+const ImU32 kFresh    = ui::kAccent;
+const ImU32 kTextHead = ui::kText;
+const ImU32 kTextBody = ui::kText;
+const ImU32 kTextDim  = ui::kTextDim;
+const ImU32 kCodeText = ui::kText;
 
 // ---- kleine Helfer --------------------------------------------------------
 
@@ -142,6 +145,17 @@ bool Unlocked(Skill skill, const Limits& l)
     case Skill::Alloy: return l.allowAlloy;
     default: return false;  // Erweiterungen und Werte haben keine eigene Seite
     }
+}
+
+// Ein Schritt ist sichtbar, wenn ALLE seine Punkte gekauft sind. Er zeigt ja
+// ein Stueck Code - darin muss jeder Befehl erlaubt sein, sonst steht dort
+// etwas, das der Spieler nirgends hinschreiben darf.
+bool SchrittSichtbar(const WikiStep& step, const Limits& l)
+{
+    for (Skill s : step.needs)
+        if (!Unlocked(s, l))
+            return false;
+    return true;
 }
 
 // Eine Seite ist sichtbar, wenn sie nichts braucht - oder wenn EINER der
@@ -657,8 +671,8 @@ void DrawAnimation(const WikiPage& page, int stepIndex, float t, ImVec2 a, ImVec
         const ImVec2 qa(ba.x, ba.y + lift);
         const ImVec2 qb(bb.x, bb.y + lift);
 
-        GradientRect(dl, qa, qb, 10.0f, WithAlpha(IM_COL32(38, 46, 58, 255), bp),
-                     WithAlpha(IM_COL32(26, 31, 40, 255), bp));
+        GradientRect(dl, qa, qb, 10.0f, WithAlpha(ui::kSunken, bp),
+                     WithAlpha(ui::kSunken, bp));
         dl->AddRect(qa, qb, WithAlpha(kAccent, bp * 0.75f), 10.0f, 0, 1.6f);
 
         TextAt(dl, headSz, ImVec2(qa.x + pad, qa.y + pad), WithAlpha(kAccent, bp),
@@ -799,9 +813,9 @@ bool Crumb(const char* label, bool clickable)
     }
 
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.20f, 0.22f, 0.28f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.22f, 0.26f, 0.34f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.46f, 0.78f, 1.00f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ui::V(ui::kAccentDim));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ui::V(ui::kAccentDim));
+    ImGui::PushStyleColor(ImGuiCol_Text, ui::V(ui::kAccent));
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5.0f, 2.0f));
 
     const bool clicked = ImGui::Button(label);
@@ -1127,6 +1141,7 @@ WikiBook LoadWikiBook()
         c.key  = e.text("schluessel", "");
         c.name = e.text("name", c.key.c_str());
         c.text = e.text("text", "");
+        c.icon = e.text("zeichen", "");
 
         if (c.key.empty())
         {
@@ -1282,6 +1297,39 @@ WikiBook LoadWikiBook()
             if (step.seconds < 1.2f)
                 step.seconds = 1.2f;
 
+            // "braucht" an einem Schritt: derselbe Schluessel wie bei der Seite,
+            // nur muessen hier ALLE genannten Punkte gekauft sein.
+            if (const JsonValue* b = s.find("braucht"))
+            {
+                auto nimm = [&](const std::string& schluessel)
+                {
+                    Skill was = Skill::None;
+                    if (SkillFromKey(schluessel, was))
+                        step.needs.push_back(was);
+                    else
+                        book.problems.push_back(page.title + " / " + step.point +
+                                                ": \"braucht\": \"" + schluessel +
+                                                "\" kenne ich nicht.");
+                };
+
+                if (b->type == JsonValue::Type::String)
+                {
+                    if (!b->str.empty())
+                        nimm(b->str);
+                }
+                else if (b->type == JsonValue::Type::Array)
+                {
+                    for (const JsonValue& k : b->items)
+                        if (k.type == JsonValue::Type::String)
+                            nimm(k.str);
+                }
+                else
+                {
+                    book.problems.push_back(page.title + " / " + step.point +
+                                            ": \"braucht\" muss ein Text oder eine Liste sein.");
+                }
+            }
+
             page.steps.push_back(step);
         }
 
@@ -1398,7 +1446,7 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, World& world, cons
         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar |
         ImGuiWindowFlags_NoScrollWithMouse;
 
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.043f, 0.047f, 0.058f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ui::V(ui::kPage));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(22.0f, 14.0f));
 
@@ -1487,15 +1535,58 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, World& world, cons
             const ImVec2 area  = ImGui::GetCursorScreenPos();
             const ImVec2 avail = ImGui::GetContentRegionAvail();
 
-            // Die Erz-Karte gibt es erst, wenn man ueberhaupt ein Erz kennt -
-            // eine leere Sammlung braucht niemand.
+            // Wie viele Seiten eine Kategorie gerade hat und wie viele davon
+            // noch keiner gelesen hat. Die Erze zaehlen anders: dort ist jedes
+            // gefundene Erz eine Seite.
+            auto zaehle = [&](const std::string& key, int& zahl, int& neu)
+            {
+                zahl = 0;
+                neu  = 0;
+
+                if (key == kOreCategory)
+                {
+                    for (int oi : KnownOres(world, ores))
+                    {
+                        ++zahl;
+                        if (seen.find(WikiOreKey(OreOf(ores, oi).name)) == seen.end())
+                            ++neu;
+                    }
+                    return;
+                }
+
+                for (int si : sichtbar)
+                    if (book.pages[(std::size_t)si].category == key)
+                    {
+                        ++zahl;
+                        if (seen.find(book.pages[(std::size_t)si].title) == seen.end())
+                            ++neu;
+                    }
+            };
+
+            // Eine leere Kategorie gibt es gar nicht erst. "Funktionen" taucht
+            // also auf, sobald der erste Befehl gekauft ist, die Erze mit dem
+            // ersten abgebauten Brocken - eine Karte mit "0 Seiten" waere nur
+            // ein Versprechen, das man noch nicht einloesen kann.
             std::vector<int> karten;
             for (int i = 0; i < (int)book.categories.size(); ++i)
-                if (book.categories[(std::size_t)i].key != kOreCategory ||
-                    !KnownOres(world, ores).empty())
+            {
+                int zahl = 0, neu = 0;
+                zaehle(book.categories[(std::size_t)i].key, zahl, neu);
+                if (zahl > 0)
                     karten.push_back(i);
+            }
 
             const int n = (int)karten.size();
+
+            if (n == 0)
+            {
+                const char* leer = "Hier steht noch nichts. Bau einen Block ab oder kauf dir "
+                                   "etwas im Skilltree.";
+                TextAt(dl, 15.0f,
+                       ImVec2(area.x + avail.x * 0.5f - TextSize(15.0f, leer).x * 0.5f,
+                              area.y + avail.y * 0.35f),
+                       kTextDim, leer);
+            }
 
             if (n > 0)
             {
@@ -1532,42 +1623,38 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, World& world, cons
                         g_wiki.page     = -1;
                     }
 
-                    GradientRect(dl, ca, cb, 16.0f,
-                                 hovered ? IM_COL32(56, 63, 76, 255) : kPanelTop, kPanelBot);
-                    dl->AddRect(ca, cb, hovered ? kAccent : kRing, 16.0f, 0,
-                                hovered ? 2.4f : 1.6f);
+                    // Zeichen und Name, sonst nichts. Der erklaerende Satz aus
+                    // der Datei stand frueher hier mit drauf - vier Zeilen
+                    // Kleingedrucktes auf jeder Karte, die man ohnehin nur
+                    // anklickt, um weiterzukommen.
+                    dl->AddRectFilled(ca, cb, hovered ? ui::kAccentDim : ui::kCard, 16.0f);
+                    dl->AddRect(ca, cb, hovered ? ui::kAccent : ui::kBorder, 16.0f, 0,
+                                hovered ? 2.0f : 1.0f);
 
-                    const ImVec2 ts = TextSize(26.0f, c.name.c_str());
-                    TextAt(dl, 26.0f, ImVec2((ca.x + cb.x) * 0.5f - ts.x * 0.5f, ca.y + 36.0f),
+                    const std::string zeichen =
+                        c.icon.empty() ? c.name.substr(0, 1) : c.icon;
+
+                    // Das Zeichen sitzt in einem eingelassenen Kaestchen - wie
+                    // die Knoten im Skilltree, damit beides zusammengehoert.
+                    const float  box = 66.0f;
+                    const ImVec2 ia((ca.x + cb.x) * 0.5f - box * 0.5f, ca.y + 34.0f);
+                    const ImVec2 ib(ia.x + box, ia.y + box);
+                    dl->AddRectFilled(ia, ib, hovered ? ui::kCard : ui::kSunken, 14.0f);
+
+                    const float  zs = 30.0f;
+                    const ImVec2 zt = TextSize(zs, zeichen.c_str());
+                    TextAt(dl, zs,
+                           ImVec2((ia.x + ib.x) * 0.5f - zt.x * 0.5f,
+                                  (ia.y + ib.y) * 0.5f - zt.y * 0.5f),
+                           ui::kAccent, zeichen.c_str());
+
+                    const ImVec2 ts = TextSize(24.0f, c.name.c_str());
+                    TextAt(dl, 24.0f, ImVec2((ca.x + cb.x) * 0.5f - ts.x * 0.5f, ib.y + 20.0f),
                            kTextHead, c.name.c_str());
-
-                    TextAt(dl, 14.5f, ImVec2(ca.x + 18.0f, ca.y + 88.0f), kTextDim, c.text.c_str(),
-                           cardW - 36.0f);
 
                     int zahl = 0;
                     int neu  = 0;
-
-                    if (c.key == kOreCategory)
-                    {
-                        // Die Erze zaehlen anders: eine Seite je Erz, das man
-                        // schon einmal in der Tasche hatte.
-                        for (int oi : KnownOres(world, ores))
-                        {
-                            ++zahl;
-                            if (seen.find(WikiOreKey(OreOf(ores, oi).name)) == seen.end())
-                                ++neu;
-                        }
-                    }
-                    else
-                    {
-                        for (int si : sichtbar)
-                            if (book.pages[(std::size_t)si].category == c.key)
-                            {
-                                ++zahl;
-                                if (seen.find(book.pages[(std::size_t)si].title) == seen.end())
-                                    ++neu;
-                            }
-                    }
+                    zaehle(c.key, zahl, neu);
 
                     char label[48];
                     std::snprintf(label, sizeof(label), "%d Seite%s", zahl, (zahl == 1) ? "" : "n");
@@ -1759,7 +1846,25 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, World& world, cons
             }
             else
             {
-                const WikiPage& page = book.pages[(std::size_t)g_wiki.page];
+                // Nur die Schritte, die der Spieler auch benutzen darf. Ein
+                // Schritt, der einen noch nicht gekauften Befehl zeigt, faellt
+                // heraus - samt seiner Marke auf der Zeitleiste. Die Kopie ist
+                // billig (eine Handvoll kurzer Texte) und spart es, jede Stelle
+                // weiter unten auf eine Umrechnungstabelle umzubauen.
+                WikiPage page = book.pages[(std::size_t)g_wiki.page];
+                {
+                    const WikiPage& roh = book.pages[(std::size_t)g_wiki.page];
+
+                    page.steps.clear();
+                    for (const WikiStep& s : roh.steps)
+                        if (SchrittSichtbar(s, limits))
+                            page.steps.push_back(s);
+
+                    // Etwas muss dastehen: eine Seite ohne einen einzigen
+                    // erlaubten Schritt waere ein leerer Rahmen.
+                    if (page.steps.empty())
+                        page.steps.push_back(roh.steps[0]);
+                }
 
                 if (g_wiki.step >= (int)page.steps.size())
                     g_wiki.step = 0;
