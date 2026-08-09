@@ -40,6 +40,10 @@ float OrePixel(float x, float y, float pattern, unsigned seed)
     return t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
 }
 
+}  // namespace
+
+// Steht ausserhalb des namenlosen Bereichs, weil auch das Wiki Erze anzeigt -
+// siehe world.h.
 const Ore& OreOf(const OrePlan& ores, int index)
 {
     static const Ore ersatz;  // falls die Datei fehlt: schlichter grauer Stein
@@ -47,6 +51,9 @@ const Ore& OreOf(const OrePlan& ores, int index)
         return ersatz;
     return ores.ores[(std::size_t)index];
 }
+
+namespace
+{
 
 // Aus einer Zustands-Liste ("ein Bit je OreState") lesbaren Text machen:
 // "Geschmolzen oder Legiert".
@@ -72,9 +79,12 @@ ImU32 Mix(const Color& a, const Color& b, float t, int alpha)
     return IM_COL32(r, g, bl, alpha);
 }
 
+}  // namespace
+
 // Ein Erz als kleines Bild - dieselben Farben und dasselbe Muster wie der
 // Block in der Welt. Der Startwert haengt am Erz und nicht am Zufall: derselbe
-// Stoff sieht in der Tasche immer gleich aus.
+// Stoff sieht in der Tasche immer gleich aus - und im Wiki auch, deshalb steht
+// die Funktion in world.h.
 void DrawOreTile(ImDrawList* dl, ImVec2 pos, float size, const Ore& erz, int ore, int zellen)
 {
     const float st = size / (float)zellen;
@@ -90,6 +100,9 @@ void DrawOreTile(ImDrawList* dl, ImVec2 pos, float size, const Ore& erz, int ore
 
     dl->AddRect(pos, ImVec2(pos.x + size, pos.y + size), IM_COL32(16, 18, 22, 255), 5.0f, 0, 2.0f);
 }
+
+namespace
+{
 
 // Was auf der Taschen-Seite gerade in den Zaehlern steht. Beim Betreten wird
 // alles auf die volle Anzahl gesetzt - dann ist ein Klick auf "Verkaufen"
@@ -172,6 +185,20 @@ int StackValue(const OrePlan& ores, const CraftPlan& craft, int ore, int state, 
     if (je < 1)
         je = 1;
     return je * anzahl;
+}
+
+void World::noteOre(int ore, int state, int purity)
+{
+    if (purity < 0)
+        purity = 0;
+    if (purity > 100)
+        purity = 100;
+
+    // Nur der erste Fund zaehlt: von ihm aus rechnet das Wiki alle Wege, und
+    // der Anfang soll sich nicht mehr aendern, nur weil spaeter ein Stapel
+    // mit anderer Reinheit dazukommt.
+    if (oreFirst.find(ore) == oreFirst.end())
+        oreFirst[ore] = OreFirst{state, purity};
 }
 
 void World::addToBag(Item was, int anzahl, int reinheit)
@@ -333,6 +360,10 @@ void World::tickMining(float dt, const OrePlan& ores, const CraftPlan& craft)
     frisch.ore   = ore;
     frisch.state = (int)OreState::Raw;
     addToBag(frisch, 1, StartPurity(ores, craft, ore));
+
+    // Ab jetzt kennt man dieses Erz - im Wiki bekommt es eine Seite.
+    noteOre(ore, (int)OreState::Raw, StartPurity(ores, craft, ore));
+
     lastOre = ore;
     ++minedCount;
 
@@ -594,6 +625,17 @@ void World::tickCraft(float dt)
     fertig.ore   = craftItem.ore;
     fertig.state = craftTo;
     addToBag(fertig, craftCount, craftPurity + craftDelta);
+
+    // Fuers Wiki: das hier hat der Spieler gerade selbst herausgefunden.
+    //
+    // Beim Legieren lernt er den neuen Stoff ueberhaupt erst kennen - deshalb
+    // steht noteOre vor der Kante. Eine Kante gibt es dabei nicht: aus zwei
+    // Erzen wird ein drittes, das ist kein Schritt von einem Zustand in den
+    // naechsten.
+    noteOre(fertig.ore, fertig.state, craftPurity + craftDelta);
+    if (craftTaken.size() == 1 && craftTaken[0].was.ore == fertig.ore &&
+        craftTaken[0].was.state != fertig.state)
+        oreSteps.insert(OreStep{fertig.ore, craftTaken[0].was.state, fertig.state});
 
     crafting     = false;
     craftByHand  = false;

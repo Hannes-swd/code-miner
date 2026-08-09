@@ -529,7 +529,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
             // Neu freigeschaltete Seiten stehen als Zahl im Reiter - sonst
             // merkt man erst beim Hineinschauen, dass es etwas Neues gibt.
             char wikiLabel[32];
-            const int wikiNeu = WikiUnseen(wiki, limits, world.wikiSeen);
+            const int wikiNeu = WikiUnseen(wiki, limits, world, ores);
             if (wikiNeu > 0)
                 std::snprintf(wikiLabel, sizeof(wikiLabel), "Wiki (%d)", wikiNeu);
             else
@@ -623,7 +623,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
         }
         else if (page == Page::Wiki)
         {
-            DrawWikiPage(wiki, limits, world.wikiSeen);
+            DrawWikiPage(wiki, limits, world, ores, crafts);
         }
         else
         {

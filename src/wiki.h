@@ -7,6 +7,9 @@
 #include <vector>
 
 struct Limits;
+struct World;
+struct OrePlan;
+struct CraftPlan;
 
 // Das Wiki. Was darin steht, kommt aus data/wiki.json - nicht aus dem
 // Programm. So kann man Seiten dazuschreiben, ohne neu zu bauen.
@@ -78,15 +81,24 @@ struct WikiBook
 // Sucht data/wiki.json an den ueblichen Stellen und liest sie ein.
 WikiBook LoadWikiBook();
 
+// Unter welchem Namen ein Erz in world.wikiSeen steht. Der Doppelpunkt haelt
+// es von den Seitentiteln aus der Datei auseinander.
+std::string WikiOreKey(const std::string& oreName);
+
 // Welche Seiten sind neu freigeschaltet, aber noch nicht aufgeschlagen?
 // Gemerkt wird das ueber den Titel - Nummern wuerden sich verschieben, sobald
-// jemand eine Seite in die Datei einfuegt.
-int WikiUnseen(const WikiBook& book, const Limits& limits,
-               const std::set<std::string>& seen);
+// jemand eine Seite in die Datei einfuegt. Die frisch gefundenen Erze zaehlen
+// mit: sie sind auch Seiten, nur eben erspielte.
+int WikiUnseen(const WikiBook& book, const Limits& limits, const World& world,
+               const OrePlan& ores);
 
 // Die Wiki-Seite. Wird STATT der Welt gezeigt, nicht daneben.
 //
 // limits entscheidet, welche Eintraege ueberhaupt in der Liste stehen: was im
 // Skilltree noch nicht gekauft ist, gibt es hier auch noch nicht.
-// seen wird ergaenzt, sobald man eine Seite aufschlaegt - deshalb nicht const.
-void DrawWikiPage(const WikiBook& book, const Limits& limits, std::set<std::string>& seen);
+//
+// world ist nicht const, weil das Aufschlagen einer Seite in world.wikiSeen
+// landet. Erz- und Verarbeitungsplan braucht die Kategorie "Erze": die steht
+// nicht in der Datei, sondern entsteht aus dem, was der Spieler gefunden hat.
+void DrawWikiPage(const WikiBook& book, const Limits& limits, World& world, const OrePlan& ores,
+                  const CraftPlan& craft);

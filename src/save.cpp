@@ -91,6 +91,22 @@ bool SaveGame(const World& world, const SkillTree& tree,
     for (const std::string& t : world.wikiSeen)
         out << t << "\n";
 
+    // Was das Wiki ueber die Erze weiss. Das ist erspielt und nicht
+    // ausgerechnet - ohne diese beiden Listen stuende die Erz-Seite nach jedem
+    // Start wieder leer da.
+    //
+    // Die Versionsnummer bleibt dabei, wo sie ist: unbekannte Zeilen
+    // ueberspringt der Leser weiter unten sowieso, und fehlen die Zeilen in
+    // einem aelteren Stand, faengt die Sammlung eben bei null an. Ein
+    // Versionssprung wuerde dagegen den ganzen Spielstand wegwerfen.
+    out << "erz_fund " << world.oreFirst.size() << "\n";
+    for (const auto& e : world.oreFirst)
+        out << e.first << " " << e.second.state << " " << e.second.purity << "\n";
+
+    out << "erz_schritt " << world.oreSteps.size() << "\n";
+    for (const World::OreStep& s : world.oreSteps)
+        out << s.ore << " " << s.from << " " << s.to << "\n";
+
     // shared[...] soll einen Neustart ueberleben - das ist der ganze Witz
     // daran, also gehoert es in den Spielstand.
     out << "geteilt " << world.shared.size() << "\n";
@@ -233,6 +249,30 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
                     break;
                 if (!titel.empty())
                     neueWelt.wikiSeen.insert(titel);
+            }
+        }
+        else if (wort == "erz_fund")
+        {
+            std::size_t n = 0;
+            in >> n;
+            for (std::size_t i = 0; i < n; ++i)
+            {
+                int erz = 0, zustand = 0, reinheit = 0;
+                in >> erz >> zustand >> reinheit;
+                if (erz >= 0)
+                    neueWelt.noteOre(erz, zustand, reinheit);
+            }
+        }
+        else if (wort == "erz_schritt")
+        {
+            std::size_t n = 0;
+            in >> n;
+            for (std::size_t i = 0; i < n; ++i)
+            {
+                World::OreStep s;
+                in >> s.ore >> s.from >> s.to;
+                if (s.ore >= 0)
+                    neueWelt.oreSteps.insert(s);
             }
         }
         else if (wort == "geteilt")

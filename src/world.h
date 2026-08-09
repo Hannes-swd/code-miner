@@ -2,12 +2,17 @@
 
 #include "round.h"
 
+// Wegen ImVec2 in DrawOreTile - die Tasche und das Wiki zeichnen dasselbe
+// Kaestchen, deshalb steht es hier und nicht in world.cpp.
+#include "imgui.h"
+
 #include <map>
 #include <random>
 #include <set>
 #include <string>
 #include <vector>
 
+struct Ore;
 struct OrePlan;
 struct CraftPlan;
 struct CraftStep;
@@ -26,6 +31,46 @@ struct World
     // Welche Wiki-Seiten man schon aufgeschlagen hat. Alles, was freigeschaltet
     // ist und hier NICHT drinsteht, wird als neu markiert.
     std::set<std::string> wikiSeen;
+
+    // ---- Was das Wiki ueber die Erze weiss -------------------------------
+    //
+    // Beides waechst nur beim Spielen: ein Erz kommt dazu, sobald es zum
+    // ersten Mal in der Tasche liegt, ein Schritt, sobald er einmal fertig
+    // geworden ist. Im Wiki steht deshalb ausschliesslich das, was man selbst
+    // herausgefunden hat - eine Sammlung und kein Nachschlagewerk.
+
+    // Wo ein Erz angefangen hat. Abgebautes faengt roh an, eine Legierung
+    // dagegen im Zustand "legiert" - und mit der Reinheit, die dabei
+    // herausgekommen ist. Von hier aus rechnet das Wiki alle Wege.
+    struct OreFirst
+    {
+        int state  = 0;  // OreState
+        int purity = 0;  // Prozent
+    };
+    std::map<int, OreFirst> oreFirst;
+
+    // Ein entdeckter Schritt: bei DIESEM Erz von DIESEM Zustand in jenen.
+    // Die Wege im Wiki setzen sich aus lauter solchen Kanten zusammen.
+    struct OreStep
+    {
+        int ore  = 0;
+        int from = 0;
+        int to   = 0;
+
+        bool operator<(const OreStep& o) const
+        {
+            if (ore != o.ore)
+                return ore < o.ore;
+            if (from != o.from)
+                return from < o.from;
+            return to < o.to;
+        }
+    };
+    std::set<OreStep> oreSteps;
+
+    // Merkt sich, dass dieses Erz so zum ersten Mal dalag. Spaetere Funde
+    // aendern nichts - der Anfang ist der Anfang.
+    void noteOre(int ore, int state, int purity);
 
     // ---- Runden ----------------------------------------------------------
     // Die Phase gehoert hierher, weil sie in den Spielstand muss: wer mitten
@@ -251,6 +296,15 @@ int StackValue(const OrePlan& ores, const CraftPlan& craft, int ore, int state, 
 
 // Mit welcher Reinheit ein Block dieses Erzes aus dem Boden kommt.
 int StartPurity(const OrePlan& ores, const CraftPlan& craft, int ore);
+
+// Ein Erz als Kaestchen: Farben und Muster kommen aus data/erze.json, der
+// Startwert des Musters aus der Erz-Nummer. Derselbe Stoff sieht damit ueberall
+// gleich aus - in der Tasche wie im Wiki.
+void DrawOreTile(ImDrawList* dl, ImVec2 pos, float size, const Ore& erz, int ore, int zellen);
+
+// Das Erz zu einer Nummer. Eine Nummer, die es nicht gibt, liefert einen
+// schlichten grauen Stein - so muss niemand vorher pruefen.
+const Ore& OreOf(const OrePlan& ores, int index);
 
 // Zeichnet die Welt in den Hintergrund (hinter alle Konsolen).
 // Ein Klick auf den Block baut ihn ab - dafuer braucht man kein Programm.

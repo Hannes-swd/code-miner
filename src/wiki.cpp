@@ -1,8 +1,11 @@
 #include "wiki.h"
 
+#include "craft.h"
 #include "json.h"
+#include "ore.h"
 #include "skillfile.h"
 #include "skilltree.h"
+#include "world.h"
 
 #include "imgui.h"
 
@@ -167,6 +170,10 @@ struct WikiView
     int         step    = 0;
     float       time    = 0.0f;  // Sekunden im aktuellen Schritt
     bool        playing = true;
+
+    // Welches Erz in der Kategorie "Erze" offen ist. Eine eigene Zahl, weil
+    // die Erze keine Seiten aus der Datei sind - page zeigt dort ins Leere.
+    int ore = -1;
 };
 
 WikiView g_wiki;
@@ -181,6 +188,151 @@ void GoTo(int page, const WikiBook& book, std::set<std::string>& seen)
 
     if (page >= 0 && page < (int)book.pages.size())
         seen.insert(book.pages[(std::size_t)page].title);
+}
+
+// ---- Die Erz-Sammlung ------------------------------------------------------
+//
+// Die Kategorie "Erze" steht als einzige NICHT in data/wiki.json - ihre Seiten
+// entstehen beim Spielen. Ein Erz kommt dazu, sobald es einmal in der Tasche
+// lag, ein Weg, sobald man ihn einmal gegangen ist. Deshalb steht hier nie ein
+// Preis, den man nicht selbst herausgefunden hat.
+
+const char* kOreCategory = "erze";
+
+// Ein Weg zu einem Zustand: welche Schritte dorthin fuehren, welche Reinheit
+// dabei herauskommt und was ein Stueck dann wert ist.
+struct OreWay
+{
+    bool             known  = false;
+    int              purity = 0;
+    int              price  = 0;
+    std::vector<int> steps;  // Indizes in craft.steps
+};
+
+// Alle Wege durchgehen und je Zustand den besten merken.
+//
+// "Bester Weg" heisst: der teuerste. Bei gleichem Preis der kuerzere - wer
+// dasselbe mit weniger Arbeit bekommt, hat den besseren Weg gefunden.
+//
+// Kein Zustand wird dabei zweimal besucht. Reinigen und Pressen fuehren
+// naemlich im Kreis (gereinigt -> gepresst -> gereinigt ...) und schrauben
+// dabei die Reinheit immer weiter hoch. Ein Weg mit fuenf Runden darin waere
+// zwar teurer, aber keine Antwort auf die Frage "wie komme ich dorthin".
+void SearchWays(const OrePlan& ores, const CraftPlan& craft, const Ore& erz, int oreIdx,
+                const std::set<World::OreStep>& kanten, int moneyPerBlock, int state, int purity,
+                unsigned besucht, std::vector<int>& weg, std::vector<OreWay>& out)
+{
+    const int preis = StackValue(ores, craft, oreIdx, state, purity, 1, moneyPerBlock);
+
+    OreWay& best = out[(std::size_t)state];
+    if (!best.known || preis > best.price ||
+        (preis == best.price && weg.size() < best.steps.size()))
+    {
+        best.known  = true;
+        best.purity = purity;
+        best.price  = preis;
+        best.steps  = weg;
+    }
+
+    for (int i = 0; i < (int)craft.steps.size(); ++i)
+    {
+        const CraftStep& s = craft.steps[(std::size_t)i];
+
+        if (!s.fits(state))
+            continue;
+        if (s.to < 0 || s.to >= (int)OreState::Count)
+            continue;
+        if ((besucht & (1u << (unsigned)s.to)) != 0)
+            continue;
+        if (!erz.allows((OreState)s.to))
+            continue;
+
+        // Der Kern der Sache: nur Schritte, die der Spieler bei genau diesem
+        // Erz und aus genau diesem Zustand heraus schon einmal gemacht hat.
+        if (kanten.find(World::OreStep{oreIdx, state, s.to}) == kanten.end())
+            continue;
+
+        int rein = purity + s.purity;
+        if (rein < 0)
+            rein = 0;
+        if (rein > 100)
+            rein = 100;
+
+        weg.push_back(i);
+        SearchWays(ores, craft, erz, oreIdx, kanten, moneyPerBlock, s.to, rein,
+                   besucht | (1u << (unsigned)s.to), weg, out);
+        weg.pop_back();
+    }
+}
+
+// Der beste bekannte Weg zu jedem Zustand. Alles, was nicht "known" ist, hat
+// der Spieler noch nicht gefunden.
+std::vector<OreWay> OreWays(const World& world, const OrePlan& ores, const CraftPlan& craft,
+                            int oreIdx)
+{
+    std::vector<OreWay> out((std::size_t)OreState::Count);
+
+    const auto it = world.oreFirst.find(oreIdx);
+    if (it == world.oreFirst.end())
+        return out;
+
+    const int anfang = it->second.state;
+    if (anfang < 0 || anfang >= (int)OreState::Count)
+        return out;
+
+    std::vector<int> weg;
+    SearchWays(ores, craft, OreOf(ores, oreIdx), oreIdx, world.oreSteps, world.moneyPerBlock,
+               anfang, it->second.purity, 1u << (unsigned)anfang, weg, out);
+    return out;
+}
+
+// Welche Zustaende bei diesem Erz ueberhaupt eine Zeile bekommen: der Anfang
+// und alles, wo ein Schritt hinfuehrt. "Oxidiert" faellt damit heraus - dorthin
+// fuehrt kein Schritt, das ist Verfall.
+std::vector<int> OreRows(const OrePlan& ores, const CraftPlan& craft, const World& world,
+                         int oreIdx)
+{
+    std::vector<int> zeilen;
+
+    const auto it = world.oreFirst.find(oreIdx);
+    if (it == world.oreFirst.end())
+        return zeilen;
+
+    const Ore& erz = OreOf(ores, oreIdx);
+    zeilen.push_back(it->second.state);
+
+    for (const CraftStep& s : craft.steps)
+    {
+        if (s.to < 0 || s.to >= (int)OreState::Count)
+            continue;
+        if (!erz.allows((OreState)s.to))
+            continue;
+        if (std::find(zeilen.begin(), zeilen.end(), s.to) == zeilen.end())
+            zeilen.push_back(s.to);
+    }
+
+    // Nach Wert sortiert: billig oben, teuer unten. So liest sich die Tabelle
+    // wie eine Leiter - und man sieht sofort, wie weit oben man schon ist.
+    std::sort(zeilen.begin(), zeilen.end(),
+              [&](int a, int b)
+              {
+                  const float va = craft.valueOf(a);
+                  const float vb = craft.valueOf(b);
+                  if (va != vb)
+                      return va < vb;
+                  return a < b;
+              });
+    return zeilen;
+}
+
+// Welche Erze der Spieler schon kennt, in der Reihenfolge aus data/erze.json.
+std::vector<int> KnownOres(const World& world, const OrePlan& ores)
+{
+    std::vector<int> out;
+    for (const auto& e : world.oreFirst)
+        if (e.first >= 0 && e.first < (int)ores.ores.size())
+            out.push_back(e.first);
+    return out;
 }
 
 // ---- Datei suchen ---------------------------------------------------------
@@ -635,6 +787,172 @@ void Slash()
     ImGui::SameLine(0.0f, 4.0f);
 }
 
+// ---- Die Kategorie "Erze" zeichnen ----------------------------------------
+//
+// Links die Erze, die man kennt, rechts eine Tabelle: jede Zeile ein Zustand,
+// dazu der beste Weg dorthin, den man selbst schon gegangen ist. Was noch
+// keiner ist, steht als "?" da - das ist die Sammlung.
+void DrawOreCollection(World& world, const OrePlan& ores, const CraftPlan& craft)
+{
+    const std::vector<int> erze = KnownOres(world, ores);
+
+    if (erze.empty())
+    {
+        ImGui::Spacing();
+        ImGui::TextDisabled("Hier steht noch nichts. Bau einen Block ab - dann bekommt sein Erz");
+        ImGui::TextDisabled("hier eine Seite, und jeder Schritt, den du damit machst, kommt dazu.");
+        return;
+    }
+
+    // Nach einem Zuruecksetzen kann das gewaehlte Erz weg sein.
+    if (std::find(erze.begin(), erze.end(), g_wiki.ore) == erze.end())
+        g_wiki.ore = -1;
+
+    // ---- links: was man kennt ---------------------------------------------
+    ImGui::BeginChild("##erzliste", ImVec2(250.0f, 0.0f), ImGuiChildFlags_Borders);
+    {
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+
+        for (int i : erze)
+        {
+            const Ore&        erz    = OreOf(ores, i);
+            const std::string schluessel = WikiOreKey(erz.name);
+            const bool        neu    = world.wikiSeen.find(schluessel) == world.wikiSeen.end();
+            const ImVec2      p0     = ImGui::GetCursorScreenPos();
+
+            char id[32];
+            std::snprintf(id, sizeof(id), "##erz%d", i);
+            if (ImGui::Selectable(id, i == g_wiki.ore, 0, ImVec2(0.0f, 30.0f)))
+            {
+                g_wiki.ore = i;
+                world.wikiSeen.insert(schluessel);
+            }
+
+            // Erkennen soll man das Erz an Farbe und Muster - also steht das
+            // Kaestchen davor, genau wie in der Tasche.
+            DrawOreTile(dl, ImVec2(p0.x + 4.0f, p0.y + 4.0f), 22.0f, erz, i, 8);
+            dl->AddText(ImVec2(p0.x + 34.0f, p0.y + 7.0f), neu ? kFresh : kTextBody,
+                        erz.name.c_str());
+
+            if (neu)
+                dl->AddCircleFilled(ImVec2(ImGui::GetItemRectMax().x - 12.0f, p0.y + 15.0f), 4.5f,
+                                    kAccent);
+        }
+    }
+    ImGui::EndChild();
+
+    ImGui::SameLine();
+    ImGui::BeginChild("##erzseite", ImVec2(0.0f, 0.0f), ImGuiChildFlags_None);
+
+    if (g_wiki.ore < 0)
+    {
+        ImGui::Spacing();
+        ImGui::TextDisabled("Wähle links ein Erz.");
+        ImGui::EndChild();
+        return;
+    }
+
+    const Ore&            erz    = OreOf(ores, g_wiki.ore);
+    const World::OreFirst anfang = world.oreFirst.find(g_wiki.ore)->second;
+
+    // ---- Kopf: Bild, Name, Grundwert --------------------------------------
+    {
+        const ImVec2 p0 = ImGui::GetCursorScreenPos();
+        DrawOreTile(ImGui::GetWindowDrawList(), ImVec2(p0.x + 4.0f, p0.y), 72.0f, erz, g_wiki.ore,
+                    16);
+        ImGui::Dummy(ImVec2(80.0f, 72.0f));
+        ImGui::SameLine(0.0f, 14.0f);
+
+        ImGui::BeginGroup();
+        ImGui::TextUnformatted(erz.name.c_str());
+        ImGui::TextDisabled("Grundwert %d   -   ab Level %d", erz.value, erz.minLevel);
+        ImGui::TextDisabled("gefunden als %s mit %d %% Reinheit",
+                            OreStateName((OreState)anfang.state), anfang.purity);
+        ImGui::EndGroup();
+    }
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // ---- die Tabelle ------------------------------------------------------
+    const std::vector<OreWay> wege   = OreWays(world, ores, craft, g_wiki.ore);
+    const std::vector<int>    zeilen = OreRows(ores, craft, world, g_wiki.ore);
+
+    const ImGuiTableFlags tf = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH |
+                               ImGuiTableFlags_SizingStretchProp;
+
+    int gefunden = 0;
+
+    if (ImGui::BeginTable("##wege", 4, tf))
+    {
+        ImGui::TableSetupColumn("Zustand", ImGuiTableColumnFlags_WidthFixed, 120.0f);
+        ImGui::TableSetupColumn("bester Weg dorthin");
+        ImGui::TableSetupColumn("Reinheit", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+        ImGui::TableSetupColumn("Preis", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+        ImGui::TableHeadersRow();
+
+        for (int s : zeilen)
+        {
+            const OreWay& w = wege[(std::size_t)s];
+            if (w.known)
+                ++gefunden;
+
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();
+            if (w.known)
+                ImGui::TextUnformatted(OreStateName((OreState)s));
+            else
+                ImGui::TextDisabled("%s", OreStateName((OreState)s));
+
+            ImGui::TableNextColumn();
+            if (!w.known)
+            {
+                ImGui::TextDisabled("?");
+            }
+            else if (w.steps.empty())
+            {
+                ImGui::TextDisabled("so hast du es gefunden");
+            }
+            else
+            {
+                std::string text;
+                for (std::size_t k = 0; k < w.steps.size(); ++k)
+                {
+                    if (k > 0)
+                        text += " > ";
+                    text += craft.steps[(std::size_t)w.steps[k]].name;
+                }
+                ImGui::TextUnformatted(text.c_str());
+            }
+
+            ImGui::TableNextColumn();
+            if (w.known)
+                ImGui::Text("%d %%", w.purity);
+            else
+                ImGui::TextDisabled("?");
+
+            ImGui::TableNextColumn();
+            if (w.known)
+                ImGui::Text("%d", w.price);
+            else
+                ImGui::TextDisabled("?");
+        }
+        ImGui::EndTable();
+    }
+
+    ImGui::Spacing();
+    ImGui::TextDisabled("%d von %d Zuständen gefunden.  ? heißt: noch nie selbst hergestellt.",
+                        gefunden, (int)zeilen.size());
+    ImGui::TextDisabled("Preis für EIN Stück, mit deinen jetzigen %d Geld pro Block.",
+                        world.moneyPerBlock);
+    ImGui::TextDisabled("Der Weg zählt mit: der Zustand ist immer gleich viel wert, die Reinheit");
+    ImGui::TextDisabled("nicht. Schmelzen kostet welche, Reinigen bringt welche.");
+
+    ImGui::EndChild();
+}
+
 }  // namespace
 
 // ===========================================================================
@@ -921,12 +1239,24 @@ WikiBook LoadWikiBook()
     return book;
 }
 
-int WikiUnseen(const WikiBook& book, const Limits& limits, const std::set<std::string>& seen)
+std::string WikiOreKey(const std::string& oreName)
+{
+    return "erz:" + oreName;
+}
+
+int WikiUnseen(const WikiBook& book, const Limits& limits, const World& world, const OrePlan& ores)
 {
     int neu = 0;
     for (const WikiPage& p : book.pages)
-        if (Sichtbar(p, limits) && seen.find(p.title) == seen.end())
+        if (Sichtbar(p, limits) && world.wikiSeen.find(p.title) == world.wikiSeen.end())
             ++neu;
+
+    // Ein frisch gefundenes Erz ist auch etwas Neues im Wiki - sonst merkt man
+    // erst beim Hineinschauen, dass eine Seite dazugekommen ist.
+    for (int i : KnownOres(world, ores))
+        if (world.wikiSeen.find(WikiOreKey(OreOf(ores, i).name)) == world.wikiSeen.end())
+            ++neu;
+
     return neu;
 }
 
@@ -934,8 +1264,11 @@ int WikiUnseen(const WikiBook& book, const Limits& limits, const std::set<std::s
 // Die Seite
 // ===========================================================================
 
-void DrawWikiPage(const WikiBook& book, const Limits& limits, std::set<std::string>& seen)
+void DrawWikiPage(const WikiBook& book, const Limits& limits, World& world, const OrePlan& ores,
+                  const CraftPlan& craft)
 {
+    std::set<std::string>& seen = world.wikiSeen;
+
     ImGuiViewport* vp = ImGui::GetMainViewport();
 
     ImGui::SetNextWindowPos(vp->WorkPos);
@@ -979,19 +1312,35 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, std::set<std::stri
             g_wiki.page = -1;
         }
 
+        // Die Erze sind die einzige Kategorie, deren Seiten nicht in der Datei
+        // stehen - sie fuehrt deshalb einen eigenen Weg durch das Zeichnen.
+        const bool erzKat = (kat != nullptr && kat->key == kOreCategory);
+
         // ---- Brotkrume ----------------------------------------------------
         if (Crumb("Wiki", kat != nullptr))
         {
             g_wiki.category.clear();
             g_wiki.page = -1;
+            g_wiki.ore  = -1;
         }
         if (kat != nullptr)
         {
             Slash();
-            if (Crumb(kat->name.c_str(), g_wiki.page >= 0))
+            if (Crumb(kat->name.c_str(), erzKat ? (g_wiki.ore >= 0) : (g_wiki.page >= 0)))
+            {
                 g_wiki.page = -1;
+                g_wiki.ore  = -1;
+            }
         }
-        if (g_wiki.page >= 0)
+        if (erzKat)
+        {
+            if (g_wiki.ore >= 0)
+            {
+                Slash();
+                Crumb(OreOf(ores, g_wiki.ore).name.c_str(), false);
+            }
+        }
+        else if (g_wiki.page >= 0)
         {
             Slash();
             Crumb(book.pages[(std::size_t)g_wiki.page].title.c_str(), false);
@@ -1019,7 +1368,16 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, std::set<std::stri
             ImDrawList*  dl    = ImGui::GetWindowDrawList();
             const ImVec2 area  = ImGui::GetCursorScreenPos();
             const ImVec2 avail = ImGui::GetContentRegionAvail();
-            const int    n     = (int)book.categories.size();
+
+            // Die Erz-Karte gibt es erst, wenn man ueberhaupt ein Erz kennt -
+            // eine leere Sammlung braucht niemand.
+            std::vector<int> karten;
+            for (int i = 0; i < (int)book.categories.size(); ++i)
+                if (book.categories[(std::size_t)i].key != kOreCategory ||
+                    !KnownOres(world, ores).empty())
+                    karten.push_back(i);
+
+            const int n = (int)karten.size();
 
             if (n > 0)
             {
@@ -1038,11 +1396,12 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, std::set<std::stri
                               y0 - 46.0f),
                        kTextDim, hallo);
 
-                for (int i = 0; i < n; ++i)
+                for (int slot = 0; slot < n; ++slot)
                 {
+                    const int           i = karten[(std::size_t)slot];
                     const WikiCategory& c = book.categories[(std::size_t)i];
 
-                    const ImVec2 ca(x0 + (cardW + gap) * (float)i, y0);
+                    const ImVec2 ca(x0 + (cardW + gap) * (float)slot, y0);
                     const ImVec2 cb(ca.x + cardW, ca.y + cardH);
 
                     ImGui::SetCursorScreenPos(ca);
@@ -1069,13 +1428,28 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, std::set<std::stri
 
                     int zahl = 0;
                     int neu  = 0;
-                    for (int si : sichtbar)
-                        if (book.pages[(std::size_t)si].category == c.key)
+
+                    if (c.key == kOreCategory)
+                    {
+                        // Die Erze zaehlen anders: eine Seite je Erz, das man
+                        // schon einmal in der Tasche hatte.
+                        for (int oi : KnownOres(world, ores))
                         {
                             ++zahl;
-                            if (seen.find(book.pages[(std::size_t)si].title) == seen.end())
+                            if (seen.find(WikiOreKey(OreOf(ores, oi).name)) == seen.end())
                                 ++neu;
                         }
+                    }
+                    else
+                    {
+                        for (int si : sichtbar)
+                            if (book.pages[(std::size_t)si].category == c.key)
+                            {
+                                ++zahl;
+                                if (seen.find(book.pages[(std::size_t)si].title) == seen.end())
+                                    ++neu;
+                            }
+                    }
 
                     char label[48];
                     std::snprintf(label, sizeof(label), "%d Seite%s", zahl, (zahl == 1) ? "" : "n");
@@ -1097,6 +1471,11 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, std::set<std::stri
                     }
                 }
             }
+        }
+        else if (erzKat)
+        {
+            // ---- Die Erze: keine Seiten aus der Datei, sondern Erspieltes --
+            DrawOreCollection(world, ores, craft);
         }
         else
         {

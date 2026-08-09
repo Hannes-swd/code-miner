@@ -13,6 +13,12 @@
     "  text        ein paar Worte dazu. Steht auch rechts, solange man noch",
     "              keine Seite gewaehlt hat.",
     "",
+    "Eine Kategorie ist anders: \"erze\". Ihre Seiten stehen NICHT hier in der",
+    "Datei, sondern entstehen beim Spielen - je ein Erz, das schon einmal in",
+    "der Tasche lag, dazu jeder Verarbeitungsschritt, den man damit gemacht",
+    "hat. Schreib dort also keine \"seiten\" hinein, die wuerden nie erscheinen.",
+    "Name und Text der Karte kommen aber weiterhin von hier.",
+    "",
     "seiten       Ein Eintrag = eine Seite in der Liste links.",
     "  kategorie   der schluessel von oben.",
     "  titel       so steht sie in der Liste.",
@@ -86,6 +92,11 @@
       "schluessel": "kontrolle",
       "name": "Kontrollstrukturen",
       "text": "Damit entscheidet und wiederholt dein Programm: if, else, while, for, Variablen, eigene Funktionen und Klassen. Das ist echtes C++."
+    },
+    {
+      "schluessel": "erze",
+      "name": "Erze",
+      "text": "Deine Sammlung. Jedes Erz, das du einmal abgebaut hast, bekommt hier eine Seite - und jeder Weg, den du damit gegangen bist, eine Zeile mit dem Preis. Was du noch nie gemacht hast, steht als ? da."
     },
     {
       "schluessel": "spiel",
