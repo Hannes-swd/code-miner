@@ -30,6 +30,7 @@ add_executable(CodeKlicker WIN32
     src/skillfile.cpp
     src/save.cpp
     src/ore.cpp
+    src/oregen.cpp
     src/craft.cpp
     src/alloy.cpp
     src/json.cpp

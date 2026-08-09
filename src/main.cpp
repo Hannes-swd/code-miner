@@ -9,6 +9,7 @@
 #include "craft.h"
 #include "native.h"
 #include "ore.h"
+#include "oregen.h"
 #include "round.h"
 #include "save.h"
 #include "skillfile.h"
@@ -171,7 +172,10 @@ enum class Page
 };
 
 // Reiter in der Menueleiste. Die offene Seite wird hervorgehoben.
-static bool PageTab(const char* label, bool active)
+//
+// breite 0 heisst "so breit wie die Aufschrift". Reiter mit einer Zahl darin
+// geben eine feste Breite mit - siehe CountTab weiter unten.
+static bool PageTab(const char* label, bool active, float breite = 0.0f)
 {
     if (active)
     {
@@ -185,10 +189,53 @@ static bool PageTab(const char* label, bool active)
     }
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.22f, 0.26f, 0.34f, 1.00f));
 
-    const bool clicked = ImGui::Button(label);
+    const bool clicked = ImGui::Button(label, ImVec2(breite, 0.0f));
 
     ImGui::PopStyleColor(3);
     return clicked;
+}
+
+// ---- Reiter mit einer Zahl dahinter ---------------------------------------
+//
+// "Tasche (12)". Die Zahl aendert sich beim Abbauen im Sekundentakt, und wenn
+// der Knopf dabei breiter wird, huepft alles dahinter mit. Deshalb:
+//
+//   - die Zahl steht rechtsbuendig in einem Feld fester Breite,
+//   - ueber kZaehlerMax steht "999+" statt einer immer laengeren Zahl,
+//   - ist nichts da, haelt ein "-" den Platz frei,
+//   - und der Knopf ist immer so breit wie seine laengstmoegliche Aufschrift.
+//
+// Der Teil hinter ### ist die ImGui-Kennung. Sie MUSS gleich bleiben: sonst
+// gehoert der Knopf beim Loslassen der Maus einer anderen Kennung als beim
+// Druecken, und der Klick faellt unter den Tisch - genau dann, wenn ein
+// Programm laeuft und staendig etwas abbaut.
+static constexpr int kZaehlerMax = 999;
+
+static void CountText(char* out, std::size_t size, const char* name, int count)
+{
+    char zahl[16];
+    if (count <= 0)
+        std::snprintf(zahl, sizeof(zahl), "-");
+    else if (count > kZaehlerMax)
+        std::snprintf(zahl, sizeof(zahl), "%d+", kZaehlerMax);
+    else
+        std::snprintf(zahl, sizeof(zahl), "%d", count);
+
+    std::snprintf(out, size, "%s (%4s)###%s", name, zahl, name);
+}
+
+static float CountWidth(const char* name)
+{
+    char breiteste[64];
+    std::snprintf(breiteste, sizeof(breiteste), "%s (%4s)", name, "999+");
+    return ImGui::CalcTextSize(breiteste).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+}
+
+static bool CountTab(const char* name, int count, bool active)
+{
+    char label[64];
+    CountText(label, sizeof(label), name, count);
+    return PageTab(label, active, CountWidth(name));
 }
 
 // Geldanzeige oben rechts: kleine Muenze plus Zahl.
@@ -298,7 +345,18 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
     // Legierungen haengen ihre Ergebnisse hinten an die Erzliste an - deshalb
     // erst hier und deshalb ist die Erzliste oben nicht const.
-    const AlloyPlan alloys = LoadAlloyPlan(ores);
+    AlloyPlan alloys = LoadAlloyPlan(ores);
+
+    // Ab hier ist alles Handgeschriebene beisammen. Was danach noch dazukommt,
+    // hat sich das Spiel selbst ausgedacht und steht im Spielstand.
+    ores.handmade = (int)ores.ores.size();
+
+    // Die Regeln fuers Wuerfeln. Gewuerfelt wird erst spaeter und dann immer
+    // nur eines: wenn das Level so weit ist.
+    OreGenPlan oreGen = LoadOreGenPlan();
+    for (const std::string& p : oreGen.problems)
+        ores.problems.push_back(p);
+    oreGen.problems.clear();
 
     // Was im Wiki steht, kommt aus data/wiki.json. Es wird einmal gelesen und
     // danach nur noch angezeigt - erklaeren aendert nichts am Spiel.
@@ -348,6 +406,13 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
         tree.start(plan, 20260808u);
 
+        // Die gewuerfelten Erze gehen mit weg: ein neues Spiel faengt wieder
+        // mit Stein und Kohle an und wuerfelt sich seine eigenen zusammen.
+        ores.ores.resize((std::size_t)ores.handmade);
+        ores.rolled = 0;
+        while (!alloys.recipes.empty() && alloys.recipes.back().result >= ores.handmade)
+            alloys.recipes.pop_back();
+
         consoles.clear();
         nextId = 1;
         addConsole();
@@ -355,8 +420,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
         page = Page::Welt;
     };
 
-    // Gab es schon einen Spielstand? Dann ersetzt er den frischen Anfang.
-    LoadGame(world, tree, consoles, nextId);
+    // Gab es schon einen Spielstand? Dann ersetzt er den frischen Anfang -
+    // samt der Erze, die sich das Spiel damals ausgedacht hat.
+    LoadGame(world, tree, consoles, nextId, ores, alloys);
 
     // Gespeichert wird nicht bei jeder Kleinigkeit, sondern alle paar Sekunden
     // und beim Beenden. Geld aendert sich staendig - jedes Mal auf die Platte
@@ -416,6 +482,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
             world.level = 1 + world.minedCount / ores.perLevel;
         }
 
+        // Ist das Level weit genug, kommt ein neues, noch nie dagewesenes Erz
+        // dazu. Meistens passiert hier gar nichts - und wenn doch, steht es ab
+        // sofort im Spielstand und bleibt fuer immer.
+        RollNewOres(ores, alloys, oreGen, world.level);
+
         // ---- Runden ------------------------------------------------------
         //
         // In der Vorbereitung steht die Welt still: nichts wird abgebaut,
@@ -440,7 +511,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
                 // Die Abrechnung soll einen Absturz ueberleben - sie ist der
                 // einzige Ort, an dem man das Ergebnis je zu sehen bekommt.
-                SaveGame(world, tree, consoles);
+                SaveGame(world, tree, consoles, ores, alloys);
                 saveTimer = 0.0f;
             }
         }
@@ -493,7 +564,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
         saveTimer += dt;
         if (saveTimer >= 10.0f)
         {
-            SaveGame(world, tree, consoles);
+            SaveGame(world, tree, consoles, ores, alloys);
             saveTimer = 0.0f;
         }
 
@@ -511,14 +582,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
             // Die Zahl im Reiter: dann sieht man auch von der Welt-Seite aus,
             // dass sich in der Tasche etwas angesammelt hat.
-            char tasche[32];
-            const int dabei = world.inventoryCount();
-            if (dabei > 0)
-                std::snprintf(tasche, sizeof(tasche), "Tasche (%d)", dabei);
-            else
-                std::snprintf(tasche, sizeof(tasche), "Tasche");
-
-            if (PageTab(tasche, page == Page::Tasche))
+            if (CountTab("Tasche", world.inventoryCount(), page == Page::Tasche))
                 page = Page::Tasche;
 
             if (PageTab("Skilltree", page == Page::Skills))
@@ -528,14 +592,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
             // nachschlaegt, soll dafuer keine Runde verbrauchen.
             // Neu freigeschaltete Seiten stehen als Zahl im Reiter - sonst
             // merkt man erst beim Hineinschauen, dass es etwas Neues gibt.
-            char wikiLabel[32];
-            const int wikiNeu = WikiUnseen(wiki, limits, world, ores);
-            if (wikiNeu > 0)
-                std::snprintf(wikiLabel, sizeof(wikiLabel), "Wiki (%d)", wikiNeu);
-            else
-                std::snprintf(wikiLabel, sizeof(wikiLabel), "Wiki");
-
-            if (PageTab(wikiLabel, page == Page::Wiki))
+            if (CountTab("Wiki", WikiUnseen(wiki, limits, world, ores), page == Page::Wiki))
                 page = Page::Wiki;
 
             // Diese Knoepfe gehoeren zur Welt-Seite.
@@ -667,7 +724,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
         g_swapChain->Present(1, 0);  // mit VSync
     }
 
-    SaveGame(world, tree, consoles);
+    SaveGame(world, tree, consoles, ores, alloys);
 
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();

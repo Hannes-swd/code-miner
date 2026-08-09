@@ -1,6 +1,8 @@
 #include "save.h"
 
+#include "alloy.h"
 #include "console.h"
+#include "ore.h"
 #include "skilltree.h"
 #include "world.h"
 
@@ -50,7 +52,8 @@ const int kVersion = 8;  // 8: Ergebnis der Runde (Ziel bezahlt)
 }  // namespace
 
 bool SaveGame(const World& world, const SkillTree& tree,
-              const std::vector<std::unique_ptr<Console>>& consoles)
+              const std::vector<std::unique_ptr<Console>>& consoles, const OrePlan& ores,
+              const AlloyPlan& alloys)
 {
     std::ofstream out(SavePath().c_str(), std::ios::binary);
     if (!out.is_open())
@@ -107,6 +110,50 @@ bool SaveGame(const World& world, const SkillTree& tree,
     for (const World::OreStep& s : world.oreSteps)
         out << s.ore << " " << s.from << " " << s.to << "\n";
 
+    // Die gewuerfelten Erze. Sie stehen in keiner Datei - sie sind beim Spielen
+    // entstanden, und ohne sie waere nach dem Laden jede Nummer in der Tasche
+    // um so viele Plaetze verschoben.
+    //
+    // Der Name steht auf einer eigenen Zeile, die Zahlen auf der naechsten. So
+    // faellt es nicht auf die Nase, falls je ein Name mit Leerzeichen entsteht.
+    {
+        const int erste = ores.handmade;
+        out << "erz_gewuerfelt " << (int)ores.ores.size() - erste << " " << ores.rolled << "\n";
+
+        for (int i = erste; i < (int)ores.ores.size(); ++i)
+        {
+            const Ore& o = ores.ores[(std::size_t)i];
+            out << o.name << "\n";
+            out << o.rarity << " " << o.value << " " << o.mineSeconds << " " << o.minLevel << " "
+                << o.purity << " " << o.pattern << " " << o.states << " " << (o.minable ? 1 : 0)
+                << " " << (int)o.color1.r << " " << (int)o.color1.g << " " << (int)o.color1.b << " "
+                << (int)o.color2.r << " " << (int)o.color2.g << " " << (int)o.color2.b << "\n";
+        }
+    }
+
+    // Und die Rezepte dazu. Wer mit wem darf ("legierbar_mit"), ergibt sich
+    // daraus von selbst und muss nicht extra mitgeschrieben werden.
+    {
+        int eigene = 0;
+        for (const AlloyRecipe& r : alloys.recipes)
+            if (r.result >= ores.handmade)
+                ++eigene;
+
+        out << "erz_rezept " << eigene << "\n";
+        for (const AlloyRecipe& r : alloys.recipes)
+        {
+            if (r.result < ores.handmade)
+                continue;  // das stand in data/legierungen.json
+
+            out << r.name << "\n";
+            out << r.from << " " << r.to << " " << r.seconds << " " << r.purity << " " << r.result
+                << " " << r.parts.size();
+            for (const AlloyPart& p : r.parts)
+                out << " " << p.ore << " " << p.count;
+            out << "\n";
+        }
+    }
+
     // shared[...] soll einen Neustart ueberleben - das ist der ganze Witz
     // daran, also gehoert es in den Spielstand.
     out << "geteilt " << world.shared.size() << "\n";
@@ -155,7 +202,7 @@ bool SaveGame(const World& world, const SkillTree& tree,
 }
 
 bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console>>& consoles,
-              int& nextConsoleId)
+              int& nextConsoleId, OrePlan& ores, AlloyPlan& alloys)
 {
     std::ifstream in(SavePath().c_str(), std::ios::binary);
     if (!in.is_open())
@@ -172,6 +219,12 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
 
     std::vector<std::unique_ptr<Console>> neueKonsolen;
     int                                   maxId = 0;
+
+    // Erst am Ende angehaengt - ein halber Spielstand darf die Erzliste nicht
+    // schon halb umgebaut haben.
+    std::vector<Ore>         neueOre;
+    std::vector<AlloyRecipe> neueRezepte;
+    int                      neueErze = 0;  // wie viele davon gewuerfelte Erze sind
 
     std::string wort;
     while (in >> wort)
@@ -275,6 +328,80 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
                     neueWelt.oreSteps.insert(s);
             }
         }
+        else if (wort == "erz_gewuerfelt")
+        {
+            int anzahl = 0;
+            in >> anzahl >> neueErze;
+
+            std::string rest;
+            std::getline(in, rest);  // Rest der Kopfzeile wegwerfen
+
+            for (int i = 0; i < anzahl; ++i)
+            {
+                std::string name;
+                if (!ReadLine(in, name) || name.empty())
+                    break;
+
+                Ore o;
+                o.name = name;
+
+                int r1 = 0, g1 = 0, b1 = 0, r2 = 0, g2 = 0, b2 = 0, abbaubar = 1;
+                in >> o.rarity >> o.value >> o.mineSeconds >> o.minLevel >> o.purity >>
+                    o.pattern >> o.states >> abbaubar >> r1 >> g1 >> b1 >> r2 >> g2 >> b2;
+
+                if (!in)
+                    break;
+
+                o.minable = (abbaubar != 0);
+                o.color1  = Color{(unsigned char)r1, (unsigned char)g1, (unsigned char)b1};
+                o.color2  = Color{(unsigned char)r2, (unsigned char)g2, (unsigned char)b2};
+
+                if (o.rarity < 0.01f)
+                    o.rarity = 0.01f;
+                if (o.value < 1)
+                    o.value = 1;
+                if (o.mineSeconds < 0.05f)
+                    o.mineSeconds = 0.05f;
+                if (o.pattern < 0.5f)
+                    o.pattern = 0.5f;
+
+                neueOre.push_back(o);
+                std::getline(in, rest);
+            }
+        }
+        else if (wort == "erz_rezept")
+        {
+            int anzahl = 0;
+            in >> anzahl;
+
+            std::string rest;
+            std::getline(in, rest);
+
+            for (int i = 0; i < anzahl; ++i)
+            {
+                std::string name;
+                if (!ReadLine(in, name) || name.empty())
+                    break;
+
+                AlloyRecipe r;
+                r.name = name;
+
+                std::size_t teile = 0;
+                in >> r.from >> r.to >> r.seconds >> r.purity >> r.result >> teile;
+                if (!in)
+                    break;
+
+                for (std::size_t k = 0; k < teile; ++k)
+                {
+                    AlloyPart p;
+                    in >> p.ore >> p.count;
+                    r.parts.push_back(p);
+                }
+
+                neueRezepte.push_back(r);
+                std::getline(in, rest);
+            }
+        }
         else if (wort == "geteilt")
         {
             std::size_t n = 0;
@@ -373,6 +500,39 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
     // Belegte Rasterzellen und Kinderzahlen stehen nicht in der Datei - die
     // ergeben sich aus den Knoten.
     neuerBaum.rebuildCells();
+
+    // Die gewuerfelten Erze wieder anhaengen - genau in der Reihenfolge, in der
+    // sie entstanden sind, sonst stimmen die Nummern in der Tasche nicht mehr.
+    ores.ores.resize((std::size_t)ores.handmade);
+    for (const Ore& o : neueOre)
+        ores.ores.push_back(o);
+    ores.rolled = neueErze;
+
+    // Rezepte dazu, und die beiden Zutaten muessen einander wieder kennen -
+    // ohne "legierbar_mit" wuerde das Rezept nicht greifen.
+    for (const AlloyRecipe& r : neueRezepte)
+    {
+        if (r.result < 0 || r.result >= (int)ores.ores.size())
+            continue;
+
+        bool gut = true;
+        for (const AlloyPart& p : r.parts)
+            if (p.ore < 0 || p.ore >= (int)ores.ores.size())
+                gut = false;
+        if (!gut)
+            continue;
+
+        for (const AlloyPart& a : r.parts)
+            for (const AlloyPart& b : r.parts)
+                if (a.ore != b.ore)
+                {
+                    Ore& erz = ores.ores[(std::size_t)a.ore];
+                    if (!erz.alloyableWith(ores.ores[(std::size_t)b.ore].name))
+                        erz.alloyWith.push_back(ores.ores[(std::size_t)b.ore].name);
+                }
+
+        alloys.recipes.push_back(r);
+    }
 
     world         = neueWelt;
     tree          = neuerBaum;

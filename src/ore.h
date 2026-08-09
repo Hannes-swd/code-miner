@@ -95,6 +95,16 @@ struct OrePlan
 {
     std::vector<Ore> ores;
 
+    // Wie viele Erze aus den Dateien kommen: data/erze.json und die Ergebnisse
+    // aus data/legierungen.json. Alles ab dieser Nummer hat sich das Spiel
+    // selbst ausgedacht (siehe oregen.h) - und genau das steht im Spielstand,
+    // denn beim naechsten Start wuerde es sonst fehlen.
+    int handmade = 0;
+
+    // Wie viele gewuerfelte Erze es schon gibt (ohne die Ergebnisse ihrer
+    // Legierungen). Daran haengt, wann das naechste faellig ist.
+    int rolled = 0;
+
     // Woraus sich das Level ergibt: "bloecke" (abgebaute Bloecke) oder
     // "skills" (gekaufte Punkte im Baum).
     std::string levelFrom = "bloecke";
