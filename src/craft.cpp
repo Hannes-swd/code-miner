@@ -121,7 +121,7 @@ CraftPlan LoadCraftPlan()
 
     if (!in.is_open())
     {
-        plan.problems.push_back("data/verarbeitung.json nicht gefunden.");
+        plan.problems.push_back("data/verarbeitung.json not found.");
         return plan;
     }
 
@@ -150,7 +150,7 @@ CraftPlan LoadCraftPlan()
             plan.valueMin = 0.0f;
         if (plan.valueMax < plan.valueMin)
         {
-            plan.problems.push_back("reinheit.wert_max ist kleiner als wert_min.");
+            plan.problems.push_back("reinheit.wert_max is smaller than wert_min.");
             plan.valueMax = plan.valueMin;
         }
     }
@@ -161,7 +161,7 @@ CraftPlan LoadCraftPlan()
         {
             const int nummer = FindOreState(f.first);
             if (nummer < 0)
-                plan.problems.push_back("zustandswert: \"" + f.first + "\" kenne ich nicht.");
+                plan.problems.push_back("zustandswert: \"" + f.first + "\" is not something I know.");
             else if (f.second.type == JsonValue::Type::Number)
                 plan.stateValue[(std::size_t)nummer] = (float)f.second.num;
         }
@@ -190,7 +190,7 @@ CraftPlan LoadCraftPlan()
         {
             // Aufrufen koennte man so einen Schritt nie: die Methoden im
             // Spielercode stehen fest.
-            plan.problems.push_back("Den Befehl \"" + step.command + "\" gibt es nicht.");
+            plan.problems.push_back("Den Befehl \"" + step.command + "\" does not exist.");
             continue;
         }
 
@@ -200,7 +200,7 @@ CraftPlan LoadCraftPlan()
         const int ziel = FindOreState(e.text("zu", ""));
         if (ziel < 0)
         {
-            plan.problems.push_back(step.command + ": \"zu\" ist kein Zustand.");
+            plan.problems.push_back(step.command + ": \"zu\" is not a state.");
             continue;
         }
         step.to = ziel;
@@ -208,7 +208,7 @@ CraftPlan LoadCraftPlan()
         const JsonValue* von = e.find("von");
         if (von == nullptr || von->type != JsonValue::Type::Array)
         {
-            plan.problems.push_back(step.command + ": \"von\" muss eine Liste sein.");
+            plan.problems.push_back(step.command + ": \"von\" must be a list.");
             continue;
         }
 
@@ -216,21 +216,21 @@ CraftPlan LoadCraftPlan()
         {
             const int nummer = FindOreState(s.str);
             if (nummer < 0)
-                plan.problems.push_back(step.command + ": Zustand \"" + s.str +
-                                        "\" kenne ich nicht.");
+                plan.problems.push_back(step.command + ": state \"" + s.str +
+                                        "\" is not something I know.");
             else
                 step.from |= (1u << (unsigned)nummer);
         }
 
         if (step.from == 0)
         {
-            plan.problems.push_back(step.command + ": in \"von\" steht kein Zustand.");
+            plan.problems.push_back(step.command + ": in \"von\" there is no state.");
             continue;
         }
 
         if (plan.find(step.command) != nullptr)
         {
-            plan.problems.push_back("Den Befehl \"" + step.command + "\" gibt es zweimal.");
+            plan.problems.push_back("Den Befehl \"" + step.command + "\" exists twice.");
             continue;
         }
 
@@ -238,7 +238,7 @@ CraftPlan LoadCraftPlan()
     }
 
     if (plan.steps.empty())
-        plan.problems.push_back("In \"schritte\" steht kein einziger Schritt.");
+        plan.problems.push_back("In \"schritte\" there is not a single step.");
 
     return plan;
 }

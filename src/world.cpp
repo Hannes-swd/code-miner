@@ -763,13 +763,6 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
         // ein Block aus und nicht wie ein Aufkleber.
         dl->AddRectFilled(a, ImVec2(b.x, a.y + 10.0f), IM_COL32(255, 255, 255, 34));
         dl->AddRectFilled(ImVec2(a.x, b.y - 12.0f), b, IM_COL32(0, 0, 0, 60));
-
-        // Abbau laeuft: ein Balken unter dem Block zeigt, wie weit.
-        if (world.mining && erz.mineSeconds > 0.0f)
-        {
-            const float t = world.mineTimer / erz.mineSeconds;
-            ui::Bar(dl, ImVec2(a.x, b.y + 12.0f), b.x - a.x, 6.0f, t, ui::kAccent);
-        }
     }
     else
     {
@@ -1198,7 +1191,7 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
                         g_sell.focus   = true;
                     }
                     if (ImGui::IsItemHovered())
-                        ImGui::SetTooltip("Klick zum Eintippen");
+                        ImGui::SetTooltip("Click to type a number");
                 }
 
                 ImGui::SameLine();

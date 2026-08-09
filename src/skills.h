@@ -15,7 +15,6 @@ void DrawStatus(const Limits& limits, const World& world);
 // Nur der Baum, sonst nichts: was ein Punkt macht und kostet, steht im
 // Tooltip. Gekauft wird per Doppelklick.
 //
-// Rueckgabe: true, wenn unten "Alles zurücksetzen" bestaetigt wurde. Was dabei
-// alles zurueckgesetzt wird, weiss nur main - deshalb macht die Seite es nicht
-// selbst, sondern sagt nur Bescheid.
-bool DrawSkillPage(World& world, SkillTree& tree);
+// Das Zuruecksetzen sitzt nicht mehr hier, sondern oben in der Leiste - es
+// gehoert zum Spiel und nicht zu einer einzelnen Seite.
+void DrawSkillPage(World& world, SkillTree& tree);

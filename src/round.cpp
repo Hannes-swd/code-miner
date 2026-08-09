@@ -56,7 +56,7 @@ bool Flag(const JsonValue& root, const char* key, bool fallback,
 
     if (v->type != JsonValue::Type::Bool)
     {
-        problems.push_back(std::string(key) + " muss true oder false sein.");
+        problems.push_back(std::string(key) + " must be true or false.");
         return fallback;
     }
     return v->flag;
@@ -87,7 +87,7 @@ RoundPlan LoadRoundPlan()
 
     if (!in.is_open())
     {
-        plan.problems.push_back("data/runden.json nicht gefunden.");
+        plan.problems.push_back("data/runden.json not found.");
         return plan;  // ohne Datei bleibt es bei 15 Minuten
     }
 
@@ -108,7 +108,7 @@ RoundPlan LoadRoundPlan()
     // sicher ein Tippfehler und kein Wunsch.
     if (plan.seconds < 1.0f)
     {
-        plan.problems.push_back("dauer ist kleiner als 1 Sekunde.");
+        plan.problems.push_back("dauer is smaller than 1 second.");
         plan.seconds = 1.0f;
     }
 
@@ -125,14 +125,14 @@ RoundPlan LoadRoundPlan()
 
         if (plan.targetStart < 0)
         {
-            plan.problems.push_back("ziel.start ist negativ.");
+            plan.problems.push_back("ziel.start is negative.");
             plan.targetStart = 0;
         }
         if (plan.targetGrowth < 1.0f)
         {
             // Unter 1 wuerde das Ziel kleiner werden - dann waere jede Runde
             // leichter als die davor.
-            plan.problems.push_back("ziel.wachstum muss mindestens 1 sein.");
+            plan.problems.push_back("ziel.wachstum must be at least 1.");
             plan.targetGrowth = 1.0f;
         }
     }
@@ -364,7 +364,7 @@ bool DrawRoundHud(const World& world, const RoundPlan& plan)
             ImGui::PopStyleColor(4);
 
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("Die Runde dauert %s.\n"
+                ImGui::SetTooltip("The round lasts %s.\n"
                                   "Until you start, the world stands still.",
                                   RoundClock(plan.seconds).c_str());
         }

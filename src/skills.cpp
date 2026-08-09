@@ -210,9 +210,8 @@ void DrawCard(ImDrawList* dl, const SkillNode& n, State st, ImVec2 c, float z, b
 
 }  // namespace
 
-bool DrawSkillPage(World& world, SkillTree& tree)
+void DrawSkillPage(World& world, SkillTree& tree)
 {
-    bool           resetWanted = false;
     ImGuiViewport* vp          = ImGui::GetMainViewport();
     ImGuiIO&       io          = ImGui::GetIO();
 
@@ -445,37 +444,11 @@ bool DrawSkillPage(World& world, SkillTree& tree)
             ImGui::PopStyleColor();
             ImGui::EndGroup();
         }
-
-        // ---- Zuruecksetzen (nur zum Testen) ------------------------------
-        // Klein und unten in der Ecke: es soll da sein, aber nicht im Weg.
-        ImGui::SetCursorPos(ImVec2(14.0f, vp->WorkSize.y - 30.0f));
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.10f, 0.10f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.52f, 0.19f, 0.19f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.62f, 0.45f, 0.45f, 1.0f));
-        if (ImGui::Button("Reset everything (test)"))
-            ImGui::OpenPopup("wirklich?");
-        ImGui::PopStyleColor(3);
-
-        if (ImGui::BeginPopup("wirklich?"))
-        {
-            ImGui::TextUnformatted("Money, tree and code will be gone.");
-            ImGui::Spacing();
-            if (ImGui::Button("Yes, delete everything"))
-            {
-                resetWanted = true;
-                ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Cancel"))
-                ImGui::CloseCurrentPopup();
-            ImGui::EndPopup();
-        }
     }
     ImGui::End();
 
     ImGui::PopStyleVar();
     ImGui::PopStyleColor();
-    return resetWanted;
 }
 
 void DrawStatus(const Limits& limits, const World& world)

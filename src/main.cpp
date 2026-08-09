@@ -300,8 +300,18 @@ static float MoneyWidth(const World& world)
     return 14.0f * 2.0f + 5.0f * 2.0f + 9.0f + ImGui::CalcTextSize(text).x;
 }
 
+// Wie breit der Menue-Knopf ganz rechts ist.
+static float MenuWidth()
+{
+    return ImGui::CalcTextSize("...").x + 22.0f;
+}
+
 // Geldanzeige oben rechts: eine Pille mit Muenze und Zahl.
-static void DrawMoney(const World& world)
+//
+// "rechts" ist der Abstand vom rechten Fensterrand bis zur rechten Kante der
+// Pille. Ohne den setzten sich Geld und Menue-Knopf beide ganz nach aussen und
+// lagen uebereinander.
+static void DrawMoney(const World& world, float rechts)
 {
     char text[32];
     std::snprintf(text, sizeof(text), "%d", world.money);
@@ -312,7 +322,7 @@ static void DrawMoney(const World& world)
     const float breit = MoneyWidth(world);
     const float hoch  = ImGui::GetTextLineHeight() + 12.0f;
 
-    ImGui::SetCursorPosX(ImGui::GetWindowWidth() - breit - 16.0f);
+    ImGui::SetCursorPosX(ImGui::GetWindowWidth() - breit - rechts);
 
     const ImVec2 p  = ImGui::GetCursorScreenPos();
     const float  y0 = p.y + (ImGui::GetTextLineHeight() - hoch) * 0.5f;
@@ -671,8 +681,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
                 const char* label       = "+ New Console";
                 const float breit       = ImGui::CalcTextSize(label).x + 28.0f;
 
-                ImGui::SetCursorPosX(ImGui::GetWindowWidth() - MoneyWidth(world) - 16.0f - 12.0f -
-                                     breit);
+                ImGui::SetCursorPosX(ImGui::GetWindowWidth() - MenuWidth() - 8.0f - 12.0f -
+                                     MoneyWidth(world) - 12.0f - breit);
 
                 ImGui::BeginDisabled(!moreAllowed);
                 ImGui::PushStyleColor(ImGuiCol_Button, ui::V(ui::kCard));
@@ -689,7 +699,85 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
                     ImGui::SetTooltip("More consoles are in the skill tree.");
             }
 
-            DrawMoney(world);
+            DrawMoney(world, MenuWidth() + 8.0f + 12.0f);
+
+            // ---- Das Menue ganz rechts ------------------------------------
+            //
+            // Hier sitzt alles, was zum Spiel gehoert und nicht zu einer
+            // einzelnen Seite. Bisher ist das genau eine Sache: von vorne
+            // anfangen. Sie steht mit Absicht hinter zwei Klicks und einer
+            // Rueckfrage - versehentlich loescht sich sonst ein Nachmittag.
+            {
+                const float breit = MenuWidth();
+                ImGui::SetCursorPosX(ImGui::GetWindowWidth() - breit - 8.0f);
+
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+                ImGui::PushStyleColor(ImGuiCol_Text, ui::V(ui::kTextDim));
+                if (ImGui::Button("...", ImVec2(breit, 0.0f)))
+                    ImGui::OpenPopup("##menue");
+                ImGui::PopStyleColor(2);
+
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("Menu");
+
+                // Der Nachfrage-Dialog darf NICHT im Menue liegen: ein
+                // Selectable schliesst sein Popup, und der verschachtelte
+                // Dialog ginge sofort mit zu. Deshalb merkt sich der Klick nur
+                // einen Wunsch, und der Dialog wird eine Ebene hoeher geoeffnet.
+                bool willNeuAnfangen = false;
+
+                if (ImGui::BeginPopup("##menue"))
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, ui::V(ui::kBad));
+                    if (ImGui::Selectable("Start over"))
+                        willNeuAnfangen = true;
+                    ImGui::PopStyleColor();
+                    ImGui::EndPopup();
+                }
+
+                if (willNeuAnfangen)
+                    ImGui::OpenPopup("##sicher");
+
+                ImGuiViewport* vp = ImGui::GetMainViewport();
+                ImGui::SetNextWindowPos(
+                    ImVec2(vp->GetCenter().x, vp->GetCenter().y), ImGuiCond_Always,
+                    ImVec2(0.5f, 0.5f));
+
+                if (ImGui::BeginPopupModal("##sicher", nullptr,
+                                           ImGuiWindowFlags_AlwaysAutoResize |
+                                               ImGuiWindowFlags_NoTitleBar |
+                                               ImGuiWindowFlags_NoSavedSettings))
+                {
+                    ImGui::TextUnformatted("Start over?");
+                    ImGui::Spacing();
+                    ImGui::TextColored(ui::V(ui::kTextDim),
+                                       "Money, skill tree, bag and your code are gone.");
+                    ImGui::TextColored(ui::V(ui::kTextDim),
+                                       "The ores the game rolled up are gone too.");
+                    ImGui::Spacing();
+                    ImGui::Spacing();
+
+                    ImGui::PushStyleColor(ImGuiCol_Button, ui::V(ui::kBad));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ui::V(ui::kBad));
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+                    // Breite aus der Aufschrift: fest waere geraten, und
+                    // abgeschnitten sieht ein Warnknopf nicht vertrauenswuerdig aus.
+                    const char* ja = "Yes, delete everything";
+                    if (ImGui::Button(ja, ImVec2(ImGui::CalcTextSize(ja).x + 28.0f, 32.0f)))
+                    {
+                        resetAll();
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::PopStyleColor(3);
+
+                    ImGui::SameLine();
+                    if (ImGui::Button("Cancel", ImVec2(110.0f, 32.0f)))
+                        ImGui::CloseCurrentPopup();
+
+                    ImGui::EndPopup();
+                }
+            }
+
             ImGui::EndMainMenuBar();
         }
 
@@ -760,8 +848,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
         }
         else
         {
-            if (DrawSkillPage(world, tree))
-                resetAll();
+            DrawSkillPage(world, tree);
 
             // Dieselbe Ecke wie auf der Welt-Seite: was man schon hat. Beim
             // Kaufen will man ja sehen, was man damit ueberhaupt schon kann.

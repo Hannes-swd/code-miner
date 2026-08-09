@@ -179,7 +179,7 @@ OrePlan LoadOrePlan()
 
     if (!in.is_open())
     {
-        plan.problems.push_back("data/erze.json nicht gefunden.");
+        plan.problems.push_back("data/erze.json not found.");
         return plan;
     }
 
@@ -202,7 +202,7 @@ OrePlan LoadOrePlan()
             plan.perLevel = 1;
         if (plan.levelFrom != "bloecke" && plan.levelFrom != "skills")
         {
-            plan.problems.push_back("level.art muss \"bloecke\" oder \"skills\" sein.");
+            plan.problems.push_back("level.art must be \"bloecke\" oder \"skills\" sein.");
             plan.levelFrom = "bloecke";
         }
     }
@@ -240,9 +240,9 @@ OrePlan LoadOrePlan()
             erz.purity = 100;
 
         if (!ParseOreColor(e.text("farbe1", ""), erz.color1))
-            plan.problems.push_back(erz.name + ": farbe1 fehlt oder ist kein #RRGGBB.");
+            plan.problems.push_back(erz.name + ": farbe1 is missing or is not #RRGGBB.");
         if (!ParseOreColor(e.text("farbe2", ""), erz.color2))
-            plan.problems.push_back(erz.name + ": farbe2 fehlt oder ist kein #RRGGBB.");
+            plan.problems.push_back(erz.name + ": farbe2 is missing or is not #RRGGBB.");
 
         // Welche Zustaende es bei diesem Erz geben darf. Fehlt die Liste, sind
         // alle erlaubt - so muss man nicht bei jedem Erz alles hinschreiben.
@@ -251,7 +251,7 @@ OrePlan LoadOrePlan()
             erz.states = 0;
             if (z->type != JsonValue::Type::Array)
             {
-                plan.problems.push_back(erz.name + ": \"zustaende\" muss eine Liste sein.");
+                plan.problems.push_back(erz.name + ": \"zustaende\" must be a list.");
                 erz.states = 0xFFFFFFFFu;
             }
             else
@@ -260,8 +260,8 @@ OrePlan LoadOrePlan()
                 {
                     const int nummer = FindOreState(s.str);
                     if (nummer < 0)
-                        plan.problems.push_back(erz.name + ": Zustand \"" + s.str +
-                                                "\" kenne ich nicht.");
+                        plan.problems.push_back(erz.name + ": state \"" + s.str +
+                                                "\" is not something I know.");
                     else
                         erz.states |= (1u << (unsigned)nummer);
                 }
@@ -276,7 +276,7 @@ OrePlan LoadOrePlan()
         if (const JsonValue* l = e.find("legierbar_mit"))
         {
             if (l->type != JsonValue::Type::Array)
-                plan.problems.push_back(erz.name + ": \"legierbar_mit\" muss eine Liste sein.");
+                plan.problems.push_back(erz.name + ": \"legierbar_mit\" must be a list.");
             else
                 for (const JsonValue& s : l->items)
                     if (s.type == JsonValue::Type::String)
@@ -287,7 +287,7 @@ OrePlan LoadOrePlan()
     }
 
     if (plan.ores.empty())
-        plan.problems.push_back("In \"erze\" steht kein einziges Erz.");
+        plan.problems.push_back("In \"erze\" there is not a single ore.");
 
     return plan;
 }

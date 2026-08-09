@@ -695,7 +695,7 @@ void DrawTimeline(const WikiPage& page, float width)
         g_wiki.playing = !g_wiki.playing;
 
     ImGui::SameLine();
-    if (ImGui::Button("Von vorn", ImVec2(96.0f, 0.0f)))
+    if (ImGui::Button("Restart", ImVec2(96.0f, 0.0f)))
     {
         g_wiki.step = 0;
         g_wiki.time = 0.0f;
@@ -724,7 +724,7 @@ void DrawTimeline(const WikiPage& page, float width)
     ImGui::TextDisabled("Step %d of %d  -  %.0f s left", g_wiki.step + 1, n, rest);
 
     ImGui::SameLine();
-    ImGui::TextDisabled("   [Leertaste] Pause   [<- ->] Schritt   [R] von vorn");
+    ImGui::TextDisabled("   [Space] pause   [<- ->] step   [R] restart");
 
     ImGui::Spacing();
 
@@ -1109,7 +1109,7 @@ WikiBook LoadWikiBook()
 
     if (!in.is_open())
     {
-        book.problems.push_back("data/wiki.json nicht gefunden.");
+        book.problems.push_back("data/wiki.json not found.");
         return book;
     }
 
@@ -1145,7 +1145,7 @@ WikiBook LoadWikiBook()
 
         if (c.key.empty())
         {
-            book.problems.push_back("Eine Kategorie hat keinen \"schluessel\".");
+            book.problems.push_back("A category has no \"schluessel\".");
             continue;
         }
         book.categories.push_back(c);
@@ -1186,7 +1186,7 @@ WikiBook LoadWikiBook()
 
         if (page.title.empty())
         {
-            book.problems.push_back("Eine Seite hat keinen \"titel\".");
+            book.problems.push_back("A page has no \"titel\".");
             continue;
         }
 
@@ -1197,8 +1197,8 @@ WikiBook LoadWikiBook()
 
         if (!bekannt)
         {
-            book.problems.push_back(page.title + ": die Kategorie \"" + page.category +
-                                    "\" gibt es nicht.");
+            book.problems.push_back(page.title + ": the category \"" + page.category +
+                                    "\" does not exist.");
             continue;
         }
 
@@ -1214,7 +1214,7 @@ WikiBook LoadWikiBook()
                     page.needs.push_back(was);
                 else
                     book.problems.push_back(page.title + ": \"braucht\": \"" + schluessel +
-                                            "\" kenne ich nicht.");
+                                            "\" is not something I know.");
             };
 
             if (b->type == JsonValue::Type::String)
@@ -1231,14 +1231,14 @@ WikiBook LoadWikiBook()
             else
             {
                 book.problems.push_back(page.title +
-                                        ": \"braucht\" muss ein Text oder eine Liste sein.");
+                                        ": \"braucht\" must be a text or a list.");
             }
         }
 
         const JsonValue* schritte = e.find("schritte");
         if (schritte == nullptr || schritte->type != JsonValue::Type::Array)
         {
-            book.problems.push_back(page.title + ": \"schritte\" muss eine Liste sein.");
+            book.problems.push_back(page.title + ": \"schritte\" must be a list.");
             continue;
         }
 
@@ -1269,7 +1269,7 @@ WikiBook LoadWikiBook()
             if (laufender.empty())
             {
                 book.problems.push_back(page.title + " / " + step.point +
-                                        ": der erste Schritt braucht \"code\".");
+                                        ": the first step needs \"code\".");
                 continue;
             }
             step.code = laufender;
@@ -1285,7 +1285,7 @@ WikiBook LoadWikiBook()
                     // Still nichts zu tun waere das Schlimmste: dann sucht man
                     // den Fehler in der Animation statt in der Datei.
                     book.problems.push_back(page.title + " / " + step.point + ": \"" + mark +
-                                            "\" steht so nicht im Code.");
+                                            "\" does not appear in the code like that.");
                 }
                 else
                 {
@@ -1309,7 +1309,7 @@ WikiBook LoadWikiBook()
                     else
                         book.problems.push_back(page.title + " / " + step.point +
                                                 ": \"braucht\": \"" + schluessel +
-                                                "\" kenne ich nicht.");
+                                                "\" is not something I know.");
                 };
 
                 if (b->type == JsonValue::Type::String)
@@ -1326,7 +1326,7 @@ WikiBook LoadWikiBook()
                 else
                 {
                     book.problems.push_back(page.title + " / " + step.point +
-                                            ": \"braucht\" muss ein Text oder eine Liste sein.");
+                                            ": \"braucht\" must be a text or a list.");
                 }
             }
 
@@ -1335,7 +1335,7 @@ WikiBook LoadWikiBook()
 
         if (page.steps.empty())
         {
-            book.problems.push_back(page.title + ": kein einziger Schritt.");
+            book.problems.push_back(page.title + ": not a single step.");
             continue;
         }
 
@@ -1343,7 +1343,7 @@ WikiBook LoadWikiBook()
     }
 
     if (book.pages.empty())
-        book.problems.push_back("In \"seiten\" steht keine einzige Seite.");
+        book.problems.push_back("In \"seiten\" there is not a single page.");
 
     // Zeigt "unter" auf eine Seite, die es gibt?
     for (WikiPage& p : book.pages)
@@ -1358,8 +1358,8 @@ WikiBook LoadWikiBook()
 
         if (!gibtEs)
         {
-            book.problems.push_back(p.title + ": \"unter\" zeigt auf \"" + p.parent +
-                                    "\" - die Seite gibt es nicht.");
+            book.problems.push_back(p.title + ": \"unter\" points to \"" + p.parent +
+                                    "\" - that page does not exist.");
             continue;
         }
 
@@ -1383,7 +1383,7 @@ WikiBook LoadWikiBook()
 
         if (!oben.empty())
         {
-            book.problems.push_back(p.title + ": \"unter\" dreht sich im Kreis.");
+            book.problems.push_back(p.title + ": \"unter\" goes in a circle.");
             p.parent.clear();
         }
     }
@@ -1399,7 +1399,7 @@ WikiBook LoadWikiBook()
 
             if (!gibtEs)
                 book.problems.push_back(p.title + ": siehe_auch zeigt auf \"" + ziel +
-                                        "\" - die Seite gibt es nicht.");
+                                        "\" - that page does not exist.");
         }
 
     return book;
@@ -1657,7 +1657,7 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, World& world, cons
                     zaehle(c.key, zahl, neu);
 
                     char label[48];
-                    std::snprintf(label, sizeof(label), "%d page%s", zahl, (zahl == 1) ? "" : "n");
+                    std::snprintf(label, sizeof(label), "%d page%s", zahl, (zahl == 1) ? "" : "s");
                     TextAt(dl, 13.0f, ImVec2(ca.x + 18.0f, cb.y - 27.0f), kAccent, label);
 
                     // Was hier neu ist, faellt sofort auf - man soll nicht erst

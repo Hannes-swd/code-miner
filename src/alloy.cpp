@@ -60,7 +60,7 @@ bool ReadParts(const JsonValue& e, const OrePlan& ores, AlloyRecipe& r,
 
         if (teil.ore < 0)
         {
-            problems.push_back(r.name + ": das Erz \"" + name + "\" kenne ich nicht.");
+            problems.push_back(r.name + ": the ore \"" + name + "\" is not something I know.");
             return false;
         }
         if (teil.count < 1)
@@ -70,7 +70,7 @@ bool ReadParts(const JsonValue& e, const OrePlan& ores, AlloyRecipe& r,
         for (const AlloyPart& da : r.parts)
             if (da.ore == teil.ore)
             {
-                problems.push_back(r.name + ": \"" + name + "\" steht zweimal in \"aus\".");
+                problems.push_back(r.name + ": \"" + name + "\" appears twice in \"aus\".");
                 return false;
             }
 
@@ -79,7 +79,7 @@ bool ReadParts(const JsonValue& e, const OrePlan& ores, AlloyRecipe& r,
 
     if (r.parts.size() < 2)
     {
-        problems.push_back(r.name + ": in \"aus\" braucht es mindestens zwei verschiedene Erze.");
+        problems.push_back(r.name + ": in \"aus\" needs at least two different ores.");
         return false;
     }
 
@@ -134,16 +134,16 @@ int AddResultOre(const JsonValue& e, OrePlan& ores, const AlloyRecipe& r,
         erg.pattern = 0.5f;
 
     if (!ParseOreColor(e.text("farbe1", ""), erg.color1))
-        problems.push_back(r.name + ": farbe1 fehlt oder ist kein #RRGGBB.");
+        problems.push_back(r.name + ": farbe1 is missing or is not #RRGGBB.");
     if (!ParseOreColor(e.text("farbe2", ""), erg.color2))
-        problems.push_back(r.name + ": farbe2 fehlt oder ist kein #RRGGBB.");
+        problems.push_back(r.name + ": farbe2 is missing or is not #RRGGBB.");
 
     if (const JsonValue* z = e.find("zustaende"))
     {
         erg.states = 0;
         if (z->type != JsonValue::Type::Array)
         {
-            problems.push_back(r.name + ": \"zustaende\" muss eine Liste sein.");
+            problems.push_back(r.name + ": \"zustaende\" must be a list.");
             erg.states = 0xFFFFFFFFu;
         }
         else
@@ -152,7 +152,7 @@ int AddResultOre(const JsonValue& e, OrePlan& ores, const AlloyRecipe& r,
             {
                 const int nummer = FindOreState(s.str);
                 if (nummer < 0)
-                    problems.push_back(r.name + ": Zustand \"" + s.str + "\" kenne ich nicht.");
+                    problems.push_back(r.name + ": state \"" + s.str + "\" is not something I know.");
                 else
                     erg.states |= (1u << (unsigned)nummer);
             }
@@ -171,7 +171,7 @@ int AddResultOre(const JsonValue& e, OrePlan& ores, const AlloyRecipe& r,
     if (const JsonValue* l = e.find("legierbar_mit"))
     {
         if (l->type != JsonValue::Type::Array)
-            problems.push_back(r.name + ": \"legierbar_mit\" muss eine Liste sein.");
+            problems.push_back(r.name + ": \"legierbar_mit\" must be a list.");
         else
             for (const JsonValue& s : l->items)
                 if (s.type == JsonValue::Type::String)
@@ -220,7 +220,7 @@ AlloyPlan LoadAlloyPlan(OrePlan& ores)
     // Ohne Datei gibt es eben keine Legierungen. Das Spiel laeuft trotzdem.
     if (!in.is_open())
     {
-        plan.problems.push_back("data/legierungen.json nicht gefunden.");
+        plan.problems.push_back("data/legierungen.json not found.");
         return plan;
     }
 
@@ -257,14 +257,14 @@ AlloyPlan LoadAlloyPlan(OrePlan& ores)
 
         if (FindOre(ores, r.name) >= 0)
         {
-            plan.problems.push_back("\"" + r.name + "\" gibt es schon als Erz.");
+            plan.problems.push_back("\"" + r.name + "\" already exists as an ore.");
             continue;
         }
 
         const int ziel = FindOreState(e.text("zu", "alloy"));
         if (ziel < 0)
         {
-            plan.problems.push_back(r.name + ": \"zu\" ist kein Zustand.");
+            plan.problems.push_back(r.name + ": \"zu\" is not a state.");
             continue;
         }
         r.to = ziel;
@@ -272,7 +272,7 @@ AlloyPlan LoadAlloyPlan(OrePlan& ores)
         const JsonValue* von = e.find("von");
         if (von == nullptr || von->type != JsonValue::Type::Array)
         {
-            plan.problems.push_back(r.name + ": \"von\" muss eine Liste sein.");
+            plan.problems.push_back(r.name + ": \"von\" must be a list.");
             continue;
         }
 
@@ -280,7 +280,7 @@ AlloyPlan LoadAlloyPlan(OrePlan& ores)
         {
             const int nummer = FindOreState(s.str);
             if (nummer < 0)
-                plan.problems.push_back(r.name + ": Zustand \"" + s.str + "\" kenne ich nicht.");
+                plan.problems.push_back(r.name + ": state \"" + s.str + "\" is not something I know.");
             else
                 r.from |= (1u << (unsigned)nummer);
         }
@@ -289,7 +289,7 @@ AlloyPlan LoadAlloyPlan(OrePlan& ores)
         if (r.from == 0 || r.from == (1u << (unsigned)OreState::Raw))
         {
             plan.problems.push_back(r.name +
-                                    ": in \"von\" braucht es einen Zustand ausser \"raw\".");
+                                    ": in \"von\" needs a state other than \"raw\".");
             continue;
         }
 
@@ -310,7 +310,7 @@ AlloyPlan LoadAlloyPlan(OrePlan& ores)
             const Ore& erz = ores.ores[(std::size_t)p.ore];
             if ((erz.states & r.from) == 0)
                 plan.problems.push_back(r.name + ": " + erz.name +
-                                        " kann nie in einen Zustand aus \"von\" kommen.");
+                                        " can never reach a state from \"von\" kommen.");
         }
 
         if (!PartsMatch(ores, r, plan.problems))

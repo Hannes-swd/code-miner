@@ -1,166 +1,176 @@
 {
   "hilfe": [
-    "Das Wiki: erklaerte Beispiele, die sich von selbst abspielen.",
+    "The wiki: explained examples that play themselves.",
     "",
-    "Eine Seite zeigt ein Stueck Code. Dazu laufen nacheinander Erklaerungen",
-    "ein: ein Teil vom Code wird eingerahmt, aus dem Rahmen waechst ein Strich",
-    "zu einer Sprechblase, die Blase blendet auf, bleibt stehen und geht wieder.",
-    "Dann kommt der naechste Schritt. Am Ende faengt es von vorne an.",
+    "A page shows a piece of code. Explanations run in one after another: a part",
+    "of the code gets framed, a line grows out of the frame to a speech bubble,",
+    "the bubble fades in, stays, and goes again. Then the next step comes. At the",
+    "end it starts over.",
     "",
-    "kategorien   Die grossen Karten auf der Startseite.",
-    "  schluessel  so heisst die Kategorie im Feld \"kategorie\" einer Seite.",
-    "  name        was auf der Karte steht.",
-    "  text        ein paar Worte dazu. Steht auch rechts, solange man noch",
-    "              keine Seite gewaehlt hat.",
+    "kategorien   The big cards on the start page.",
+    "  schluessel  this is what the category is called in a page's \"kategorie\".",
+    "  name        what the card says.",
+    "  zeichen     one to three characters for the card, like the tags on the",
+    "              skill tree nodes. Empty = the first letter of the name.",
+    "  text        a few words about it. Also shown on the right as long as no",
+    "              page has been picked.",
     "",
-    "Eine Kategorie ist anders: \"erze\". Ihre Seiten stehen NICHT hier in der",
-    "Datei, sondern entstehen beim Spielen - je ein Erz, das schon einmal in",
-    "der Tasche lag, dazu jeder Verarbeitungsschritt, den man damit gemacht",
-    "hat. Schreib dort also keine \"seiten\" hinein, die wuerden nie erscheinen.",
-    "Name und Text der Karte kommen aber weiterhin von hier.",
+    "One category is different: \"erze\". Its pages are NOT in this file, they",
+    "come into being while you play - one per ore that has been in your bag,",
+    "plus every processing step you have done with it. So do not write any",
+    "\"seiten\" for it, they would never show up. Name and text of the card do",
+    "still come from here.",
     "",
-    "seiten       Ein Eintrag = eine Seite in der Liste links.",
-    "  kategorie   der schluessel von oben.",
-    "  titel       so steht sie in der Liste.",
-    "  kurz        ein Satz, der unter dem Titel steht.",
-    "  braucht     der Schluessel eines Skilltree-Punktes - dieselben wie in",
-    "              data/skills.txt: abbauen, verkaufen, tasche, pruefen,",
-    "              print, geteilt, while, if, else, for, variablen,",
-    "              klassen, funktionen, waschen, schmelzen, giessen, reinigen,",
-    "              polieren, haerten, veredeln, pressen, legieren.",
-    "              Ist der Punkt nicht gekauft, taucht die Seite GAR NICHT auf.",
-    "              Ohne \"braucht\" ist die Seite immer da.",
-    "  schritte    die Bilder der Animation, der Reihe nach.",
+    "seiten       One entry = one page in the list on the left.",
+    "  kategorie   the key from above.",
+    "  titel       how it appears in the list.",
+    "  kurz        one sentence below the title.",
+    "  braucht     the key of a skill tree point - the same ones as in",
+    "              data/skills.txt: mine, sell, bag, check, print, shared, while,",
+    "              if, else, for, variables, classes, functions, wash, smelt,",
+    "              cast, clean, polish, harden, refine, press, alloy.",
+    "              If the point is not bought, the page does NOT show up at all.",
+    "              Without \"braucht\" the page is always there.",
+    "  schritte    the frames of the animation, in order.",
     "",
-    "Ein Schritt in \"schritte\":",
-    "  punkt      die Beschriftung auf der Zeitleiste unten. Zusammen sind die",
-    "             Punkte das Inhaltsverzeichnis der Animation - man kann sie",
-    "             anklicken und springt genau dorthin.",
-    "  code       der Code, der gezeigt wird. Zeilenumbruch als \\n.",
-    "             Er gilt weiter, bis ein Schritt einen NEUEN code mitbringt.",
-    "             Aendert er sich, laufen genau die neuen Zeichen sichtbar ein.",
-    "             Der erste Schritt einer Seite braucht einen code.",
-    "  markiere   ein Textstueck AUS DEM CODE. Es wird dort gesucht und",
-    "             eingerahmt. Wird es nicht gefunden, steht das rot im Spiel -",
-    "             lieber eine Meldung als eine Animation, die nichts tut.",
-    "  treffer    kommt das Stueck mehrfach vor: das wievielte gemeint ist.",
-    "             Ohne Angabe das erste.",
-    "  text       was in der Sprechblase steht. Kurze Saetze, keine Fachwoerter",
-    "             ohne Erklaerung - das soll ein Kind verstehen.",
-    "  dauer      Sekunden, die der Schritt stehen bleibt. Unter 1.2 geht",
-    "             nicht, sonst waere die Blase weg, bevor sie da ist.",
+    "One step in \"schritte\":",
+    "  punkt      the label on the timeline below. Together the labels are the",
+    "             table of contents of the animation - you can click them and",
+    "             jump straight there.",
+    "  code       the code that is shown. Line break as \\n.",
+    "             It stays in force until a step brings a NEW code. When it",
+    "             changes, exactly the new characters type themselves in.",
+    "             The first step of a page needs a code.",
+    "  markiere   a piece of text FROM THE CODE. It is searched for there and",
+    "             framed. If it is not found, that shows up in red in the game -",
+    "             better a message than an animation that does nothing.",
+    "  treffer    if the piece occurs more than once: which one is meant.",
+    "             Without it, the first one.",
+    "  text       what the speech bubble says. Short sentences, no jargon without",
+    "             explanation - a child should understand this.",
+    "  dauer      seconds the step stays. Below 1.2 is not allowed, otherwise the",
+    "             bubble would be gone before it arrived.",
     "",
-    "Der code muss kein C++ sein. Bei den Seiten unter \"Spiel\" stehen dort",
-    "kleine Tabellen - die Schrift ist eine Schreibmaschinenschrift, deshalb",
-    "steht alles sauber untereinander.",
+    "The code does not have to be C++. On the pages under \"Game\" there are small",
+    "tables instead - the font is a typewriter font, so everything lines up.",
     "",
-    "Die Zahlen in den Texten kommen aus data/erze.json,",
-    "data/verarbeitung.json, data/legierungen.json und data/runden.json.",
-    "Aenderst du dort etwas, gehoert es hier nachgetragen.",
+    "The numbers in the texts come from data/erze.json, data/verarbeitung.json,",
+    "data/legierungen.json and data/runden.json. If you change something there,",
+    "it belongs updated here.",
     "",
-    "siehe_auch   Liste von Titeln anderer Seiten. Die stehen rechts als",
-    "             kleine Verweise und springen direkt dorthin - auch in",
-    "             eine andere Kategorie. Gezeigt wird nur, was schon",
-    "             freigeschaltet ist.",
+    "siehe_auch   list of titles of other pages. They stand on the right as small",
+    "             links and jump straight there - even into another category.",
+    "             Only what is already unlocked is shown.",
     "",
-    "braucht      ein Schlüssel wie \"pruefen\" - oder eine Liste davon. Bei",
-    "             einer Liste reicht EINER: die Seite taucht auf, sobald du",
-    "             irgendeinen davon gekauft hast. Ohne braucht ist sie immer da.",
+    "braucht      a key like \"check\" - or a list of them. With a list ONE is",
+    "             enough: the page shows up as soon as you have bought any of",
+    "             them. Without braucht it is always there.",
     "",
-    "             Ein SCHRITT darf auch ein \"braucht\" haben - dort müssen aber",
-    "             ALLE genannten Punkte gekauft sein. Der Unterschied hat einen",
-    "             Grund: eine Seite ist ein Thema, ein Schritt ist ein Stück",
-    "             Code, und darin muss jeder einzelne Befehl erlaubt sein.",
-    "             Schritte, die etwas zeigen würden, das du noch nicht kaufen",
-    "             konntest, fallen einfach weg - samt ihrer Marke auf der",
-    "             Zeitleiste. So steht im Wiki nie ein Befehl, den du nirgends",
-    "             hinschreiben darfst.",
+    "             A STEP may have a \"braucht\" too - but there ALL the named",
+    "             points have to be bought. The difference has a reason: a page",
+    "             is a topic, a step is a piece of code, and every single command",
+    "             in it has to be allowed. Steps that would show something you",
+    "             could not buy yet simply drop out - together with their mark on",
+    "             the timeline. That way the wiki never shows a command you are",
+    "             not allowed to write anywhere.",
     "",
-    "unter        Titel einer anderen Seite. Diese Seite steht dann in der Liste",
-    "             links eingerückt darunter, und der Oberpunkt lässt sich zu-",
-    "             klappen. So hängen die acht Verarbeitungs-Befehle unter der",
-    "             Übersicht statt die halbe Liste zu füllen.",
+    "unter        title of another page. This page then sits indented below it in",
+    "             the list on the left, and the parent can be folded away. That is",
+    "             how the eight processing commands hang under the overview",
+    "             instead of filling half the list.",
     "",
-    "             Das geht über beliebig viele Ebenen: \"item.wash(...)\" hängt",
-    "             unter \"Verarbeiten - Überblick\", und der wiederum unter",
-    "             \"item\". Nur im Kreis darf es nicht gehen - das meldet das",
-    "             Spiel und hängt die Seite wieder ganz nach oben.",
+    "             This works over any number of levels: \"item.wash(...)\" hangs",
+    "             under \"Processing - overview\", and that one under \"item\".",
+    "             Only going in a circle is not allowed - the game reports that",
+    "             and hangs the page back at the top.",
     "",
-    "             Ganz oben stehen genau zwei Überpunkte: \"block\" ist der",
-    "             Stein draußen (abbauen, nachschauen), \"item\" ist deine",
-    "             Tasche (verkaufen, verarbeiten, legieren). Ein neuer Befehl",
-    "             gehört mit \"unter\" unter den, zu dem er passt."
+    "             At the very top there are exactly two overview points: \"block\"",
+    "             is the stone outside (mining, checking), \"item\" is your bag",
+    "             (selling, processing, alloying). A new command belongs under",
+    "             whichever one it fits, using \"unter\"."
   ],
   "kategorien": [
     {
       "schluessel": "functions",
       "zeichen": "f()",
-      "name": "Funktionen",
-      "text": "Befehle, die du dem Spiel gibst. Jeder von ihnen steht in deinem Code, und dein Roboter macht ihn. Alles hier musst du vorher im Skilltree kaufen."
+      "name": "Functions",
+      "text": "Commands you give the game. Every one of them stands in your code, and your robot carries it out. Everything here has to be bought in the skill tree first."
     },
     {
       "schluessel": "kontrolle",
       "zeichen": "if",
-      "name": "Kontrollstrukturen",
-      "text": "Damit entscheidet und wiederholt dein Programm: if, else, while, for, Variablen, eigene Funktionen und Klassen. Das ist echtes C++."
+      "name": "Control structures",
+      "text": "This is how your program decides and repeats: if, else, while, for, variables, your own functions and classes. That is real C++."
     },
     {
       "schluessel": "erze",
-      "zeichen": "Er",
-      "name": "Erze",
-      "text": "Deine Sammlung. Jedes Erz, das du einmal abgebaut hast, bekommt hier eine Seite - und jeder Weg, den du damit gegangen bist, eine Zeile mit dem Preis. Was du noch nie gemacht hast, steht als ? da."
+      "zeichen": "Or",
+      "name": "Ores",
+      "text": "Your collection. Every ore you have mined once gets a page here - and every way you have taken with it gets a row with its price. What you have never done shows up as a ?."
     },
     {
       "schluessel": "spiel",
       "zeichen": "?",
-      "name": "Spiel",
-      "text": "Wie das Spiel selbst funktioniert: welche Erze es gibt, was Zustände und Reinheit bedeuten, wie Legieren, die Tasche, die Runden und der Skilltree arbeiten."
+      "name": "Game",
+      "text": "How the game itself works: which ores exist, what states and purity mean, how alloying, the bag, the rounds and the skill tree work."
     }
   ],
   "seiten": [
     {
       "kategorie": "functions",
       "titel": "block",
-      "braucht": ["mine", "check"],
-      "kurz": "Der Block da draußen: abbauen und nachschauen.",
+      "braucht": [
+        "mine",
+        "check"
+      ],
+      "kurz": "The block out there: mining and checking.",
       "schritte": [
         {
-          "punkt": "Der Name davor",
+          "punkt": "The name in front",
           "code": "block.mine();",
           "markiere": "block",
-          "text": "Fast jeder Befehl fängt mit einem Namen an. block ist der eine Stein, der gerade vor dir liegt - alles, was mit IHM zu tun hat, fängt so an.",
+          "text": "Almost every command starts with a name. block is the one stone lying in front of you - everything that has to do with IT starts this way.",
           "braucht": "mine",
           "dauer": 5.5
         },
         {
-          "punkt": "Abbauen",
+          "punkt": "Mining",
           "markiere": "block.mine();",
-          "text": "mine heißt abbauen. Mehr passiert draußen nicht: der Stein wandert danach in deine Tasche, und dort geht es weiter.",
+          "text": "mine means to mine it. Nothing more happens out there: the stone then goes into your bag, and that is where it continues.",
           "braucht": "mine",
           "dauer": 5.0
         },
         {
-          "punkt": "Nachschauen",
+          "punkt": "Checking",
           "code": "block.isThere();",
           "markiere": "block.isThere()",
-          "text": "Das Zweite, was block kann: nachschauen, ob überhaupt einer dasteht. Er wächst ja nach und ist zwischendurch kurz weg.",
+          "text": "The second thing block can do: check whether one is there at all. It regrows, so now and then it is gone for a moment.",
           "braucht": "check",
           "dauer": 5.5
         },
         {
-          "punkt": "Erst fragen, dann hauen",
+          "punkt": "Ask first, then swing",
           "code": "if (block.isThere())\n{\n    block.mine();\n}",
           "markiere": "if (block.isThere())",
-          "text": "Beides zusammen: nur abbauen, wenn auch etwas da ist. So fängt fast jedes Programm an.",
-          "braucht": ["mine", "check", "if"],
+          "text": "Both together: only mine when there is something there. That is how almost every program starts.",
+          "braucht": [
+            "mine",
+            "check",
+            "if"
+          ],
           "dauer": 5.5
         },
         {
-          "punkt": "Immer wieder",
+          "punkt": "Again and again",
           "code": "while (true)\n{\n    if (block.isThere())\n    {\n        block.mine();\n    }\n}",
           "markiere": "while (true)",
-          "text": "Mit while läuft das die ganze Runde durch, ohne dass du etwas tun musst.",
-          "braucht": ["mine", "check", "if", "while"],
+          "text": "With while this runs the whole round through, without you doing anything.",
+          "braucht": [
+            "mine",
+            "check",
+            "if",
+            "while"
+          ],
           "dauer": 5.0
         }
       ],
@@ -173,38 +183,53 @@
     {
       "kategorie": "functions",
       "titel": "item",
-      "braucht": ["sell", "bag", "wash", "smelt", "cast", "clean",
-                  "polish", "harden", "refine", "press", "alloy"],
-      "kurz": "Deine Tasche: verkaufen, nachschauen, verarbeiten.",
+      "braucht": [
+        "sell",
+        "bag",
+        "wash",
+        "smelt",
+        "cast",
+        "clean",
+        "polish",
+        "harden",
+        "refine",
+        "press",
+        "alloy"
+      ],
+      "kurz": "Your bag: selling, checking, processing.",
       "schritte": [
         {
-          "punkt": "Deine Tasche",
+          "punkt": "Your bag",
           "code": "item.sell();",
           "markiere": "item",
-          "text": "Was einmal abgebaut ist, gehört nicht mehr dem Block, sondern dir. Alles, was mit deiner Tasche zu tun hat, fängt deshalb mit item an.",
+          "text": "Once something is mined it no longer belongs to the block but to you. That is why everything about your bag starts with item.",
           "braucht": "sell",
           "dauer": 5.5
         },
         {
-          "punkt": "Zu Geld machen",
+          "punkt": "Turning it into money",
           "markiere": "item.sell()",
-          "text": "sell verkauft, was in der Tasche liegt. Erst hier gibt es Geld - vom Abbauen allein wird niemand reich.",
+          "text": "sell sells what is in the bag. Only here is there money - nobody gets rich from mining alone.",
           "braucht": "sell",
           "dauer": 5.0
         },
         {
-          "punkt": "Hineinschauen",
-          "code": "if (item.has(\"Stein\"))\n{\n    item.sell(\"Stein\");\n}",
-          "markiere": "item.has(\"Stein\")",
-          "text": "has schaut nur nach, ohne etwas herauszunehmen. So verkaufst du gezielt das, wovon du genug hast.",
-          "braucht": ["bag", "sell", "if"],
+          "punkt": "Looking inside",
+          "code": "if (item.has(\"Stone\"))\n{\n    item.sell(\"Stone\");\n}",
+          "markiere": "item.has(\"Stone\")",
+          "text": "has only looks, without taking anything out. That way you sell exactly what you have enough of.",
+          "braucht": [
+            "bag",
+            "sell",
+            "if"
+          ],
           "dauer": 5.5
         },
         {
-          "punkt": "Erst besser machen",
-          "code": "item.wash(\"Stein\", 3);",
-          "markiere": "item.wash(\"Stein\", 3)",
-          "text": "Roh verkaufen bringt wenig. Waschen, Schmelzen, Polieren, Legieren - alle diese Schritte arbeiten in der Tasche, nie am Block.",
+          "punkt": "Make it better first",
+          "code": "item.wash(\"Stone\", 3);",
+          "markiere": "item.wash(\"Stone\", 3)",
+          "text": "Selling raw brings little. Washing, smelting, polishing, alloying - all these steps work in the bag, never on the block.",
           "braucht": "wash",
           "dauer": 6.0
         }
@@ -213,8 +238,8 @@
         "block",
         "item.sell()",
         "item.has(...)",
-        "Verarbeiten - Überblick",
-        "Tasche und Verkaufen"
+        "Processing - overview",
+        "Bag and selling"
       ]
     },
     {
@@ -222,40 +247,40 @@
       "titel": "block.mine()",
       "unter": "block",
       "braucht": "mine",
-      "kurz": "Baut den Block vor dir ab.",
+      "kurz": "Mines the block in front of you.",
       "schritte": [
         {
-          "punkt": "Der Befehl",
+          "punkt": "The command",
           "code": "block.mine();",
           "markiere": "block.mine()",
-          "text": "block ist der Block vor dir. mine heißt abbauen. Diese Zeile sagt: hau einmal drauf.",
+          "text": "block is the block in front of you. mine means to mine it. This line says: give it one hit.",
           "dauer": 3.5
         },
         {
-          "punkt": "Der Strichpunkt",
+          "punkt": "The semicolon",
           "markiere": ";",
-          "text": "Jeder Befehl endet mit einem Strichpunkt. Er sagt: fertig, der nächste bitte.",
+          "text": "Every command ends with a semicolon. It says: done, next one please.",
           "dauer": 3.0
         },
         {
-          "punkt": "Immer wieder",
+          "punkt": "Again and again",
           "code": "while (true)\n{\n    block.mine();\n}",
           "markiere": "while (true)",
-          "text": "Eine Zeile baut einen Block ab. Mit while machst du es immer wieder, die ganze Runde lang.",
+          "text": "One line mines one block. With while you do it again and again, the whole round long.",
           "dauer": 4.0
         },
         {
-          "punkt": "Wo landet das Erz?",
+          "punkt": "Where does the ore go?",
           "markiere": "block.mine();",
-          "text": "Jeder abgebaute Block wandert in deine Tasche. Zu Geld wird er erst beim Verkaufen.",
+          "text": "Every mined block goes into your bag. It only turns into money when you sell it.",
           "dauer": 4.0
         }
       ],
       "siehe_auch": [
         "block.isThere()",
         "while",
-        "Erze",
-        "Tasche und Verkaufen"
+        "Ores",
+        "Bag and selling"
       ]
     },
     {
@@ -263,40 +288,40 @@
       "titel": "block.isThere()",
       "unter": "block",
       "braucht": "check",
-      "kurz": "Fragt nach, ob der Block gerade da ist.",
+      "kurz": "Asks whether the block is there right now.",
       "schritte": [
         {
-          "punkt": "Der Befehl",
+          "punkt": "The command",
           "code": "block.isThere()",
           "markiere": "block.isThere()",
-          "text": "Fragt das Spiel: steht der Block gerade da?",
+          "text": "Asks the game: is the block there right now?",
           "dauer": 3.5
         },
         {
-          "punkt": "Was er zurückgibt",
+          "punkt": "What it gives back",
           "markiere": "isThere",
-          "text": "Die Antwort ist true oder false - ja oder nein. Etwas anderes kommt nie heraus.",
+          "text": "The answer is true or false - yes or no. Nothing else ever comes out.",
           "dauer": 3.5
         },
         {
-          "punkt": "In ein if gesteckt",
+          "punkt": "Put into an if",
           "code": "if (block.isThere())\n{\n    block.mine();\n}",
           "markiere": "if",
-          "text": "Mit if entscheidet dein Programm selbst: nur wenn der Block da ist, wird abgebaut.",
+          "text": "With if your program decides for itself: it only mines when the block is there.",
           "dauer": 4.5
         },
         {
-          "punkt": "Zusammen mit else",
+          "punkt": "Together with else",
           "code": "if (block.isThere())\n{\n    block.mine();\n}\nelse\n{\n    print(\"warte\");\n}",
           "markiere": "else",
-          "text": "else heißt sonst. Ist der Block gerade weg, macht dein Programm etwas anderes.",
+          "text": "else means otherwise. If the block happens to be gone, your program does something else.",
           "dauer": 4.5
         },
         {
-          "punkt": "Andersherum fragen",
+          "punkt": "Asking the other way round",
           "code": "if (block.isLoading())\n{\n    print(\"warte\");\n}",
           "markiere": "block.isLoading()",
-          "text": "isLoading() ist die Gegenfrage: wächst der Block gerade nach? Beides gibt es, damit du nicht umdenken musst.",
+          "text": "isLoading() is the opposite question: is the block regrowing right now? Both exist so that you do not have to think backwards.",
           "dauer": 4.5
         }
       ],
@@ -312,48 +337,48 @@
       "titel": "item.sell()",
       "unter": "item",
       "braucht": "sell",
-      "kurz": "Macht aus deiner Tasche Geld.",
+      "kurz": "Turns your bag into money.",
       "schritte": [
         {
-          "punkt": "Alles verkaufen",
+          "punkt": "Sell everything",
           "code": "item.sell();",
           "markiere": "item.sell()",
-          "text": "Verkauft alles, was in deiner Tasche liegt. Dafür bekommst du Geld.",
+          "text": "Sells everything in your bag. You get money for it.",
           "dauer": 3.5
         },
         {
-          "punkt": "Nur eine Sorte",
-          "code": "item.sell(\"Stein\");",
-          "markiere": "\"Stein\"",
-          "text": "In die Klammer schreibst du einen Erznamen. Dann geht nur diese Sorte über die Theke, dein Gold bleibt liegen.",
+          "punkt": "Only one kind",
+          "code": "item.sell(\"Stone\");",
+          "markiere": "\"Stone\"",
+          "text": "Into the brackets you write an ore name. Then only that kind goes over the counter, your gold stays put.",
           "dauer": 4.0
         },
         {
-          "punkt": "Nur ein paar davon",
-          "code": "item.sell(\"Stein\", 3);",
+          "punkt": "Only a few of them",
+          "code": "item.sell(\"Stone\", 3);",
           "markiere": "3",
-          "text": "Die Zahl sagt, wie viele Stück. Hier genau drei Steine, der Rest bleibt in der Tasche.",
+          "text": "The number says how many pieces. Here exactly three stones, the rest stays in the bag.",
           "dauer": 4.0
         },
         {
-          "punkt": "Was zurückkommt",
-          "code": "int geld = item.sell(\"Stein\", 3);\nprint(geld);",
-          "markiere": "int geld",
-          "text": "sell gibt dir zurück, wie viel Geld es gab. Das kannst du dir merken und anschauen.",
+          "punkt": "What comes back",
+          "code": "int money = item.sell(\"Stone\", 3);\nprint(money);",
+          "markiere": "int money",
+          "text": "sell gives you back how much money there was. You can remember that and look at it.",
           "dauer": 4.5
         },
         {
-          "punkt": "Erst verarbeiten",
-          "code": "item.wash(\"Stein\");\nint geld = item.sell(\"Stein\");",
-          "markiere": "item.wash(\"Stein\")",
-          "text": "Roh ist ein Block wenig wert. Gewaschen, gepresst oder poliert bringt er ein Vielfaches. Verkaufe lieber danach.",
+          "punkt": "Process it first",
+          "code": "item.wash(\"Stone\");\nint money = item.sell(\"Stone\");",
+          "markiere": "item.wash(\"Stone\")",
+          "text": "Raw, a block is worth little. Washed, pressed or polished it brings many times as much. Better sell afterwards.",
           "dauer": 5.0
         }
       ],
       "siehe_auch": [
         "item.has(...)",
-        "Tasche und Verkaufen",
-        "Zustände und Reinheit"
+        "Bag and selling",
+        "States and purity"
       ]
     },
     {
@@ -361,34 +386,34 @@
       "titel": "item.has(...)",
       "unter": "item",
       "braucht": "bag",
-      "kurz": "Schaut in die Tasche, ohne etwas zu verkaufen.",
+      "kurz": "Looks into the bag without selling anything.",
       "schritte": [
         {
-          "punkt": "Der Befehl",
-          "code": "item.has(\"Stein\")",
-          "markiere": "item.has(\"Stein\")",
-          "text": "Fragt: liegt mindestens ein Stein in meiner Tasche? Die Antwort ist ja oder nein.",
+          "punkt": "The command",
+          "code": "item.has(\"Stone\")",
+          "markiere": "item.has(\"Stone\")",
+          "text": "Asks: is there at least one stone in my bag? The answer is yes or no.",
           "dauer": 3.5
         },
         {
-          "punkt": "Mit einer Anzahl",
-          "code": "item.has(\"Stein\", 10)",
+          "punkt": "With a count",
+          "code": "item.has(\"Stone\", 10)",
           "markiere": "10",
-          "text": "Mit einer Zahl fragst du nach mindestens so vielen. Hier: habe ich zehn Steine oder mehr?",
+          "text": "With a number you ask for at least that many. Here: do I have ten stones or more?",
           "dauer": 4.0
         },
         {
-          "punkt": "Warten, bis genug da ist",
-          "code": "if (item.has(\"Stein\", 10))\n{\n    item.sell(\"Stein\");\n}",
+          "punkt": "Waiting until there is enough",
+          "code": "if (item.has(\"Stone\", 10))\n{\n    item.sell(\"Stone\");\n}",
           "markiere": "if",
-          "text": "So verkaufst du erst, wenn sich etwas angesammelt hat - und nicht jeden einzelnen Stein sofort.",
+          "text": "That way you only sell once something has piled up - and not every single stone right away.",
           "dauer": 4.5
         },
         {
-          "punkt": "Erst sammeln, dann schmelzen",
-          "code": "if (item.has(\"Kupfer\", 5))\n{\n    item.smelt(\"Kupfer\");\n}",
-          "markiere": "item.smelt(\"Kupfer\")",
-          "text": "Genauso vor dem Verarbeiten: es läuft immer nur ein Auftrag, und der kostet Zeit. Fünf auf einmal lohnt sich mehr als fünfmal einer.",
+          "punkt": "Collect first, then smelt",
+          "code": "if (item.has(\"Copper\", 5))\n{\n    item.smelt(\"Copper\");\n}",
+          "markiere": "item.smelt(\"Copper\")",
+          "text": "The same before processing: only one job runs at a time, and it costs time. Five at once pays off more than one five times.",
           "dauer": 5.0
         }
       ],
@@ -402,39 +427,39 @@
       "kategorie": "functions",
       "titel": "print(...)",
       "braucht": "print",
-      "kurz": "Schreibt dir etwas in die Konsole.",
+      "kurz": "Writes something into your console.",
       "schritte": [
         {
-          "punkt": "Der Befehl",
+          "punkt": "The command",
           "code": "print(\"Hallo\");",
           "markiere": "print(\"Hallo\")",
-          "text": "Schreibt den Text unten in deine Konsole. Am Spiel ändert das nichts - es ist nur für dich.",
+          "text": "Writes the text at the bottom of your console. It changes nothing in the game - it is just for you.",
           "dauer": 3.5
         },
         {
-          "punkt": "Zahlen gehen auch",
+          "punkt": "Numbers work too",
           "code": "print(42);",
           "markiere": "42",
-          "text": "Statt Text darfst du auch eine Zahl hineinschreiben.",
+          "text": "Instead of text you may also write a number in there.",
           "dauer": 3.0
         },
         {
-          "punkt": "Nachschauen, was drin ist",
-          "code": "int geld = item.sell();\nprint(geld);",
-          "markiere": "print(geld)",
-          "text": "So siehst du, was in einer Variablen steckt. Genau dafür ist print da: verstehen, was dein Programm gerade tut.",
+          "punkt": "Checking what is inside",
+          "code": "int money = item.sell();\nprint(money);",
+          "markiere": "print(money)",
+          "text": "That is how you see what is inside a variable. That is exactly what print is for: understanding what your program is doing.",
           "dauer": 4.5
         },
         {
-          "punkt": "Suchen, wo es klemmt",
+          "punkt": "Finding where it sticks",
           "code": "while (true)\n{\n    print(\"Runde\");\n    block.mine();\n}",
           "markiere": "print(\"Runde\")",
-          "text": "Läuft dein Programm nicht wie gedacht, setz ein print hinein. Kommt der Text nicht, kommt dein Programm dort auch nicht an.",
+          "text": "If your program does not run as expected, put a print in. If the text does not appear, your program never gets there either.",
           "dauer": 5.0
         }
       ],
       "siehe_auch": [
-        "Variablen",
+        "Variables",
         "shared[...]"
       ]
     },
@@ -442,88 +467,88 @@
       "kategorie": "functions",
       "titel": "shared[...]",
       "braucht": "shared",
-      "kurz": "Ein Zettel, den alle Konsolen lesen können.",
+      "kurz": "A note that every console can read.",
       "schritte": [
         {
-          "punkt": "Hinschreiben",
-          "code": "shared[\"punkte\"] = 10;",
-          "markiere": "shared[\"punkte\"]",
-          "text": "shared ist ein Zettel mit Fächern. In das Fach punkte legst du die Zahl 10.",
+          "punkt": "Writing it down",
+          "code": "shared[\"points\"] = 10;",
+          "markiere": "shared[\"points\"]",
+          "text": "shared is a note with compartments. Into the compartment points you put the number 10.",
           "dauer": 4.0
         },
         {
-          "punkt": "Dazuzählen",
-          "code": "shared[\"punkte\"] += 1;",
+          "punkt": "Adding to it",
+          "code": "shared[\"points\"] += 1;",
           "markiere": "+= 1",
-          "text": "+= 1 heißt: eins dazu. Aus 10 wird 11, ohne dass du die alte Zahl kennen musst.",
+          "text": "+= 1 means: one more. 10 becomes 11, without you having to know the old number.",
           "dauer": 4.0
         },
         {
-          "punkt": "Wieder lesen",
-          "code": "shared[\"punkte\"] += 1;\nint p = shared[\"punkte\"];\nprint(p);",
-          "markiere": "int p = shared[\"punkte\"]",
-          "text": "So holst du die Zahl wieder heraus. Sie bleibt im Fach liegen, bis du sie änderst.",
+          "punkt": "Reading it again",
+          "code": "shared[\"points\"] += 1;\nint p = shared[\"points\"];\nprint(p);",
+          "markiere": "int p = shared[\"points\"]",
+          "text": "That is how you get the number back out. It stays in the compartment until you change it.",
           "dauer": 4.5
         },
         {
-          "punkt": "Alle Konsolen teilen ihn",
+          "punkt": "All consoles share it",
           "code": "// Konsole 1\nshared[\"gold\"] = 5;\n\n// Konsole 2\nif (shared[\"gold\"] > 0)\n{\n    item.sell(\"Gold\");\n}",
           "markiere": "// Konsole 2",
-          "text": "Der Zettel gehört allen Konsolen zusammen. Die eine schreibt hin, die andere liest - so reden deine Programme miteinander.",
+          "text": "The note belongs to all consoles together. One writes, another reads - that is how your programs talk to each other.",
           "dauer": 5.5
         }
       ],
       "siehe_auch": [
-        "Variablen",
+        "Variables",
         "print(...)"
       ]
     },
     {
       "kategorie": "functions",
-      "titel": "Verarbeiten - Überblick",
+      "titel": "Processing - overview",
       "unter": "item",
-      "kurz": "Aus einem Zustand einen besseren machen.",
+      "kurz": "Turning one state into a better one.",
       "schritte": [
         {
-          "punkt": "Roh ist wenig wert",
-          "code": "item.sell(\"Kupfer\");",
-          "markiere": "item.sell(\"Kupfer\")",
-          "text": "Frisch aus dem Boden ist ein Block roh. So verkauft bringt er am allerwenigsten.",
+          "punkt": "Raw is worth little",
+          "code": "item.sell(\"Copper\");",
+          "markiere": "item.sell(\"Copper\")",
+          "text": "Fresh out of the ground a block is raw. Sold like that it brings the very least.",
           "dauer": 4.0
         },
         {
-          "punkt": "Ein Schritt dazwischen",
-          "code": "item.smelt(\"Kupfer\");\nitem.sell(\"Kupfer\");",
-          "markiere": "item.smelt(\"Kupfer\")",
-          "text": "Schmelzen macht aus rohem Kupfer geschmolzenes. Geschmolzen ist doppelt so viel wert wie roh.",
+          "punkt": "One step in between",
+          "code": "item.smelt(\"Copper\");\nitem.sell(\"Copper\");",
+          "markiere": "item.smelt(\"Copper\")",
+          "text": "Smelting turns raw copper into smelted copper. Smelted is worth twice as much as raw.",
           "dauer": 4.5
         },
         {
-          "punkt": "Noch weiter",
-          "code": "item.smelt(\"Kupfer\");\nitem.cast(\"Kupfer\");\nitem.polish(\"Kupfer\");\nitem.sell(\"Kupfer\");",
-          "markiere": "item.polish(\"Kupfer\")",
-          "text": "Jeder Schritt macht den Block wertvoller: poliert bringt viereinhalbmal so viel wie roh. Aber jeder Schritt kostet auch Zeit.",
+          "punkt": "Further still",
+          "code": "item.smelt(\"Copper\");\nitem.cast(\"Copper\");\nitem.polish(\"Copper\");\nitem.sell(\"Copper\");",
+          "markiere": "item.polish(\"Copper\")",
+          "text": "Every step makes the block worth more: polished brings four and a half times as much as raw. But every step costs time too.",
           "dauer": 5.5
         },
         {
-          "punkt": "Acht Befehle gibt es",
-          "code": "item.wash(\"Kupfer\");\nitem.clean(\"Kupfer\");\nitem.smelt(\"Kupfer\");\nitem.cast(\"Kupfer\");\nitem.harden(\"Kupfer\");\nitem.polish(\"Kupfer\");\nitem.refine(\"Kupfer\");\nitem.press(\"Stein\");",
-          "markiere": "item.press(\"Stein\")",
-          "text": "Nicht jeder Befehl passt zu jedem Erz. Stein kann man pressen, aber nicht schmelzen. Was gerade geht, zeigt dir die Tasche.",
+          "punkt": "There are eight commands",
+          "code": "item.wash(\"Copper\");\nitem.clean(\"Copper\");\nitem.smelt(\"Copper\");\nitem.cast(\"Copper\");\nitem.harden(\"Copper\");\nitem.polish(\"Copper\");\nitem.refine(\"Copper\");\nitem.press(\"Stone\");",
+          "markiere": "item.press(\"Stone\")",
+          "text": "Not every command fits every ore. Stone can be pressed but not smelted. The bag shows you what works right now.",
           "dauer": 6.0
         },
         {
-          "punkt": "Es ist ein Netz",
-          "markiere": "item.clean(\"Kupfer\")",
-          "text": "Es gibt nicht nur einen Weg. Reinigen zum Beispiel geht aus roh, gewaschen, gegossen und gepresst heraus. Und: es läuft immer nur ein Auftrag, der nächste muss warten.",
+          "punkt": "It is a net",
+          "markiere": "item.clean(\"Copper\")",
+          "text": "There is not just one way. Cleaning, for example, works from raw, washed, cast and pressed. And: only one job runs at a time, the next one has to wait.",
           "dauer": 6.0
         }
       ],
       "siehe_auch": [
-        "Zustände und Reinheit",
+        "States and purity",
         "item.wash(...)",
         "item.smelt(...)",
-        "Legieren"
+        "Alloying"
       ],
       "braucht": [
         "wash",
@@ -540,96 +565,96 @@
       "kategorie": "functions",
       "titel": "item.wash(...)",
       "braucht": "wash",
-      "kurz": "Waschen: aus roh wird gewaschen.",
+      "kurz": "Washing: raw becomes washed.",
       "schritte": [
         {
-          "punkt": "Der Befehl",
-          "code": "item.wash(\"Kupfer\");",
-          "markiere": "item.wash(\"Kupfer\")",
-          "text": "Wäscht alles rohe Kupfer in deiner Tasche. Gewaschen ist 1,2-mal so viel wert wie roh.",
+          "punkt": "The command",
+          "code": "item.wash(\"Copper\");",
+          "markiere": "item.wash(\"Copper\")",
+          "text": "Washes all the raw copper in your bag. Washed is worth 1.2 times as much as raw.",
           "dauer": 4.0
         },
         {
-          "punkt": "Nur ein paar",
-          "code": "item.wash(\"Kupfer\", 2);",
+          "punkt": "Only a few",
+          "code": "item.wash(\"Copper\", 2);",
           "markiere": "2",
-          "text": "Mit einer Zahl wäschst du genau so viele Stück. Ohne Zahl nimmt er alles, was gerade passt.",
+          "text": "With a number you wash exactly that many pieces. Without a number it takes everything that fits.",
           "dauer": 4.0
         },
         {
-          "punkt": "Sauberer wird es auch",
-          "markiere": "\"Kupfer\"",
-          "text": "Waschen hebt die Reinheit um 10 Punkte, und es dauert nur 0,6 Sekunden pro Stück. Es geht aber nur aus roh heraus.",
+          "punkt": "It gets cleaner too",
+          "markiere": "\"Copper\"",
+          "text": "Washing lifts the purity by 10 points, and it only takes 0.6 seconds per piece. But it only works from raw.",
           "dauer": 5.0
         }
       ],
       "siehe_auch": [
-        "Verarbeiten - Überblick",
+        "Processing - overview",
         "item.clean(...)",
         "item.smelt(...)"
       ],
-      "unter": "Verarbeiten - Überblick"
+      "unter": "Processing - overview"
     },
     {
       "kategorie": "functions",
       "titel": "item.smelt(...)",
       "braucht": "smelt",
-      "kurz": "Schmelzen: in den Ofen damit.",
+      "kurz": "Smelting: into the furnace with it.",
       "schritte": [
         {
-          "punkt": "Der Befehl",
-          "code": "item.smelt(\"Kupfer\");",
-          "markiere": "item.smelt(\"Kupfer\")",
-          "text": "Schmilzt Kupfer im Ofen. Geschmolzen ist doppelt so viel wert wie roh - dafür sinkt die Reinheit um 5 Punkte.",
+          "punkt": "The command",
+          "code": "item.smelt(\"Copper\");",
+          "markiere": "item.smelt(\"Copper\")",
+          "text": "Melts copper in the furnace. Smelted is worth twice as much as raw - but the purity drops by 5 points.",
           "dauer": 4.5
         },
         {
-          "punkt": "Woraus es geht",
-          "code": "item.smelt(\"Kupfer\", 3);",
+          "punkt": "What it works from",
+          "code": "item.smelt(\"Copper\", 3);",
           "markiere": "3",
-          "text": "Schmelzen geht aus roh, gewaschen und gepresst. Mit einer Zahl nimmst du nur so viele Stück - das dauert 1,5 Sekunden pro Stück.",
+          "text": "Smelting works from raw, washed and pressed. With a number you take only that many pieces - that takes 1.5 seconds each.",
           "dauer": 5.0
         },
         {
-          "punkt": "Danach geht es weiter",
-          "code": "item.smelt(\"Kupfer\");\nitem.cast(\"Kupfer\");",
-          "markiere": "item.cast(\"Kupfer\")",
-          "text": "Aus geschmolzen wird gegossen, gehärtet oder legiert. Gießen geht nur aus geschmolzen - deshalb kommt der Ofen zuerst.",
+          "punkt": "It goes on from there",
+          "code": "item.smelt(\"Copper\");\nitem.cast(\"Copper\");",
+          "markiere": "item.cast(\"Copper\")",
+          "text": "From smelted comes cast, hardened or alloyed. Casting only works from smelted - that is why the furnace comes first.",
           "dauer": 5.5
         }
       ],
       "siehe_auch": [
-        "Verarbeiten - Überblick",
+        "Processing - overview",
         "item.cast(...)",
         "item.alloy(...)"
       ],
-      "unter": "Verarbeiten - Überblick"
+      "unter": "Processing - overview"
     },
     {
       "kategorie": "functions",
       "titel": "item.cast(...)",
       "braucht": "cast",
-      "kurz": "Gießen: flüssiges Metall in eine Form.",
+      "kurz": "Casting: liquid metal into a mould.",
       "schritte": [
         {
-          "punkt": "Der Befehl",
-          "code": "item.cast(\"Kupfer\");",
-          "markiere": "item.cast(\"Kupfer\")",
-          "text": "Gießt geschmolzenes Kupfer in eine Form. Gegossen ist 2,8-mal so viel wert wie roh.",
+          "punkt": "The command",
+          "code": "item.cast(\"Copper\");",
+          "markiere": "item.cast(\"Copper\")",
+          "text": "Pours smelted copper into a mould. Cast is worth 2.8 times as much as raw.",
           "dauer": 4.0
         },
         {
-          "punkt": "Erst der Ofen",
-          "code": "item.smelt(\"Kupfer\");\nitem.cast(\"Kupfer\");",
-          "markiere": "item.smelt(\"Kupfer\")",
-          "text": "Gießen geht nur aus geschmolzen heraus. Ohne Ofen vorher passiert gar nichts.",
+          "punkt": "The furnace first",
+          "code": "item.smelt(\"Copper\");\nitem.cast(\"Copper\");",
+          "markiere": "item.smelt(\"Copper\")",
+          "text": "Casting only works from smelted. Without the furnace first nothing happens at all.",
           "dauer": 4.5
         },
         {
-          "punkt": "Und dann?",
-          "code": "item.smelt(\"Kupfer\");\nitem.cast(\"Kupfer\");\nitem.polish(\"Kupfer\");",
-          "markiere": "item.polish(\"Kupfer\")",
-          "text": "Aus gegossen geht es zu poliert, gehärtet oder gereinigt weiter. Die Reinheit bleibt beim Gießen gleich.",
+          "punkt": "And then?",
+          "code": "item.smelt(\"Copper\");\nitem.cast(\"Copper\");\nitem.polish(\"Copper\");",
+          "markiere": "item.polish(\"Copper\")",
+          "text": "From cast it goes on to polished, hardened or cleaned. Casting leaves the purity unchanged.",
           "dauer": 5.0
         }
       ],
@@ -638,65 +663,65 @@
         "item.polish(...)",
         "item.harden(...)"
       ],
-      "unter": "Verarbeiten - Überblick"
+      "unter": "Processing - overview"
     },
     {
       "kategorie": "functions",
       "titel": "item.clean(...)",
       "braucht": "clean",
-      "kurz": "Reinigen: der große Sprung bei der Reinheit.",
+      "kurz": "Cleaning: the big jump in purity.",
       "schritte": [
         {
-          "punkt": "Der Befehl",
-          "code": "item.clean(\"Kupfer\");",
-          "markiere": "item.clean(\"Kupfer\")",
-          "text": "Reinigen holt den Dreck heraus: die Reinheit steigt um 18 Punkte. Nur Veredeln schafft mehr.",
+          "punkt": "The command",
+          "code": "item.clean(\"Copper\");",
+          "markiere": "item.clean(\"Copper\")",
+          "text": "Cleaning gets the dirt out: the purity rises by 18 points. Only refining does more.",
           "dauer": 4.5
         },
         {
-          "punkt": "Fast immer möglich",
-          "markiere": "\"Kupfer\"",
-          "text": "Es geht aus vier Zuständen heraus: roh, gewaschen, gegossen und gepresst. Du kannst also fast jederzeit reinigen.",
+          "punkt": "Possible almost always",
+          "markiere": "\"Copper\"",
+          "text": "It works from four states: raw, washed, cast and pressed. So you can clean almost any time.",
           "dauer": 5.0
         },
         {
-          "punkt": "Der kurze Weg nach oben",
-          "code": "item.clean(\"Kupfer\");\nitem.refine(\"Kupfer\");",
-          "markiere": "item.refine(\"Kupfer\")",
-          "text": "Gereinigt ist 2,4-mal so viel wert wie roh - und von dort geht es direkt zum Veredeln, dem teuersten Zustand.",
+          "punkt": "The short way up",
+          "code": "item.clean(\"Copper\");\nitem.refine(\"Copper\");",
+          "markiere": "item.refine(\"Copper\")",
+          "text": "Cleaned is worth 2.4 times as much as raw - and from there it goes straight to refining, the most expensive state.",
           "dauer": 5.5
         }
       ],
       "siehe_auch": [
         "item.wash(...)",
-        "Zustände und Reinheit"
+        "States and purity"
       ],
-      "unter": "Verarbeiten - Überblick"
+      "unter": "Processing - overview"
     },
     {
       "kategorie": "functions",
       "titel": "item.polish(...)",
       "braucht": "polish",
-      "kurz": "Polieren: bis es glänzt.",
+      "kurz": "Polishing: until it shines.",
       "schritte": [
         {
-          "punkt": "Der Befehl",
-          "code": "item.polish(\"Diamant\");",
-          "markiere": "item.polish(\"Diamant\")",
-          "text": "Poliert einen Block, bis er glänzt. Poliert ist 4,5-mal so viel wert wie roh.",
+          "punkt": "The command",
+          "code": "item.polish(\"Diamond\");",
+          "markiere": "item.polish(\"Diamond\")",
+          "text": "Polishes a block until it shines. Polished is worth 4.5 times as much as raw.",
           "dauer": 4.0
         },
         {
-          "punkt": "Nicht aus roh",
-          "markiere": "\"Diamant\"",
-          "text": "Polieren geht aus gegossen, gereinigt und gehärtet heraus. Einen rohen Block kannst du nicht polieren.",
+          "punkt": "Not from raw",
+          "markiere": "\"Diamond\"",
+          "text": "Polishing works from cast, cleaned and hardened. You cannot polish a raw block.",
           "dauer": 4.5
         },
         {
-          "punkt": "Beim Diamanten",
-          "code": "item.clean(\"Diamant\");\nitem.polish(\"Diamant\");",
-          "markiere": "item.clean(\"Diamant\")",
-          "text": "Also erst reinigen, dann polieren. Die Reinheit steigt dabei noch einmal um 8 Punkte.",
+          "punkt": "With a diamond",
+          "code": "item.clean(\"Diamond\");\nitem.polish(\"Diamond\");",
+          "markiere": "item.clean(\"Diamond\")",
+          "text": "So clean first, then polish. The purity rises by another 8 points in the process.",
           "dauer": 5.0
         }
       ],
@@ -705,32 +730,32 @@
         "item.refine(...)",
         "item.harden(...)"
       ],
-      "unter": "Verarbeiten - Überblick"
+      "unter": "Processing - overview"
     },
     {
       "kategorie": "functions",
       "titel": "item.harden(...)",
       "braucht": "harden",
-      "kurz": "Härten: hart machen im Feuer.",
+      "kurz": "Hardening: making it hard in the fire.",
       "schritte": [
         {
-          "punkt": "Der Befehl",
-          "code": "item.harden(\"Eisen\");",
-          "markiere": "item.harden(\"Eisen\")",
-          "text": "Härtet Eisen im Feuer. Gehärtet ist 3,4-mal so viel wert wie roh, die Reinheit sinkt um 4 Punkte.",
+          "punkt": "The command",
+          "code": "item.harden(\"Iron\");",
+          "markiere": "item.harden(\"Iron\")",
+          "text": "Hardens iron in the fire. Hardened is worth 3.4 times as much as raw, the purity drops by 4 points.",
           "dauer": 4.5
         },
         {
-          "punkt": "Nicht jedes Erz",
-          "markiere": "\"Eisen\"",
-          "text": "Härten geht aus geschmolzen, gegossen, gepresst und gereinigt heraus. Und nicht jedes Erz kann es: Gold zum Beispiel nicht.",
+          "punkt": "Not every ore",
+          "markiere": "\"Iron\"",
+          "text": "Hardening works from smelted, cast, pressed and cleaned. And not every ore can do it: gold, for example, cannot.",
           "dauer": 5.0
         },
         {
-          "punkt": "Ein guter Zwischenschritt",
-          "code": "item.smelt(\"Eisen\");\nitem.harden(\"Eisen\");\nitem.refine(\"Eisen\");",
-          "markiere": "item.refine(\"Eisen\")",
-          "text": "Von gehärtet geht es weiter zu poliert oder veredelt. So kommst du beim Eisen ganz nach oben.",
+          "punkt": "A good middle step",
+          "code": "item.smelt(\"Iron\");\nitem.harden(\"Iron\");\nitem.refine(\"Iron\");",
+          "markiere": "item.refine(\"Iron\")",
+          "text": "From hardened it goes on to polished or refined. That is how you get iron all the way to the top.",
           "dauer": 5.5
         }
       ],
@@ -738,119 +763,119 @@
         "item.cast(...)",
         "item.polish(...)"
       ],
-      "unter": "Verarbeiten - Überblick"
+      "unter": "Processing - overview"
     },
     {
       "kategorie": "functions",
       "titel": "item.refine(...)",
       "braucht": "refine",
-      "kurz": "Veredeln: der letzte und beste Schritt.",
+      "kurz": "Refining: the last and best step.",
       "schritte": [
         {
-          "punkt": "Der Befehl",
+          "punkt": "The command",
           "code": "item.refine(\"Gold\");",
           "markiere": "item.refine(\"Gold\")",
-          "text": "Veredeln ist der letzte Schritt. Veredelt ist sechsmal so viel wert wie roh - mehr geht nicht.",
+          "text": "Refining is the last step. Refined is worth six times as much as raw - there is nothing above it.",
           "dauer": 4.5
         },
         {
-          "punkt": "Nur von weit oben",
+          "punkt": "Only from high up",
           "markiere": "\"Gold\"",
-          "text": "Es geht nur aus gereinigt, gehärtet oder poliert heraus. Rohes Gold kannst du nicht veredeln.",
+          "text": "It only works from cleaned, hardened or polished. You cannot refine raw gold.",
           "dauer": 4.5
         },
         {
-          "punkt": "Langsam, aber sauber",
+          "punkt": "Slow, but clean",
           "code": "item.clean(\"Gold\");\nitem.refine(\"Gold\");",
           "markiere": "item.clean(\"Gold\")",
-          "text": "Erst reinigen, dann veredeln. Veredeln dauert 3 Sekunden pro Stück - der langsamste Schritt. Dafür steigt die Reinheit um 25 Punkte.",
+          "text": "Clean first, then refine. Refining takes 3 seconds per piece - the slowest step. In return the purity rises by 25 points.",
           "dauer": 6.0
         }
       ],
       "siehe_auch": [
         "item.polish(...)",
-        "Zustände und Reinheit"
+        "States and purity"
       ],
-      "unter": "Verarbeiten - Überblick"
+      "unter": "Processing - overview"
     },
     {
       "kategorie": "functions",
       "titel": "item.press(...)",
       "braucht": "press",
-      "kurz": "Pressen: aus billig wird brauchbar.",
+      "kurz": "Pressing: cheap becomes useful.",
       "schritte": [
         {
-          "punkt": "Der Befehl",
-          "code": "item.press(\"Stein\");",
-          "markiere": "item.press(\"Stein\")",
-          "text": "Presst Stein zusammen. Gepresst ist 1,8-mal so viel wert wie roh.",
+          "punkt": "The command",
+          "code": "item.press(\"Stone\");",
+          "markiere": "item.press(\"Stone\")",
+          "text": "Presses stone together. Pressed is worth 1.8 times as much as raw.",
           "dauer": 4.0
         },
         {
-          "punkt": "Woraus es geht",
-          "markiere": "\"Stein\"",
-          "text": "Pressen geht aus roh, gewaschen und gereinigt heraus. Für billige Erze wie Stein ist es der schnellste Gewinn.",
+          "punkt": "What it works from",
+          "markiere": "\"Stone\"",
+          "text": "Pressing works from raw, washed and cleaned. For cheap ores like stone it is the fastest profit.",
           "dauer": 4.5
         },
         {
-          "punkt": "Wertvoller, nicht sauberer",
-          "code": "item.wash(\"Stein\");\nitem.press(\"Stein\");\nitem.sell(\"Stein\");",
-          "markiere": "item.press(\"Stein\")",
-          "text": "Die Reinheit sinkt beim Pressen um 3 Punkte. Wasch also vorher - das bringt 10 Punkte und gleicht es aus.",
+          "punkt": "Worth more, not cleaner",
+          "code": "item.wash(\"Stone\");\nitem.press(\"Stone\");\nitem.sell(\"Stone\");",
+          "markiere": "item.press(\"Stone\")",
+          "text": "Pressing drops the purity by 3 points. So wash first - that brings 10 points and makes up for it.",
           "dauer": 5.5
         }
       ],
       "siehe_auch": [
-        "Verarbeiten - Überblick",
+        "Processing - overview",
         "item.smelt(...)"
       ],
-      "unter": "Verarbeiten - Überblick"
+      "unter": "Processing - overview"
     },
     {
       "kategorie": "functions",
       "titel": "item.alloy(...)",
       "unter": "item",
       "braucht": "alloy",
-      "kurz": "Aus zwei Erzen wird ein neuer Stoff.",
+      "kurz": "Two ores become a new material.",
       "schritte": [
         {
-          "punkt": "Der Befehl",
+          "punkt": "The command",
           "code": "item.alloy(\"Bronze\");",
           "markiere": "item.alloy(\"Bronze\")",
-          "text": "Macht ein Stück Bronze. Bronze liegt nicht im Boden - sie entsteht nur hier.",
+          "text": "Makes one piece of bronze. Bronze does not lie in the ground - it only comes into being here.",
           "dauer": 4.0
         },
         {
-          "punkt": "Woraus Bronze ist",
+          "punkt": "What bronze is made of",
           "markiere": "\"Bronze\"",
-          "text": "Bronze braucht 2 Kupfer und 1 Eisen. Beide müssen geschmolzen sein, roh geht nicht.",
+          "text": "Bronze needs 2 copper and 1 iron. Both have to be smelted, raw does not work.",
           "dauer": 4.5
         },
         {
-          "punkt": "Erst schmelzen",
-          "code": "item.smelt(\"Kupfer\");\nitem.smelt(\"Eisen\");\nitem.alloy(\"Bronze\");",
-          "markiere": "item.smelt(\"Eisen\")",
-          "text": "Also erst beide Zutaten in den Ofen, dann legieren. Es läuft immer nur ein Auftrag - einer nach dem anderen.",
+          "punkt": "Smelt first",
+          "code": "item.smelt(\"Copper\");\nitem.smelt(\"Iron\");\nitem.alloy(\"Bronze\");",
+          "markiere": "item.smelt(\"Iron\")",
+          "text": "So both ingredients into the furnace first, then alloy. Only one job runs at a time - one after the other.",
           "dauer": 5.5
         },
         {
-          "punkt": "Mehrere Stück",
-          "code": "item.smelt(\"Kupfer\");\nitem.smelt(\"Eisen\");\nitem.alloy(\"Bronze\", 3);",
+          "punkt": "Several pieces",
+          "code": "item.smelt(\"Copper\");\nitem.smelt(\"Iron\");\nitem.alloy(\"Bronze\", 3);",
           "markiere": "3",
-          "text": "Die Zahl sagt, wie viele Stück du machen willst. Ohne Zahl macht er genau eins.",
+          "text": "The number says how many pieces you want to make. Without a number it makes exactly one.",
           "dauer": 4.5
         },
         {
-          "punkt": "Noch einmal legieren",
-          "code": "item.smelt(\"Gold\");\nitem.smelt(\"Silber\");\nitem.alloy(\"Elektrum\");\nitem.alloy(\"Weissgold\");",
+          "punkt": "Alloying again",
+          "code": "item.smelt(\"Gold\");\nitem.smelt(\"Silver\");\nitem.alloy(\"Electrum\");\nitem.alloy(\"Weissgold\");",
           "markiere": "item.alloy(\"Weissgold\")",
-          "text": "Ein legierter Stoff kann selbst Zutat sein: Elektrum und Silber ergeben Weissgold. Gold allein ist 70 wert, Weissgold 360.",
+          "text": "An alloy can itself be an ingredient: Electrum and Silver make White Gold. Gold alone is worth 70, White Gold 360.",
           "dauer": 6.5
         }
       ],
       "siehe_auch": [
         "item.canAlloy(...)",
-        "Legieren",
+        "Alloying",
         "item.smelt(...)",
         "if"
       ]
@@ -860,34 +885,34 @@
       "titel": "item.canAlloy(...)",
       "unter": "item",
       "braucht": "alloy",
-      "kurz": "Fragt vorher, ob die Zutaten reichen.",
+      "kurz": "Asks beforehand whether the ingredients are enough.",
       "schritte": [
         {
-          "punkt": "Der Befehl",
+          "punkt": "The command",
           "code": "item.canAlloy(\"Bronze\")",
           "markiere": "item.canAlloy(\"Bronze\")",
-          "text": "Fragt: wie viele Stück Bronze könnte ich gerade machen? Die Antwort ist eine Zahl.",
+          "text": "Asks: how many pieces of bronze could I make right now? The answer is a number.",
           "dauer": 4.0
         },
         {
-          "punkt": "Null heißt nein",
+          "punkt": "Zero means no",
           "code": "if (item.canAlloy(\"Bronze\"))\n{\n    item.alloy(\"Bronze\");\n}",
           "markiere": "if",
-          "text": "0 heißt: es reicht nicht. Jede andere Zahl heißt ja. Deshalb passt die Frage direkt in ein if.",
+          "text": "0 means: not enough. Any other number means yes. That is why the question fits straight into an if.",
           "dauer": 5.0
         },
         {
-          "punkt": "Sonst etwas anderes tun",
-          "code": "if (item.canAlloy(\"Bronze\"))\n{\n    item.alloy(\"Bronze\");\n}\nelse\n{\n    item.smelt(\"Kupfer\");\n}",
-          "markiere": "item.smelt(\"Kupfer\")",
-          "text": "Reicht es nicht, schmilzt du eben nach. So wartet dein Programm nicht, sondern arbeitet weiter.",
+          "punkt": "Otherwise do something else",
+          "code": "if (item.canAlloy(\"Bronze\"))\n{\n    item.alloy(\"Bronze\");\n}\nelse\n{\n    item.smelt(\"Copper\");\n}",
+          "markiere": "item.smelt(\"Copper\")",
+          "text": "If it is not enough, you simply smelt some more. That way your program does not wait, it keeps working.",
           "dauer": 5.5
         },
         {
-          "punkt": "So viele wie möglich",
+          "punkt": "As many as possible",
           "code": "int n = item.canAlloy(\"Bronze\");\nitem.alloy(\"Bronze\", n);",
           "markiere": "int n = item.canAlloy(\"Bronze\")",
-          "text": "Du kannst die Zahl auch merken und genau so viele Stück machen, wie gerade gehen.",
+          "text": "You can also remember the number and make exactly as many pieces as are possible right now.",
           "dauer": 5.0
         }
       ],
@@ -901,39 +926,39 @@
       "kategorie": "kontrolle",
       "titel": "while",
       "braucht": "while",
-      "kurz": "Wiederholt etwas, solange die Antwort ja ist.",
+      "kurz": "Repeats something as long as the answer is yes.",
       "schritte": [
         {
-          "punkt": "Ohne Schleife",
+          "punkt": "Without a loop",
           "code": "block.mine();",
           "markiere": "block.mine()",
-          "text": "Diese Zeile baut einen Block ab. Einen. Dann ist dein Programm fertig.",
+          "text": "This line mines one block. One. Then your program is finished.",
           "dauer": 3.5
         },
         {
-          "punkt": "Mit while",
+          "punkt": "With while",
           "code": "while (true)\n{\n    block.mine();\n}",
           "markiere": "while (true)",
-          "text": "while heißt solange. In der Klammer steht true, und true heißt immer wahr. Also hört es nie auf.",
+          "text": "while means as long as. In the brackets stands true, and true means always true. So it never stops.",
           "dauer": 4.5
         },
         {
-          "punkt": "Der Rumpf",
+          "punkt": "The body",
           "markiere": "block.mine();",
-          "text": "Zwischen den geschweiften Klammern steht, was wiederholt wird. Das nennt man den Rumpf der Schleife.",
+          "text": "Between the curly braces stands what gets repeated. That is called the body of the loop.",
           "dauer": 4.5
         },
         {
-          "punkt": "Mit einer Bedingung",
+          "punkt": "With a condition",
           "code": "while (block.isThere())\n{\n    block.mine();\n}",
           "markiere": "block.isThere()",
-          "text": "Statt true darf da jede Frage stehen. Hier: mach weiter, solange der Block da ist. Ist er weg, hört die Schleife auf.",
+          "text": "Instead of true any question may stand there. Here: keep going as long as the block is there. Once it is gone, the loop stops.",
           "dauer": 5.5
         },
         {
-          "punkt": "Vorsicht",
+          "punkt": "Careful",
           "markiere": "while",
-          "text": "Eine Schleife dreht sehr schnell. Steht darin nichts, was Zeit kostet, dreht dein Programm sich nur im Kreis. Bau immer einen Befehl hinein.",
+          "text": "A loop spins very fast. If nothing in it costs time, your program just runs in circles. Always put a command inside.",
           "dauer": 5.5
         }
       ],
@@ -947,77 +972,77 @@
       "kategorie": "kontrolle",
       "titel": "for",
       "braucht": "for",
-      "kurz": "Wiederholt etwas eine feste Anzahl mal.",
+      "kurz": "Repeats something a fixed number of times.",
       "schritte": [
         {
-          "punkt": "Der Kopf",
+          "punkt": "The head",
           "code": "for (int i = 0; i < 10; i++)\n{\n    block.mine();\n}",
           "markiere": "for (int i = 0; i < 10; i++)",
-          "text": "for heißt für. In der Klammer stehen drei Sachen, mit Strichpunkt getrennt.",
+          "text": "for means for. In the brackets stand three things, separated by semicolons.",
           "dauer": 4.5
         },
         {
-          "punkt": "Der Zähler",
+          "punkt": "The counter",
           "markiere": "int i = 0",
-          "text": "i ist ein Zähler und fängt bei 0 an. Er merkt sich, wie oft die Schleife schon lief.",
+          "text": "i is a counter and starts at 0. It remembers how often the loop has already run.",
           "dauer": 4.5
         },
         {
-          "punkt": "Wie lange",
+          "punkt": "How long",
           "markiere": "i < 10",
-          "text": "Solange i kleiner als 10 ist, geht es weiter. Also zehnmal: 0, 1, 2 und so weiter bis 9.",
+          "text": "As long as i is smaller than 10 it keeps going. So ten times: 0, 1, 2 and so on up to 9.",
           "dauer": 4.5
         },
         {
-          "punkt": "Einen dazu",
+          "punkt": "One more",
           "markiere": "i++",
-          "text": "i++ heißt: eins dazu. Ohne das bliebe i für immer 0 und die Schleife hörte nie auf.",
+          "text": "i++ means: one more. Without it i would stay 0 forever and the loop would never stop.",
           "dauer": 4.5
         },
         {
-          "punkt": "Wofür man das braucht",
+          "punkt": "What it is good for",
           "code": "for (int i = 0; i < 10; i++)\n{\n    block.mine();\n}\nitem.sell();",
           "markiere": "item.sell()",
-          "text": "So baust du genau zehn Blöcke ab und verkaufst danach. Mit while müsstest du selbst mitzählen.",
+          "text": "That is how you mine exactly ten blocks and sell afterwards. With while you would have to count yourself.",
           "dauer": 5.0
         }
       ],
       "siehe_auch": [
         "while",
-        "Variablen"
+        "Variables"
       ]
     },
     {
       "kategorie": "kontrolle",
       "titel": "if",
       "braucht": "if",
-      "kurz": "Entscheidet, ob etwas gemacht wird.",
+      "kurz": "Decides whether something is done.",
       "schritte": [
         {
-          "punkt": "Die Frage",
+          "punkt": "The question",
           "code": "if (block.isThere())\n{\n    block.mine();\n}",
           "markiere": "if",
-          "text": "if heißt wenn. In der Klammer steht eine Frage, die nur ja oder nein kennt.",
+          "text": "if means if. In the brackets stands a question that only knows yes or no.",
           "dauer": 4.0
         },
         {
-          "punkt": "Was dann passiert",
+          "punkt": "What happens then",
           "markiere": "block.mine();",
-          "text": "Nur wenn die Antwort ja ist, wird das hier gemacht. Sonst überspringt dein Programm alles zwischen den Klammern.",
+          "text": "Only if the answer is yes is this done. Otherwise your program skips everything between the braces.",
           "dauer": 4.5
         },
         {
-          "punkt": "Zahlen vergleichen",
-          "code": "int geld = item.sell();\nif (geld > 100)\n{\n    print(\"gut gelaufen\");\n}",
-          "markiere": "geld > 100",
-          "text": "Du kannst auch rechnen: > ist größer, < ist kleiner, == ist gleich. Achtung, beim Vergleichen stehen zwei Gleichheitszeichen.",
+          "punkt": "Comparing numbers",
+          "code": "int money = item.sell();\nif (money > 100)\n{\n    print(\"went well\");\n}",
+          "markiere": "money > 100",
+          "text": "You can also do maths: > is greater, < is smaller, == is equal. Careful, comparing uses two equals signs.",
           "dauer": 6.0
         },
         {
-          "punkt": "Zwei Fragen auf einmal",
-          "code": "if (block.isThere() && item.has(\"Stein\"))\n{\n    block.mine();\n}",
+          "punkt": "Two questions at once",
+          "code": "if (block.isThere() && item.has(\"Stone\"))\n{\n    block.mine();\n}",
           "markiere": "&&",
-          "text": "&& heißt und: beides muss stimmen. || heißt oder - dann reicht eines von beiden.",
+          "text": "&& means and: both have to be true. || means or - then one of the two is enough.",
           "dauer": 5.0
         }
       ],
@@ -1031,33 +1056,33 @@
       "kategorie": "kontrolle",
       "titel": "else",
       "braucht": "else",
-      "kurz": "Was passiert, wenn die Antwort nein war.",
+      "kurz": "What happens when the answer was no.",
       "schritte": [
         {
-          "punkt": "Nur ein if",
+          "punkt": "Only an if",
           "code": "if (block.isThere())\n{\n    block.mine();\n}",
           "markiere": "if (block.isThere())",
-          "text": "Ist der Block da, wird abgebaut. Ist er weg, macht dein Programm gar nichts.",
+          "text": "If the block is there, it gets mined. If it is gone, your program does nothing at all.",
           "dauer": 4.5
         },
         {
-          "punkt": "Sonst",
+          "punkt": "Otherwise",
           "code": "if (block.isThere())\n{\n    block.mine();\n}\nelse\n{\n    item.sell();\n}",
           "markiere": "else",
-          "text": "else heißt sonst. Dieser Teil läuft genau dann, wenn die Antwort nein war.",
+          "text": "else means otherwise. This part runs exactly when the answer was no.",
           "dauer": 4.5
         },
         {
-          "punkt": "Immer genau einer",
+          "punkt": "Always exactly one",
           "markiere": "item.sell()",
-          "text": "Entweder das eine oder das andere. Nie beides, nie keines. So nutzt dein Roboter auch die Wartezeit, bis der Block nachwächst.",
+          "text": "Either one or the other. Never both, never neither. That way your robot uses the waiting time too, until the block regrows.",
           "dauer": 4.5
         },
         {
-          "punkt": "Noch eine Frage hinterher",
-          "code": "if (item.has(\"Gold\"))\n{\n    item.sell(\"Gold\");\n}\nelse if (item.has(\"Stein\"))\n{\n    item.sell(\"Stein\");\n}",
+          "punkt": "One more question after it",
+          "code": "if (item.has(\"Gold\"))\n{\n    item.sell(\"Gold\");\n}\nelse if (item.has(\"Stone\"))\n{\n    item.sell(\"Stone\");\n}",
           "markiere": "else if",
-          "text": "else if hängt noch eine Frage an. Sie wird nur gestellt, wenn die erste nein war.",
+          "text": "else if attaches one more question. It is only asked if the first one was no.",
           "dauer": 5.5
         }
       ],
@@ -1068,425 +1093,425 @@
     },
     {
       "kategorie": "kontrolle",
-      "titel": "Variablen",
+      "titel": "Variables",
       "braucht": "variables",
-      "kurz": "Ein Kästchen, in dem du dir etwas merkst.",
+      "kurz": "A little box where you remember something.",
       "schritte": [
         {
-          "punkt": "Anlegen",
-          "code": "int geld = 0;",
-          "markiere": "int geld = 0",
-          "text": "int heißt ganze Zahl. geld ist der Name des Kästchens. 0 ist das, was am Anfang darin liegt.",
+          "punkt": "Creating one",
+          "code": "int money = 0;",
+          "markiere": "int money = 0",
+          "text": "int means whole number. money is the name of the box. 0 is what is in it at the start.",
           "dauer": 4.5
         },
         {
-          "punkt": "Der Name",
-          "markiere": "geld",
-          "text": "Den Namen suchst du dir selbst aus. Nimm einen, der sagt, was drin ist - dann verstehst du deinen Code auch morgen noch.",
+          "punkt": "The name",
+          "markiere": "money",
+          "text": "You pick the name yourself. Take one that says what is inside - then you will still understand your code tomorrow.",
           "dauer": 4.5
         },
         {
-          "punkt": "Neu füllen",
-          "code": "int geld = 0;\ngeld = item.sell();",
-          "markiere": "geld = item.sell()",
-          "text": "Ein Gleichheitszeichen heißt: leg das hier hinein. Was vorher drin war, ist damit weg.",
+          "punkt": "Filling it again",
+          "code": "int money = 0;\nmoney = item.sell();",
+          "markiere": "money = item.sell()",
+          "text": "A single equals sign means: put this in here. Whatever was in there before is gone.",
           "dauer": 5.0
         },
         {
-          "punkt": "Dazuzählen",
-          "code": "int geld = 0;\ngeld = item.sell();\ngeld = geld + 10;",
-          "markiere": "geld = geld + 10",
-          "text": "Rechts wird gerechnet, links wieder hineingelegt. Aus 5 wird 15. Kürzer schreibt man das so: geld += 10;",
+          "punkt": "Adding to it",
+          "code": "int money = 0;\nmoney = item.sell();\nmoney = money + 10;",
+          "markiere": "money = money + 10",
+          "text": "The right side is calculated, the left side gets it put back in. 5 becomes 15. Shorter: money += 10;",
           "dauer": 5.5
         },
         {
-          "punkt": "Andere Sorten",
+          "punkt": "Other kinds",
           "code": "int stueck = 3;\nfloat preis = 1.5;\nbool fertig = false;",
           "markiere": "float preis = 1.5",
-          "text": "int für ganze Zahlen, float für Kommazahlen, bool für ja und nein. Die Sorte sagst du beim Anlegen.",
+          "text": "int for whole numbers, float for decimals, bool for yes and no. You state the kind when you create it.",
           "dauer": 5.5
         }
       ],
       "siehe_auch": [
-        "Eigene Funktionen",
+        "Your own functions",
         "for",
         "shared[...]"
       ]
     },
     {
       "kategorie": "kontrolle",
-      "titel": "Eigene Funktionen",
+      "titel": "Your own functions",
       "braucht": "functions",
-      "kurz": "Ein eigener Befehl, den du selbst baust.",
+      "kurz": "Your own command, built by you.",
       "schritte": [
         {
-          "punkt": "Das Grundgerüst",
+          "punkt": "The skeleton",
           "code": "int main()\n{\n    block.mine();\n}",
           "markiere": "int main()",
-          "text": "main ist die Funktion, in der dein Programm anfängt. Sie ist immer da und zählt nicht mit.",
+          "text": "main is the function where your program starts. It is always there and does not count.",
           "dauer": 4.5
         },
         {
-          "punkt": "Eine eigene bauen",
-          "code": "void abbauen()\n{\n    block.mine();\n}\n\nint main()\n{\n    abbauen();\n}",
-          "markiere": "void abbauen()",
-          "text": "void heißt: gibt nichts zurück. abbauen ist der Name, den du dir aussuchst. Die Klammern gehören dazu.",
+          "punkt": "Building your own",
+          "code": "void mineBlock()\n{\n    block.mine();\n}\n\nint main()\n{\n    mineBlock();\n}",
+          "markiere": "void mineBlock()",
+          "text": "void means: gives nothing back. mineBlock is the name you pick yourself. The brackets belong to it.",
           "dauer": 5.5
         },
         {
-          "punkt": "main gehört nach UNTEN",
+          "punkt": "main belongs at the BOTTOM",
           "markiere": "int main()",
-          "text": "Schau, wo main steht: ganz unten. C++ liest von oben nach unten und kennt immer nur das, was es schon gelesen hat. Deine Funktionen müssen also ÜBER main stehen.",
+          "text": "Look where main is: right at the bottom. C++ reads from top to bottom and only ever knows what it has already read. So your functions have to stand ABOVE main.",
           "dauer": 6.5
         },
         {
-          "punkt": "Andersherum geht es nicht",
-          "code": "int main()\n{\n    abbauen();\n}\n\nvoid abbauen()\n{\n    block.mine();\n}",
-          "markiere": "abbauen();",
-          "text": "So nicht: an dieser Stelle hat C++ das Wort abbauen noch nie gesehen. Es meckert dann \"kennt das Programm hier noch nicht\" - dreh die beiden Teile einfach um.",
+          "punkt": "The other way round does not work",
+          "code": "int main()\n{\n    mineBlock();\n}\n\nvoid mineBlock()\n{\n    block.mine();\n}",
+          "markiere": "mineBlock();",
+          "text": "Not like this: at this point C++ has never seen the word mineBlock. It complains \"is not known here yet\" - just swap the two parts around.",
           "dauer": 6.5
         },
         {
-          "punkt": "Aufrufen",
-          "markiere": "abbauen();",
-          "text": "So rufst du sie auf: der Name mit Klammern. Dann läuft alles ab, was du oben hineingeschrieben hast.",
+          "punkt": "Calling it",
+          "markiere": "mineBlock();",
+          "text": "That is how you call it: the name with brackets. Then everything you wrote up there runs.",
           "dauer": 5.0
         },
         {
-          "punkt": "Etwas mitgeben",
-          "code": "void abbauen(int wie_oft)\n{\n    for (int i = 0; i < wie_oft; i++)\n    {\n        block.mine();\n    }\n}\n\nint main()\n{\n    abbauen(5);\n}",
-          "markiere": "int wie_oft",
-          "text": "In die Klammer kannst du etwas hineingeben. Beim Aufruf sagst du die Zahl.",
+          "punkt": "Passing something in",
+          "code": "void mineBlock(int how_often)\n{\n    for (int i = 0; i < how_often; i++)\n    {\n        block.mine();\n    }\n}\n\nint main()\n{\n    mineBlock(5);\n}",
+          "markiere": "int how_often",
+          "text": "Into the brackets you can pass something in. When calling it you say the number.",
           "dauer": 6.0
         },
         {
-          "punkt": "Wozu das gut ist",
-          "markiere": "abbauen(5)",
-          "text": "Einmal aufschreiben, oft benutzen. Und wenn du etwas ändern willst, änderst du es nur an einer einzigen Stelle.",
+          "punkt": "What it is good for",
+          "markiere": "mineBlock(5)",
+          "text": "Write it once, use it often. And if you want to change something, you change it in one single place.",
           "dauer": 5.5
         }
       ],
       "siehe_auch": [
-        "Variablen",
-        "Klassen",
+        "Variables",
+        "Classes",
         "if"
       ]
     },
     {
       "kategorie": "kontrolle",
-      "titel": "Klassen",
+      "titel": "Classes",
       "braucht": "classes",
-      "kurz": "Ein selbst gebautes Ding mit eigenen Kästchen und Befehlen.",
+      "kurz": "A thing you build yourself, with its own boxes and commands.",
       "schritte": [
         {
-          "punkt": "Der Bauplan",
-          "code": "struct Zaehler\n{\n    int stand = 0;\n};",
-          "markiere": "struct Zaehler",
-          "text": "struct heißt Bauplan. Zaehler ist der Name. Dahinter steht, was so ein Ding alles hat.",
+          "punkt": "The blueprint",
+          "code": "struct Counter\n{\n    int value = 0;\n};",
+          "markiere": "struct Counter",
+          "text": "struct means blueprint. Counter is the name. Behind it stands everything such a thing has.",
           "dauer": 5.0
         },
         {
-          "punkt": "Ein Kästchen darin",
-          "markiere": "int stand = 0",
-          "text": "stand ist ein Kästchen, das zu jedem Zaehler gehört. Jedes Ding hat sein eigenes.",
+          "punkt": "A box inside it",
+          "markiere": "int value = 0",
+          "text": "value is a box that belongs to every Counter. Every thing has its own.",
           "dauer": 4.5
         },
         {
-          "punkt": "Ein Ding daraus machen",
-          "code": "struct Zaehler\n{\n    int stand = 0;\n};\n\nint main()\n{\n    Zaehler z;\n    z.stand = 5;\n}",
-          "markiere": "Zaehler z;",
-          "text": "Der Bauplan allein macht noch nichts. Erst hier entsteht wirklich ein Zähler, und der heißt z.",
+          "punkt": "Making a thing out of it",
+          "code": "struct Counter\n{\n    int value = 0;\n};\n\nint main()\n{\n    Counter c;\n    c.value = 5;\n}",
+          "markiere": "Counter c;",
+          "text": "The blueprint alone does nothing. Only here does a counter really come into being, and it is called c.",
           "dauer": 5.5
         },
         {
-          "punkt": "Der Punkt",
-          "markiere": "z.stand = 5",
-          "text": "Der Punkt heißt: das Kästchen stand von z. Genau wie bei block.mine() - block ist auch nur so ein Ding.",
+          "punkt": "The dot",
+          "markiere": "c.value = 5",
+          "text": "The dot means: the box value of c. Exactly like block.mine() - block is just such a thing too.",
           "dauer": 5.5
         },
         {
-          "punkt": "Ein eigener Befehl darin",
-          "code": "struct Zaehler\n{\n    int stand = 0;\n\n    void hoch()\n    {\n        stand = stand + 1;\n    }\n};\n\nint main()\n{\n    Zaehler z;\n    z.hoch();\n}",
-          "markiere": "void hoch()",
-          "text": "In den Bauplan darfst du auch Befehle schreiben. z.hoch() zählt dann eins hoch - das Kästchen stand kennt der Befehl von selbst.",
+          "punkt": "Your own command inside it",
+          "code": "struct Counter\n{\n    int value = 0;\n\n    void up()\n    {\n        stand = stand + 1;\n    }\n};\n\nint main()\n{\n    Counter c;\n    c.up();\n}",
+          "markiere": "void up()",
+          "text": "You may write commands into the blueprint too. c.up() then counts one up - the command knows the box value by itself.",
           "dauer": 6.5
         }
       ],
       "siehe_auch": [
-        "Eigene Funktionen",
-        "Variablen"
+        "Your own functions",
+        "Variables"
       ]
     },
     {
       "kategorie": "spiel",
-      "titel": "Erze",
-      "kurz": "Was im Boden steckt und wie du es erkennst.",
+      "titel": "Ores",
+      "kurz": "What is in the ground and how you recognise it.",
       "schritte": [
         {
-          "punkt": "Neun Erze",
-          "code": "Stein      ab Level 1     Wert 1\nKohle      ab Level 1     Wert 3\nGranit     ab Level 2     Wert 5\nKupfer     ab Level 2     Wert 8\nEisen      ab Level 3     Wert 14\nSilber     ab Level 5     Wert 30\nGold       ab Level 7     Wert 70\nSmaragd    ab Level 10    Wert 160\nDiamant    ab Level 13    Wert 400",
-          "markiere": "Stein",
-          "text": "Das sind alle Erze, die im Boden vorkommen. Der Wert sagt, was ein roher Block bringt.",
+          "punkt": "Nine ores",
+          "code": "Stone      from level 1     value 1\nCoal       from level 1     value 3\nGranite    from level 2     value 5\nCopper     from level 2     value 8\nIron       from level 3     value 14\nSilver     from level 5     value 30\nGold       from level 7     value 70\nEmerald    from level 10    value 160\nDiamond    from level 13    value 400",
+          "markiere": "Stone",
+          "text": "These are all the ores that occur in the ground. The value says what a raw block brings.",
           "dauer": 5.0
         },
         {
-          "punkt": "Dein Level entscheidet",
-          "markiere": "ab Level 13",
-          "text": "Am Anfang gibt es nur Stein und Kohle. Je höher dein Level, desto mehr Sorten kommen dazu - Diamant erst ab Level 13.",
+          "punkt": "Your level decides",
+          "markiere": "from level 13",
+          "text": "At the start there is only Stone and Coal. The higher your level, the more kinds come along - Diamond only from level 13.",
           "dauer": 5.5
         },
         {
-          "punkt": "Selten und langsam",
-          "markiere": "Wert 400",
-          "text": "Ein Diamant ist 400-mal so viel wert wie ein Stein. Dafür kommt er 150-mal seltener vor und braucht 3,5 Sekunden zum Abbauen.",
+          "punkt": "Rare and slow",
+          "markiere": "value 400",
+          "text": "A diamond is worth 400 times as much as a stone. In return it occurs 150 times more rarely and takes 3.5 seconds to mine.",
           "dauer": 6.0
         },
         {
-          "punkt": "Erkennen an der Farbe",
-          "code": "Stein     grau           Kohle     fast schwarz\nGranit    rosa-braun     Kupfer    orange\nEisen     hell-beige     Silber    fast weiss\nGold      gelb           Smaragd   gruen\nDiamant   hellblau",
-          "markiere": "hellblau",
-          "text": "Am Block steht kein Name. Du erkennst ihn an Farbe und Muster: Gold ist immer gelb gesprenkelt, Kohle fast schwarz.",
+          "punkt": "Telling them apart by colour",
+          "code": "Stone     grey           Coal      almost black\nGranite   pink-brown     Copper    orange\nIron      light beige    Silver    almost white\nGold      yellow         Emerald   green\nDiamond   light blue",
+          "markiere": "light blue",
+          "text": "There is no name on the block. You recognise it by colour and pattern: gold is always speckled yellow, coal almost black.",
           "dauer": 6.0
         },
         {
-          "punkt": "Nicht jedes kann alles",
-          "code": "Stein     roh gewaschen gereinigt poliert gepresst\nKupfer    roh gewaschen geschmolzen gegossen ...\nDiamant   roh gewaschen gereinigt poliert gehaertet",
-          "markiere": "Diamant",
-          "text": "Jedes Erz erlaubt nur bestimmte Zustände. Stein kann man pressen, aber nicht schmelzen. Einen Diamanten schmilzt man auch nicht.",
+          "punkt": "Not every one can do everything",
+          "code": "Stone     raw washed cleaned polished pressed\nCopper    raw washed smelted cast ...\nDiamond   raw washed cleaned polished hardened",
+          "markiere": "Diamond",
+          "text": "Every ore allows only certain states. Stone can be pressed but not smelted. And you do not melt a diamond either.",
           "dauer": 6.0
         }
       ],
       "siehe_auch": [
-        "Zustände und Reinheit",
+        "States and purity",
         "block.mine()",
-        "Skilltree"
+        "Skill tree"
       ]
     },
     {
       "kategorie": "spiel",
-      "titel": "Zustände und Reinheit",
-      "kurz": "Zwei Zahlen entscheiden, was ein Block wert ist.",
+      "titel": "States and purity",
+      "kurz": "Two numbers decide what a block is worth.",
       "schritte": [
         {
-          "punkt": "Der Zustand",
-          "code": "roh           Faktor 1.0\ngewaschen     Faktor 1.2\ngepresst      Faktor 1.8\ngeschmolzen   Faktor 2.0\ngereinigt     Faktor 2.4\ngegossen      Faktor 2.8\ngehaertet     Faktor 3.4\npoliert       Faktor 4.5\nlegiert       Faktor 5.0\nveredelt      Faktor 6.0\noxidiert      Faktor 0.6",
-          "markiere": "veredelt",
-          "text": "Jeder Zustand hat einen Faktor. Veredelt bringt sechsmal so viel wie roh - oxidiert sogar weniger als roh.",
+          "punkt": "The state",
+          "code": "raw          factor 1.0\nwashed       factor 1.2\npressed      factor 1.8\nsmelted      factor 2.0\ncleaned      factor 2.4\ncast         factor 2.8\nhardened     factor 3.4\npolished     factor 4.5\nalloyed      factor 5.0\nrefined      factor 6.0\noxidized     factor 0.6",
+          "markiere": "refined",
+          "text": "Every state has a factor. Refined brings six times as much as raw - oxidized even less than raw.",
           "dauer": 6.0
         },
         {
-          "punkt": "Es ist ein Netz",
-          "code": "waschen     von: roh\npressen     von: roh, gewaschen, gereinigt\nreinigen    von: roh, gewaschen, gegossen, gepresst\nschmelzen   von: roh, gewaschen, gepresst\ngiessen     von: geschmolzen\nhaerten     von: geschmolzen, gegossen, gepresst, gereinigt\npolieren    von: gegossen, gereinigt, gehaertet\nveredeln    von: gereinigt, gehaertet, poliert",
-          "markiere": "giessen",
-          "text": "Das ist keine feste Kette, sondern ein Netz: aus einem Zustand führen mehrere Wege. Nur Gießen geht ausschließlich aus geschmolzen.",
+          "punkt": "It is a net",
+          "code": "wash      from: raw\npress     from: raw, washed, cleaned\nclean     from: raw, washed, cast, pressed\nsmelt     from: raw, washed, pressed\ncast      from: smelted\nharden    from: smelted, cast, pressed, cleaned\npolish    from: cast, cleaned, hardened\nrefine    from: cleaned, hardened, polished",
+          "markiere": "cast      from: smelted",
+          "text": "This is not a fixed chain but a net: several ways lead out of one state. Only casting works exclusively from smelted.",
           "dauer": 7.0
         },
         {
-          "punkt": "Die Reinheit",
-          "code": "Reinheit 0%      Preis mal 0.5\nReinheit 50%     Preis mal 1.0\nReinheit 100%    Preis mal 1.5",
-          "markiere": "Reinheit 100%",
-          "text": "Jeder Block hat außerdem eine Reinheit in Prozent. Ein ganz reiner Block bringt dreimal so viel wie ein ganz dreckiger.",
+          "punkt": "The purity",
+          "code": "purity 0%      price times 0.5\npurity 50%     price times 1.0\npurity 100%    price times 1.5",
+          "markiere": "purity 100%",
+          "text": "Every block also has a purity in percent. A perfectly pure block brings three times as much as a filthy one.",
           "dauer": 6.0
         },
         {
-          "punkt": "Sauberer und schmutziger",
-          "code": "veredeln    +25      pressen     -3\nreinigen    +18      haerten     -4\nwaschen     +10      schmelzen   -5\npolieren     +8      giessen      0",
+          "punkt": "Cleaner and dirtier",
+          "code": "refine    +25      press     -3\nclean     +18      harden    -4\nwash      +10      smelt     -5\npolish     +8      cast       0",
           "markiere": "+25",
-          "text": "Manche Schritte machen den Block sauberer, andere schmutziger. Schmelzen kostet 5 Punkte Reinheit, Veredeln bringt 25.",
+          "text": "Some steps make the block cleaner, others dirtier. Smelting costs 5 points of purity, refining brings 25.",
           "dauer": 6.0
         },
         {
-          "punkt": "Der ganze Preis",
-          "code": "Preis = Wert x Zustand x Reinheit x Geld pro Block",
-          "markiere": "Geld pro Block",
-          "text": "So rechnet das Spiel: der Grundwert des Erzes, mal dem Zustand, mal der Reinheit, mal dem Geld pro Block aus dem Skilltree.",
+          "punkt": "The whole price",
+          "code": "price = value x state x purity x money per block",
+          "markiere": "money per block",
+          "text": "This is how the game calculates: the base value of the ore, times the state, times the purity, times the money per block from the skill tree.",
           "dauer": 6.5
         }
       ],
       "siehe_auch": [
-        "Verarbeiten - Überblick",
-        "Legieren",
-        "Tasche und Verkaufen"
+        "Processing - overview",
+        "Alloying",
+        "Bag and selling"
       ]
     },
     {
       "kategorie": "spiel",
-      "titel": "Legieren",
-      "kurz": "Aus zwei Erzen wird ein neuer Stoff.",
+      "titel": "Alloying",
+      "kurz": "Two ores become a new material.",
       "schritte": [
         {
-          "punkt": "Drei Rezepte",
-          "code": "Bronze       2 Kupfer   + 1 Eisen     Wert 48\nElektrum     1 Gold     + 1 Silber    Wert 165\nWeissgold    1 Elektrum + 2 Silber    Wert 360",
+          "punkt": "Three recipes",
+          "code": "Bronze        2 Copper   + 1 Iron      value 48\nElectrum      1 Gold     + 1 Silver    value 165\nWhite Gold    1 Electrum + 2 Silver    value 360",
           "markiere": "Bronze",
-          "text": "Zwei verschiedene Erze werden ein neuer Stoff. Der ist mehr wert als seine Teile zusammen.",
+          "text": "Two different ores become a new material. It is worth more than its parts together.",
           "dauer": 5.5
         },
         {
-          "punkt": "Erst schmelzen",
-          "markiere": "Elektrum",
+          "punkt": "Smelt first",
+          "markiere": "Electrum",
           "treffer": 1,
-          "text": "Die Zutaten müssen geschmolzen sein. Roh nimmt das Rezept nicht - Legieren ist der letzte Schritt, nicht der erste.",
+          "text": "The ingredients have to be smelted. The recipe does not take them raw - alloying is the last step, not the first.",
           "dauer": 6.0
         },
         {
-          "punkt": "Legiertes wieder legieren",
-          "markiere": "Weissgold",
-          "text": "Ein neuer Stoff kann selbst Zutat sein: Elektrum und Silber ergeben Weissgold. Gold allein ist 70 wert, Weissgold 360.",
+          "punkt": "Alloying an alloy again",
+          "markiere": "White Gold",
+          "text": "A new material can itself be an ingredient: Electrum and Silver make White Gold. Gold alone is worth 70, White Gold 360.",
           "dauer": 6.0
         },
         {
-          "punkt": "Es muss zusammenpassen",
-          "code": "Kupfer     legierbar mit Eisen, Silber, Gold\nEisen      legierbar mit Kupfer, Silber\nSilber     legierbar mit Gold, Kupfer, Eisen, Elektrum\nGold       legierbar mit Silber, Kupfer\nDiamant    legierbar mit nichts",
-          "markiere": "Diamant",
-          "text": "Nicht alles passt zusammen. Stein, Kohle, Granit, Smaragd und Diamant lassen sich gar nicht legieren.",
+          "punkt": "It has to fit together",
+          "code": "Copper     alloyable with Iron, Silver, Gold\nIron       alloyable with Copper, Silver\nSilver     alloyable with Gold, Copper, Iron, Electrum\nGold       alloyable with Silver, Copper\nDiamond    alloyable with nothing",
+          "markiere": "Diamond",
+          "text": "Not everything fits together. Stone, Coal, Granite, Emerald and Diamond cannot be alloyed at all.",
           "dauer": 6.0
         },
         {
-          "punkt": "Der neue Stapel",
-          "code": "item.smelt(\"Gold\");\nitem.smelt(\"Silber\");\nitem.alloy(\"Elektrum\");",
-          "markiere": "item.alloy(\"Elektrum\")",
-          "text": "In der Tasche liegt danach ein eigener Stapel mit eigenem Namen und eigener Farbe. Verkaufen kannst du ihn wie jedes Erz.",
+          "punkt": "The new stack",
+          "code": "item.smelt(\"Gold\");\nitem.smelt(\"Silver\");\nitem.alloy(\"Electrum\");",
+          "markiere": "item.alloy(\"Electrum\")",
+          "text": "Afterwards there is a stack of its own in the bag, with its own name and its own colour. You can sell it like any ore.",
           "dauer": 6.0
         }
       ],
       "siehe_auch": [
         "item.alloy(...)",
-        "Zustände und Reinheit",
+        "States and purity",
         "item.smelt(...)"
       ],
       "braucht": "alloy"
     },
     {
       "kategorie": "spiel",
-      "titel": "Tasche und Verkaufen",
-      "kurz": "Wo dein Erz liegt und wie es zu Geld wird.",
+      "titel": "Bag and selling",
+      "kurz": "Where your ore sits and how it turns into money.",
       "schritte": [
         {
-          "punkt": "Stapel",
-          "code": "Kupfer   roh           12 Stueck   Reinheit 60%\nKupfer   geschmolzen    4 Stueck   Reinheit 55%\nGold     roh            1 Stueck   Reinheit 45%",
-          "markiere": "geschmolzen",
-          "text": "In der Tasche liegen Stapel. Gleiches Erz im gleichen Zustand kommt zusammen: Kupfer roh und Kupfer geschmolzen sind zwei Stapel.",
+          "punkt": "Stacks",
+          "code": "Copper   raw          12 pcs   purity 60%\nCopper   smelted       4 pcs   purity 55%\nGold     raw           1 pcs   purity 45%",
+          "markiere": "smelted",
+          "text": "The bag holds stacks. The same ore in the same state goes together: raw copper and smelted copper are two stacks.",
           "dauer": 6.0
         },
         {
-          "punkt": "Rechtsklick",
-          "markiere": "Kupfer",
+          "punkt": "Right-click",
+          "markiere": "Copper",
           "treffer": 1,
-          "text": "Klick auf der Tasche-Seite mit der rechten Maustaste auf einen Stapel. Dann siehst du, was mit ihm gerade geht.",
+          "text": "On the Bag page, right-click a stack. Then you see what works with it right now.",
           "dauer": 5.5
         },
         {
-          "punkt": "Von Hand verkaufen",
+          "punkt": "Selling by hand",
           "markiere": "Gold",
-          "text": "Verkaufen geht auch ohne Code: der Knopf oben rechts macht die ganze Tasche zu Geld.",
+          "text": "Selling works without code too: the button at the top right turns the whole bag into money.",
           "dauer": 5.0
         },
         {
-          "punkt": "Per Code verkaufen",
+          "punkt": "Selling by code",
           "code": "item.sell();\nitem.sell(\"Gold\");\nitem.sell(\"Gold\", 3);",
           "markiere": "item.sell(\"Gold\", 3)",
-          "text": "Im Programm hast du drei Möglichkeiten: alles, nur eine Sorte, oder genau so viele Stück.",
+          "text": "In a program you have three options: everything, only one kind, or exactly that many pieces.",
           "dauer": 6.0
         },
         {
-          "punkt": "Am Ende der Runde",
+          "punkt": "At the end of the round",
           "markiere": "item.sell();",
-          "text": "Ist die Runde vorbei, wird die Tasche sowieso verkauft. Was du bis dahin verarbeitet hast, zählt dann mit.",
+          "text": "Once the round is over the bag is sold anyway. Whatever you processed by then counts towards it.",
           "dauer": 5.5
         }
       ],
       "siehe_auch": [
         "item.sell()",
-        "Zustände und Reinheit",
-        "Runden"
+        "States and purity",
+        "Rounds"
       ]
     },
     {
       "kategorie": "spiel",
-      "titel": "Runden",
-      "kurz": "Vorbereitung, Lauf, Abrechnung - und wieder von vorn.",
+      "titel": "Rounds",
+      "kurz": "Preparation, run, summary - and round again.",
       "schritte": [
         {
-          "punkt": "Vorbereitung",
+          "punkt": "Preparation",
           "code": "Vorbereitung   ->   Lauf   ->   Abrechnung",
           "markiere": "Vorbereitung",
-          "text": "Hier steht die Welt still: nichts wird abgebaut, nichts wächst nach. Du kaufst im Skilltree, schreibst Code, schaust in die Tasche. Zeit spielt keine Rolle.",
+          "text": "Here the world stands still: nothing is mined, nothing regrows. You buy in the skill tree, write code, look in the bag. Time does not matter.",
           "dauer": 7.0
         },
         {
-          "punkt": "Lauf",
+          "punkt": "Run",
           "markiere": "Lauf",
-          "text": "Jetzt läuft die Uhr, und alles läuft mit: dein Programm, der Abbau, das Nachwachsen, das Verarbeiten. Eine Runde dauert 15 Minuten.",
+          "text": "Now the clock runs, and everything runs with it: your program, mining, regrowing, processing. A round lasts 15 minutes.",
           "dauer": 6.5
         },
         {
-          "punkt": "Abrechnung",
+          "punkt": "Summary",
           "markiere": "Abrechnung",
-          "text": "Ist die Zeit um, wird dein Programm gestoppt, der laufende Auftrag abgebrochen und die Tasche verkauft. Du siehst, was die Runde gebracht hat.",
+          "text": "When time is up your program is stopped, the running job cancelled and the bag sold. You see what the round brought in.",
           "dauer": 7.0
         },
         {
-          "punkt": "Und wieder von vorn",
+          "punkt": "And round again",
           "markiere": "->",
-          "text": "Danach beginnt die nächste Vorbereitung. Geld, Skilltree und Code bleiben dir - nur die Tasche ist leer.",
+          "text": "After that the next preparation begins. Money, skill tree and code stay with you - only the bag is empty.",
           "dauer": 6.0
         },
         {
-          "punkt": "Der allererste Block",
+          "punkt": "The very first block",
           "code": "Vorbereitung   ->   Lauf   ->   Abrechnung\n     ^\n     hier darfst du auf den Block klicken",
           "markiere": "hier darfst du auf den Block klicken",
-          "text": "In der Vorbereitung darfst du von Hand auf den Block klicken. Ganz am Anfang hast du weder Programm noch Geld - der erste Block muss so kommen.",
+          "text": "During preparation you may click the block by hand. At the very beginning you have neither a program nor money - the first block has to come that way.",
           "dauer": 7.0
         }
       ],
       "siehe_auch": [
-        "Tasche und Verkaufen",
-        "Skilltree"
+        "Bag and selling",
+        "Skill tree"
       ]
     },
     {
       "kategorie": "spiel",
-      "titel": "Skilltree",
-      "kurz": "Hier kaufst du dir C++ Stück für Stück frei.",
+      "titel": "Skill tree",
+      "kurz": "Here you unlock C++ piece by piece.",
       "schritte": [
         {
-          "punkt": "Nichts geht von allein",
+          "punkt": "Nothing happens by itself",
           "code": "block.mine();",
           "markiere": "block.mine()",
-          "text": "Am Anfang darfst du diese Zeile nicht schreiben. Jeder Befehl muss erst im Skilltree gekauft werden.",
+          "text": "At the start you are not allowed to write this line. Every command has to be bought in the skill tree first.",
           "dauer": 5.0
         },
         {
-          "punkt": "Kaufen",
+          "punkt": "Buying",
           "code": "Karte anklicken   ->   Doppelklick   ->   gekauft",
           "markiere": "Doppelklick",
-          "text": "Auf der Skilltree-Seite siehst du Karten. Ein Doppelklick kauft - wenn du genug Geld hast.",
+          "text": "On the Skills page you see cards. A double-click buys - if you have enough money.",
           "dauer": 5.5
         },
         {
-          "punkt": "Der Baum wächst mit",
+          "punkt": "The tree grows with you",
           "markiere": "gekauft",
-          "text": "Nach jedem Kauf kommen neue Karten dazu. Was dahinter liegt, wird erst beim Kauf ausgewürfelt: du siehst immer nur einen Schritt weiter.",
+          "text": "After every purchase new cards appear. What lies behind them is only rolled when you buy: you always see just one step ahead.",
           "dauer": 6.5
         },
         {
-          "punkt": "Eine Karte, eine Verwendung",
+          "punkt": "One card, one use",
           "code": "if gekauft         ->   1 Bedingung erlaubt\nBedingung+ dazu    ->   2 Bedingungen erlaubt",
           "markiere": "Bedingung+",
-          "text": "Wer if kauft, darf genau ein if schreiben. Mehr gibt es über die Plus-Karten: +1 Bedingung, +1 Schleife, +1 Konsole.",
+          "text": "Whoever buys if may write exactly one if. More comes from the plus cards: +1 condition, +1 loop, +1 console.",
           "dauer": 6.5
         },
         {
-          "punkt": "Das Wiki wächst auch",
+          "punkt": "The wiki grows too",
           "code": "Wiki   ->   Funktionen   ->   nur was du schon hast",
           "markiere": "nur was du schon hast",
-          "text": "Auch hier stehen nur die Befehle, die du schon gekauft hast. Jede neue Karte bringt neue Wiki-Seiten mit.",
+          "text": "Here too only the commands you have already bought are listed. Every new card brings new wiki pages with it.",
           "dauer": 6.0
         }
       ],
       "siehe_auch": [
-        "Runden",
-        "Erze"
+        "Rounds",
+        "Ores"
       ]
     }
   ]

@@ -198,8 +198,8 @@ unsigned StatesOf(const std::vector<std::string>& keys, const std::string& wer,
     {
         const int nummer = FindOreState(k);
         if (nummer < 0)
-            problems.push_back("data/erzgenerator.json - " + wer + ": Zustand \"" + k +
-                               "\" kenne ich nicht.");
+            problems.push_back("data/erzgenerator.json - " + wer + ": state \"" + k +
+                               "\" is not something I know.");
         else
             bits |= (1u << (unsigned)nummer);
     }
@@ -279,8 +279,8 @@ OreGenPlan LoadOreGenPlan()
     if (gen.valueScatter > 0.35f)
     {
         gen.problems.push_back(
-            "data/erzgenerator.json - wert.streuung ueber 0.35 waere zu viel: dann koennte ein "
-            "haeufiges Erz teurer werden als ein seltenes. Auf 0.35 begrenzt.");
+            "data/erzgenerator.json - wert.streuung above 0.35 would be too much: then a "
+            "common ore could get more expensive than a rare one. Capped at 0.35.");
         gen.valueScatter = 0.35f;
     }
 
@@ -341,8 +341,8 @@ OreGenPlan LoadOreGenPlan()
                 art.weight = 1;
             if (art.cores.empty())
             {
-                gen.problems.push_back("data/erzgenerator.json - Art \"" + art.name +
-                                       "\" hat keine Kernwoerter, sie faellt aus.");
+                gen.problems.push_back("data/erzgenerator.json - kind \"" + art.name +
+                                       "\" has no core words, it drops out.");
                 continue;
             }
 
@@ -352,10 +352,10 @@ OreGenPlan LoadOreGenPlan()
 
     if (gen.front.empty())
         gen.problems.push_back(
-            "data/erzgenerator.json - woerter.vorne ist leer, ohne das gibt es keine Namen.");
+            "data/erzgenerator.json - woerter.vorne is empty, without it there are no names.");
 
     if (gen.kinds.empty())
-        gen.problems.push_back("data/erzgenerator.json - es gibt keine einzige brauchbare Art.");
+        gen.problems.push_back("data/erzgenerator.json - there is not a single usable kind.");
 
     gen.active = (!gen.kinds.empty() && !gen.front.empty());
     return gen;
@@ -400,8 +400,8 @@ bool RollOneOre(OrePlan& ores, AlloyPlan& alloys, OreGenPlan& gen, int level, st
     if (name.empty())
     {
         gen.problems.push_back(
-            "data/erzgenerator.json - kein freier Name mehr zu finden. Mehr Woerter in die Listen "
-            "legen, dann geht es weiter.");
+            "data/erzgenerator.json - no free name left to find. Put more words into the lists "
+            "and it will carry on.");
         return false;
     }
 

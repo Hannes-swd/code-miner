@@ -68,12 +68,48 @@ void Chip(const char* text)
     ImGui::Dummy(ImVec2(ts.x + px * 2.0f, ts.y + py * 2.0f));
 }
 
+// Die Farben des Editors.
+//
+// Die mitgelieferte Helle passt nicht zum Rest: ihr Cursor ist ein schwarzer
+// Strich von einem Pixel, und die Auswahl ist ein dunkles Marineblau. Auf dem
+// hellen Grund sieht man den Cursor darin praktisch nicht - genau das war das
+// Problem. Hier steht deshalb eine eigene, aus derselben Palette wie alles
+// andere (theme.h): Auswahl und laufende Zeile nur zart getoent, der Cursor
+// dafuer im kraeftigen Orange.
+const TextEditor::Palette& CodePalette()
+{
+    static const TextEditor::Palette p = {{
+        IM_COL32(0x24, 0x21, 0x1D, 255),  // Default
+        IM_COL32(0x9A, 0x3E, 0xA8, 255),  // Keyword
+        IM_COL32(0x1B, 0x7A, 0x3E, 255),  // Number
+        IM_COL32(0xB0, 0x50, 0x18, 255),  // String
+        IM_COL32(0xB0, 0x50, 0x18, 255),  // Char literal
+        IM_COL32(0x6B, 0x64, 0x59, 255),  // Punctuation
+        IM_COL32(0x7A, 0x5A, 0x1E, 255),  // Preprocessor
+        IM_COL32(0x24, 0x21, 0x1D, 255),  // Identifier
+        IM_COL32(0x1F, 0x5F, 0x8B, 255),  // Known identifier
+        IM_COL32(0x7A, 0x5A, 0x1E, 255),  // Preproc identifier
+        IM_COL32(0x8A, 0x83, 0x78, 255),  // Comment
+        IM_COL32(0x8A, 0x83, 0x78, 255),  // Multi line comment
+        IM_COL32(0, 0, 0, 0),             // Background - die Karte ist schon weiss
+        IM_COL32(0xCC, 0x5B, 0x1E, 255),  // Cursor
+        IM_COL32(0xCC, 0x5B, 0x1E, 0x38),  // Selection
+        IM_COL32(0xC4, 0x3D, 0x2F, 0x30),  // Error marker
+        IM_COL32(0xCC, 0x5B, 0x1E, 0x22),  // Breakpoint = die laufende Zeile
+        IM_COL32(0xB3, 0xAC, 0xA1, 255),  // Line number
+        IM_COL32(0, 0, 0, 0x0C),          // Current line fill
+        IM_COL32(0, 0, 0, 0x06),          // Current line fill (inactive)
+        IM_COL32(0, 0, 0, 0),             // Current line edge
+    }};
+    return p;
+}
+
 }  // namespace
 
 Console::Console(int aId, ImVec2 aPos, bool withStarterCode) : id(aId), startPos(aPos)
 {
     editor.SetLanguageDefinition(TextEditor::LanguageDefinition::CPlusPlus());
-    editor.SetPalette(TextEditor::GetLightPalette());
+    editor.SetPalette(CodePalette());
     editor.SetTabSize(4);
     editor.SetShowWhitespaces(false);
 

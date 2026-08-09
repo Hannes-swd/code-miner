@@ -601,6 +601,12 @@ std::string Erklaere(const std::string& roh)
              code == "C2238")
         text = "Something is written wrong. Most often: the semicolon at the end of the "
                "line BEFORE is missing.";
+    // Ein Text ohne Ende. Der Compiler liest ueber das Zeilenende hinaus
+    // weiter und meldet "Zeilenvorschub in Konstante" - kein Mensch kommt von
+    // dieser Meldung auf das fehlende Anfuehrungszeichen.
+    else if (code == "C2001" || code == "C2015")
+        text = "Ein Text ohne Ende: irgendwo fehlt ein Anfuehrungszeichen. Text gehoert immer "
+               "zwischen zwei davon, item.wash(\"Stone\").";
     else if (code == "C1004" || code == "C1075")
         text = "A curly brace is missing. Every { needs its }.";
     else if (code == "C2181" || code == "C2059e")
