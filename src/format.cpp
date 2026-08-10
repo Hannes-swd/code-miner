@@ -5,28 +5,27 @@
 namespace
 {
 
-bool FileExists(const wchar_t* path)
+// clang-format suchen. Unter Windows liegt es bei Visual Studio dabei, unter
+// Linux kommt es aus dem PATH (Paket clang-format). Gefunden wird es einmal,
+// danach steht es fest.
+std::string FindClangFormat()
 {
-    return GetFileAttributesW(path) != INVALID_FILE_ATTRIBUTES;
-}
-
-// clang-format.exe suchen: erst die ueblichen Visual-Studio-Pfade, dann PATH.
-std::wstring FindClangFormat()
-{
-    static std::wstring cached;
-    static bool         searched = false;
+    static std::string cached;
+    static bool        searched = false;
     if (searched)
         return cached;
     searched = true;
 
-    static const wchar_t* kCandidates[] = {
-        L"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\Llvm\\bin\\clang-format.exe",
-        L"C:\\Program Files\\Microsoft Visual Studio\\2022\\Professional\\VC\\Tools\\Llvm\\bin\\clang-format.exe",
-        L"C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Tools\\Llvm\\bin\\clang-format.exe",
-        L"C:\\Program Files\\LLVM\\bin\\clang-format.exe",
+    static const char* kCandidates[] = {
+        "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/bin/clang-format.exe",
+        "C:/Program Files/Microsoft Visual Studio/2022/Professional/VC/Tools/Llvm/bin/"
+        "clang-format.exe",
+        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/Llvm/bin/"
+        "clang-format.exe",
+        "C:/Program Files/LLVM/bin/clang-format.exe",
     };
 
-    for (const wchar_t* c : kCandidates)
+    for (const char* c : kCandidates)
     {
         if (FileExists(c))
         {
@@ -35,10 +34,7 @@ std::wstring FindClangFormat()
         }
     }
 
-    wchar_t buf[MAX_PATH] = {};
-    if (SearchPathW(nullptr, L"clang-format.exe", nullptr, MAX_PATH, buf, nullptr) != 0)
-        cached = buf;
-
+    cached = FindInPath(std::string("clang-format") + ExeSuffix());
     return cached;
 }
 
@@ -46,8 +42,8 @@ std::wstring FindClangFormat()
 
 std::string FormatCode(const std::string& code)
 {
-    const std::wstring exe = FindClangFormat();
-    const std::wstring dir = WorkDir();
+    const std::string exe = FindClangFormat();
+    const std::string dir = WorkDir();
     if (exe.empty() || dir.empty())
         return code;
 
@@ -68,16 +64,14 @@ std::string FormatCode(const std::string& code)
         // bekommen eine Zeilenmarkierung.
         "InsertBraces: true\n";
 
-    const std::wstring stylePath = dir + L".clang-format";
-    const std::wstring srcPath   = dir + L"snippet.cpp";
+    const std::string stylePath = dir + ".clang-format";
+    const std::string srcPath   = dir + "snippet.cpp";
 
     if (!WriteTextFile(stylePath, kStyle) || !WriteTextFile(srcPath, code))
         return code;
 
     std::string out;
-    if (!RunCapture(L"\"" + exe + L"\" -style=file \"" + srcPath + L"\"", dir, out, nullptr,
-                    10000) ||
-        out.empty())
+    if (!RunCapture({exe, "-style=file", srcPath}, dir, out, nullptr, 10000) || out.empty())
         return code;
 
     return out;

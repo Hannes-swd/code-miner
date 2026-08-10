@@ -1,4 +1,5 @@
 #include "round.h"
+#include "datapath.h"
 
 #include "json.h"
 #include "theme.h"
@@ -11,7 +12,6 @@
 // ImGui in den Innereien - benutzt wird sie dort fuer BeginMainMenuBar selbst.
 #include "imgui_internal.h"
 
-#include <windows.h>
 
 #include <cstdio>
 #include <fstream>
@@ -22,27 +22,7 @@ namespace
 
 std::vector<std::string> Candidates()
 {
-    std::vector<std::string> out;
-
-    char        exe[MAX_PATH] = {0};
-    const DWORD len           = GetModuleFileNameA(nullptr, exe, MAX_PATH);
-    if (len > 0)
-    {
-        std::string       dir(exe, len);
-        const std::size_t cut = dir.find_last_of("\\/");
-        if (cut != std::string::npos)
-            dir.resize(cut);
-
-        out.push_back(dir + "\\..\\..\\data\\runden.json");  // build/Debug -> Projekt
-        out.push_back(dir + "\\..\\..\\..\\data\\runden.json");
-        out.push_back(dir + "\\..\\data\\runden.json");
-        out.push_back(dir + "\\data\\runden.json");
-        out.push_back(dir + "\\runden.json");
-    }
-
-    out.push_back("data/runden.json");
-    out.push_back("runden.json");
-    return out;
+    return DataPaths("runden.json");
 }
 
 // true/false lesen. Ein Zahlenwert waere hier ein Tippfehler und keine

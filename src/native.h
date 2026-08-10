@@ -8,8 +8,8 @@
 
 // Stufe 2: echtes C++.
 //
-// Der Code wird instrumentiert (ck::line), mit cl.exe zu einer run.exe
-// kompiliert und als eigener Prozess gestartet. Verstaendigung ueber zwei
+// Der Code wird instrumentiert (ck::line), mit dem C++-Compiler des Systems
+// (cl.exe bzw. g++) uebersetzt und als eigener Prozess gestartet. Verstaendigung ueber zwei
 // Pipes:
 //
 // ALLE Konsolen werden zu EINEM Programm zusammengesetzt. Deshalb sieht
@@ -42,10 +42,10 @@ public:
     // eigenen Thread erzeugt wird).
     struct Build
     {
-        bool         ok = false;
-        std::wstring exe;
-        std::wstring dir;
-        std::string  error;
+        bool        ok = false;
+        std::string exe;
+        std::string dir;
+        std::string error;
         int          errorConsole = 0;
         int          errorLine    = 0;
         std::string  combined;  // der zusammengesetzte Quelltext
@@ -86,13 +86,14 @@ private:
     // Beim Klicker drueckt man am Anfang immer wieder Play, ohne etwas zu
     // aendern. Dann wird nicht neu uebersetzt, sondern die fertige run.exe
     // noch einmal gestartet - das macht aus 400 ms ein sofort.
-    std::string  mLastCombined;
-    std::wstring mLastExe;
-    std::wstring mLastDir;
+    std::string mLastCombined;
+    std::string mLastExe;
+    std::string mLastDir;
 
-    HANDLE mProcess  = nullptr;
-    HANDLE mFromChild = nullptr;  // Leseende: Ausgabe des Kindes
-    HANDLE mToChild   = nullptr;  // Schreibende: Freigaben an das Kind
+    // Das laufende Programm des Spielers samt seinen beiden Roehren. Wie das
+    // auf dem jeweiligen System gemacht wird, steht in proc_win.cpp bzw.
+    // proc_posix.cpp - hier ist es einfach ein Kind.
+    Child mChild;
 
     std::string mPending;                             // angefangene Zeile aus der Pipe
     bool        mAwaitingGo     = false;              // Kind wartet auf Freigabe

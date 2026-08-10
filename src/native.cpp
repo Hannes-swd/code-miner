@@ -373,23 +373,12 @@ AtEnd g_atEnd;
 )KLICKER";
 
 // ---------------------------------------------------------------------------
-// Visual Studio finden
+// Den C++-Compiler finden
 // ---------------------------------------------------------------------------
-
-bool FileExists(const std::wstring& p)
-{
-    return GetFileAttributesW(p.c_str()) != INVALID_FILE_ATTRIBUTES;
-}
-
-std::wstring Widen(const std::string& s)
-{
-    if (s.empty())
-        return L"";
-    const int n = MultiByteToWideChar(CP_ACP, 0, s.data(), (int)s.size(), nullptr, 0);
-    std::wstring w(n, L'\0');
-    MultiByteToWideChar(CP_ACP, 0, s.data(), (int)s.size(), w.data(), n);
-    return w;
-}
+//
+// Das Spiel uebersetzt den Code des Spielers wirklich - es braucht also einen
+// echten Compiler. Unter Windows ist das cl.exe aus Visual Studio, unter Linux
+// g++. Gesucht wird einmal, das Ergebnis bleibt stehen.
 
 std::string Trim(const std::string& s)
 {
@@ -399,23 +388,34 @@ std::string Trim(const std::string& s)
     return s.substr(a, s.find_last_not_of(" \t\r\n") - a + 1);
 }
 
-std::wstring FindVcVars()
+struct Toolchain
 {
-    wchar_t pf[MAX_PATH] = {};
-    if (GetEnvironmentVariableW(L"ProgramFiles(x86)", pf, MAX_PATH) != 0)
+    std::string              compiler;  // voller Pfad zum Compiler
+    std::vector<std::string> env;       // "NAME=WERT", leer = eigene erben
+    std::string              problem;   // gefuellt, wenn nichts gefunden wurde
+};
+
+#ifdef _WIN32
+
+// vcvars64.bat setzt INCLUDE, LIB und PATH so, dass cl.exe arbeiten kann.
+// Ohne das findet der Compiler nicht einmal <string>.
+std::string FindVcVars()
+{
+    const char* pf = std::getenv("ProgramFiles(x86)");
+    if (pf != nullptr)
     {
-        const std::wstring vswhere =
-            std::wstring(pf) + L"\\Microsoft Visual Studio\\Installer\\vswhere.exe";
+        const std::string vswhere =
+            std::string(pf) + "/Microsoft Visual Studio/Installer/vswhere.exe";
         if (FileExists(vswhere))
         {
             std::string out;
-            if (RunCapture(L"\"" + vswhere + L"\" -latest -products * -property installationPath",
-                           L"", out, nullptr, 15000))
+            if (RunCapture({vswhere, "-latest", "-products", "*", "-property", "installationPath"},
+                           "", out, nullptr, 15000))
             {
-                const std::wstring root = Widen(Trim(out));
+                const std::string root = Trim(out);
                 if (!root.empty())
                 {
-                    const std::wstring bat = root + L"\\VC\\Auxiliary\\Build\\vcvars64.bat";
+                    const std::string bat = root + "/VC/Auxiliary/Build/vcvars64.bat";
                     if (FileExists(bat))
                         return bat;
                 }
@@ -423,26 +423,19 @@ std::wstring FindVcVars()
         }
     }
 
-    static const wchar_t* kFallback[] = {
-        L"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat",
-        L"C:\\Program Files\\Microsoft Visual Studio\\2022\\Professional\\VC\\Auxiliary\\Build\\vcvars64.bat",
-        L"C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Auxiliary\\Build\\vcvars64.bat",
+    static const char* kFallback[] = {
+        "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/Build/vcvars64.bat",
+        "C:/Program Files/Microsoft Visual Studio/2022/Professional/VC/Auxiliary/Build/"
+        "vcvars64.bat",
+        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/Build/"
+        "vcvars64.bat",
     };
-    for (const wchar_t* p : kFallback)
+    for (const char* p : kFallback)
         if (FileExists(p))
             return p;
 
-    return L"";
+    return std::string();
 }
-
-// Die Umgebung, die cl.exe braucht (INCLUDE, LIB, PATH ...). vcvars64.bat
-// einmal aufrufen, das Ergebnis merken - danach ist Kompilieren schnell.
-struct Toolchain
-{
-    std::vector<wchar_t> env;  // doppelt nullterminierter Block
-    std::wstring         clExe;
-    std::string          problem;
-};
 
 const Toolchain& GetToolchain()
 {
@@ -452,23 +445,25 @@ const Toolchain& GetToolchain()
         return tc;
     done = true;
 
-    const std::wstring vcvars = FindVcVars();
+    const std::string vcvars = FindVcVars();
     if (vcvars.empty())
     {
-        tc.problem = "Visual Studio 2022 wurde nicht gefunden (vcvars64.bat fehlt).";
+        tc.problem = "Visual Studio 2022 was not found (vcvars64.bat is missing).";
         return tc;
     }
 
+    // vcvars64.bat einmal aufrufen und die Umgebung abschreiben, die es setzt.
+    // "set" listet sie danach Zeile fuer Zeile auf.
     std::string out;
-    if (!RunCapture(L"cmd.exe /c \"\"" + vcvars + L"\" >nul 2>&1 && set\"", L"", out, nullptr,
+    if (!RunCapture({"cmd.exe", "/c", "\"" + vcvars + "\" >nul 2>&1 && set"}, "", out, nullptr,
                     60000))
     {
-        tc.problem = "vcvars64.bat konnte nicht ausgefuehrt werden.";
+        tc.problem = "vcvars64.bat could not be run.";
         return tc;
     }
 
-    std::wstring pathValue;
-    std::size_t  pos = 0;
+    std::string pathValue;
+    std::size_t pos = 0;
     while (pos < out.size())
     {
         std::size_t nl = out.find('\n', pos);
@@ -484,26 +479,85 @@ const Toolchain& GetToolchain()
         if (eq == std::string::npos || eq == 0)
             continue;
 
-        const std::wstring wide = Widen(entry);
-        tc.env.insert(tc.env.end(), wide.begin(), wide.end());
-        tc.env.push_back(L'\0');
+        tc.env.push_back(entry);
 
         if (_strnicmp(entry.c_str(), "PATH=", 5) == 0)
-            pathValue = Widen(entry.substr(5));
+            pathValue = entry.substr(5);
     }
-    tc.env.push_back(L'\0');
 
     // CreateProcess sucht Programme in der Umgebung des AUFRUFERS, nicht in der
-    // uebergebenen. Deshalb brauchen wir den vollen Pfad zu cl.exe.
-    wchar_t found[MAX_PATH] = {};
-    if (SearchPathW(pathValue.empty() ? nullptr : pathValue.c_str(), L"cl.exe", nullptr, MAX_PATH,
-                    found, nullptr) != 0)
-        tc.clExe = found;
-    else
-        tc.problem = "cl.exe wurde nicht gefunden.";
+    // uebergebenen. Deshalb brauchen wir den vollen Pfad zu cl.exe - und der
+    // steht in dem PATH, den vcvars gerade gesetzt hat.
+    std::size_t suche = 0;
+    while (suche <= pathValue.size() && tc.compiler.empty())
+    {
+        std::size_t cut = pathValue.find(';', suche);
+        if (cut == std::string::npos)
+            cut = pathValue.size();
+
+        std::string dir = pathValue.substr(suche, cut - suche);
+        suche           = cut + 1;
+
+        if (dir.empty())
+            continue;
+        if (dir.back() != '/' && dir.back() != '\\')
+            dir += '\\';
+
+        const std::string full = dir + "cl.exe";
+        if (FileExists(full))
+            tc.compiler = full;
+    }
+
+    if (tc.compiler.empty())
+        tc.problem = "cl.exe was not found.";
 
     return tc;
 }
+
+// Die Kommandozeile zum Uebersetzen. /utf-8: damit Umlaute in print("...")
+// richtig ankommen - der Editor liefert UTF-8, und ImGui erwartet ebenfalls
+// UTF-8. /FI haengt den Header davor, ohne eine Zeile im Code des Spielers zu
+// verbrauchen: die Zeilennummern bleiben also stehen.
+std::vector<std::string> CompileCommand(const Toolchain& tc, const std::string& header,
+                                        const std::string& exeName)
+{
+    return {tc.compiler,    "/nologo",       "/EHsc",   "/std:c++17",  "/W1", "/utf-8",
+            "/FI" + header, "/Fe" + exeName, "run.cpp", "klicker.cpp"};
+}
+
+#else  // Linux
+
+const Toolchain& GetToolchain()
+{
+    static Toolchain tc;
+    static bool      done = false;
+    if (done)
+        return tc;
+    done = true;
+
+    // g++ zuerst, clang++ als Ersatz. Beide koennen alles, was das Spiel
+    // braucht - und eines von beiden ist auf einem Rechner mit Entwicklerkram
+    // fast immer da.
+    tc.compiler = FindInPath("g++");
+    if (tc.compiler.empty())
+        tc.compiler = FindInPath("clang++");
+
+    if (tc.compiler.empty())
+        tc.problem = "No C++ compiler found. Install g++ (package build-essential).";
+
+    return tc;
+}
+
+// -include ist das Gegenstueck zu /FI: der Header kommt davor, ohne dass eine
+// Zeile im Code des Spielers dazukommt.
+std::vector<std::string> CompileCommand(const Toolchain& tc, const std::string& header,
+                                        const std::string& exeName)
+{
+    return {tc.compiler, "-std=c++17", "-O1",     "-include", header,
+            "-o",        exeName,      "run.cpp", "klicker.cpp"};
+}
+
+#endif
 
 // Zerlegt "W name wert" bzw. "A name differenz".
 // Getrennt wird am LETZTEN Leerzeichen, damit Namen mit Leerzeichen gehen.
@@ -533,6 +587,117 @@ bool SplitNameValue(const std::string& msg, std::string& name, int& value)
 // Uebersetzt wird ueber die Fehlernummer und nicht ueber den Text: cl.exe
 // spricht die Sprache von Windows, die Nummer ist ueberall dieselbe.
 
+// Das erste Wort in Anfuehrungszeichen. cl.exe benutzt je nach Sprache " oder
+// ', g++ die typographischen Zeichen U+2018/U+2019. Alle drei Sorten also.
+std::string FirstQuoted(const std::string& text)
+{
+    struct Paar
+    {
+        const char* auf;
+        const char* zu;
+    };
+    static const Paar kPaare[] = {{"\"", "\""}, {"'", "'"}, {"\xe2\x80\x98", "\xe2\x80\x99"}};
+
+    for (const Paar& p : kPaare)
+    {
+        const std::size_t len = std::strlen(p.auf);
+
+        const std::size_t a = text.find(p.auf);
+        if (a == std::string::npos)
+            continue;
+        const std::size_t b = text.find(p.zu, a + len);
+        if (b != std::string::npos && b > a + len)
+            return text.substr(a + len, b - a - len);
+    }
+    return std::string();
+}
+
+// Den Namen aufraeumen: der Compiler nennt die Innereien beim Namen
+// ("CkItem::wash"), der Spieler kennt nur wash.
+std::string KurzerName(const std::string& roh)
+{
+    std::string       wort = FirstQuoted(roh);
+    const std::size_t cut  = wort.rfind("::");
+    if (cut != std::string::npos)
+        wort = wort.substr(cut + 2);
+
+    // g++ haengt gern die ganze Signatur an: "wash(std::string)". Klammer weg.
+    const std::size_t klammer = wort.find('(');
+    if (klammer != std::string::npos)
+        wort = wort.substr(0, klammer);
+
+    return wort;
+}
+
+// Die Saetze selbst. Sie sind auf beiden Systemen dieselben - nur der Weg
+// dorthin ist ein anderer. Deshalb stehen sie hier einmal, und die beiden
+// Uebersetzer unten springen sie nur noch an.
+enum class Fehlerart
+{
+    Unbekannt,
+    NichtBekannt,      // Name gibt es (hier) nicht
+    KeinMitglied,      // das Ding kann das nicht
+    KeinPunkt,         // vor dem Punkt steht etwas Falsches
+    Schreibweise,      // Semikolon und Verwandtes
+    TextOhneEnde,      // Anfuehrungszeichen fehlt
+    KlammerFehlt,      // { ohne }
+    ElseOhneIf,
+    FunktionInFunktion,
+    FalscheAnzahl,     // zu viele/zu wenige Werte in den Klammern
+    FalscheArt,        // Zahl statt Text
+    GibtEsSchon,       // Name doppelt
+    IncludeFehlt,
+    KeinRumpf          // angekuendigt, aber nie geschrieben
+};
+
+std::string Satz(Fehlerart art, const std::string& was)
+{
+    switch (art)
+    {
+    case Fehlerart::NichtBekannt:
+        return was +
+               " is not known here yet. In C++ everything must ALREADY BE THERE before you "
+               "use it: your own functions belong above main(), not below it. "
+               "Otherwise: a typo?";
+    case Fehlerart::KeinMitglied:
+        return was +
+               " does not exist there. block can mine() and isThere(); everything about the bag "
+               "belongs to item - selling, washing, alloying.";
+    case Fehlerart::KeinPunkt:
+        return "What is in front of the dot cannot take a dot. You mean block or item.";
+    case Fehlerart::Schreibweise:
+        return "Something is written wrong. Most often: the semicolon at the end of the "
+               "line BEFORE is missing.";
+    case Fehlerart::TextOhneEnde:
+        return "A text without an end: somewhere a quotation mark is missing. Text always "
+               "belongs between two of them, item.wash(\"Stone\").";
+    case Fehlerart::KlammerFehlt:
+        return "A curly brace is missing. Every { needs its }.";
+    case Fehlerart::ElseOhneIf:
+        return "An else without an if. else belongs right after the } of the if.";
+    case Fehlerart::FunktionInFunktion:
+        return "A function inside a function does not work. Put it next to it, above main().";
+    case Fehlerart::FalscheAnzahl:
+        return was + " gets the wrong number of values in the brackets.";
+    case Fehlerart::FalscheArt:
+        return "At " + was +
+               " the brackets hold the wrong kind of value - a number where text belongs, "
+               "or the other way round. Text belongs in quotes: item.wash(\"Stone\").";
+    case Fehlerart::GibtEsSchon:
+        return was + " already exists. Every name may be used only once.";
+    case Fehlerart::IncludeFehlt:
+        return "An #include that does not exist. Check the spelling.";
+    case Fehlerart::KeinRumpf:
+        return was +
+               " was announced, but nowhere did you write what it should do. Missing "
+               "is the body with { }.";
+    default:
+        return std::string();
+    }
+}
+
+#ifdef _WIN32
+
 // Aus  "konsole1(7,5): error C3861: ..."  wird  C3861.
 std::string ErrorCode(const std::string& text)
 {
@@ -548,134 +713,109 @@ std::string ErrorCode(const std::string& text)
     return code;
 }
 
-// Das erste Wort in Anfuehrungszeichen. cl.exe benutzt je nach Sprache " oder '.
-std::string FirstQuoted(const std::string& text)
-{
-    const char zeichen[] = {'"', '\''};
-    for (const char q : zeichen)
-    {
-        const std::size_t a = text.find(q);
-        if (a == std::string::npos)
-            continue;
-        const std::size_t b = text.find(q, a + 1);
-        if (b != std::string::npos && b > a + 1)
-            return text.substr(a + 1, b - a - 1);
-    }
-    return std::string();
-}
-
+// Uebersetzt wird ueber die Fehlernummer und nicht ueber den Text: cl.exe
+// spricht die Sprache von Windows, die Nummer ist ueberall dieselbe.
 std::string Erklaere(const std::string& roh)
 {
     const std::string code = ErrorCode(roh);
     if (code.empty())
         return roh;
 
-    // cl.exe nennt die Innereien beim Namen: "CkItem::wash". Der Spieler kennt
-    // nur wash - alles vor dem letzten :: fliegt deshalb raus.
-    std::string       wort = FirstQuoted(roh);
-    const std::size_t cut  = wort.rfind("::");
-    if (cut != std::string::npos)
-        wort = wort.substr(cut + 2);
+    const std::string wort = KurzerName(roh);
+    const std::string was  = wort.empty() ? std::string("This") : ("\"" + wort + "\"");
 
-    const std::string was = wort.empty() ? std::string("This") : ("\"" + wort + "\"");
+    Fehlerart art = Fehlerart::Unbekannt;
 
-    std::string text;
-
-    // Kennt das Programm nicht. Der mit Abstand haeufigste Anfaengerfehler -
-    // und fast immer ist es die Reihenfolge.
     if (code == "C3861" || code == "C2065" || code == "C2064" || code == "C2062")
-        text = was +
-               " is not known here yet. In C++ everything must ALREADY BE THERE before you "
-               "use it: your own functions belong above main(), not below it. "
-               "Otherwise: a typo?";
-
-    // Gibt es bei diesem Ding nicht.
+        art = Fehlerart::NichtBekannt;
     else if (code == "C2039")
-        text = was +
-               " does not exist there. block can mine() and isThere(); everything about the bag "
-               "belongs to item - selling, washing, alloying.";
+        art = Fehlerart::KeinMitglied;
     else if (code == "C2228" || code == "C2227")
-        text = "What is in front of the dot cannot take a dot. You mean block or "
-               "item.";
-
-    // Schreibweise.
+        art = Fehlerart::KeinPunkt;
     else if (code == "C2143" || code == "C2144" || code == "C2146" || code == "C2059" ||
              code == "C2238")
-        text = "Something is written wrong. Most often: the semicolon at the end of the "
-               "line BEFORE is missing.";
-    // Ein Text ohne Ende. Der Compiler liest ueber das Zeilenende hinaus
-    // weiter und meldet "Zeilenvorschub in Konstante" - kein Mensch kommt von
-    // dieser Meldung auf das fehlende Anfuehrungszeichen.
+        art = Fehlerart::Schreibweise;
     else if (code == "C2001" || code == "C2015")
-        text = "Ein Text ohne Ende: irgendwo fehlt ein Anfuehrungszeichen. Text gehoert immer "
-               "zwischen zwei davon, item.wash(\"Stone\").";
+        art = Fehlerart::TextOhneEnde;
     else if (code == "C1004" || code == "C1075")
-        text = "A curly brace is missing. Every { needs its }.";
-    else if (code == "C2181" || code == "C2059e")
-        text = "An else without an if. else belongs right after the } of the if.";
+        art = Fehlerart::KlammerFehlt;
+    else if (code == "C2181")
+        art = Fehlerart::ElseOhneIf;
     else if (code == "C2601" || code == "C2447")
-        text = "A function inside a function does not work. Put it next to it, above main().";
-
-    // Klammern und Werte.
+        art = Fehlerart::FunktionInFunktion;
     else if (code == "C2660" || code == "C2661" || code == "C2198" || code == "C2668")
-        text = was + " gets the wrong number of values in the brackets.";
+        art = Fehlerart::FalscheAnzahl;
     else if (code == "C2664" || code == "C2440" || code == "C2446" || code == "C2665" ||
              code == "C2666")
-        text = "At " + was +
-               " the brackets hold the wrong kind of value - a number where text belongs, "
-               "or the other way round. Text belongs in quotes: item.wash(\"Stone\").";
+        art = Fehlerart::FalscheArt;
     else if (code == "C4430" || code == "C2371" || code == "C2086")
-        text = was + " already exists. Every name may be used only once.";
-
-    // Drumherum.
+        art = Fehlerart::GibtEsSchon;
     else if (code == "C1083")
-        text = "An #include that does not exist. Check the spelling.";
+        art = Fehlerart::IncludeFehlt;
     else if (code == "LNK2019" || code == "LNK2001")
-        text = was +
-               " was announced, but nowhere did you write what it should do. Missing "
-               "is the body with { }.";
+        art = Fehlerart::KeinRumpf;
 
+    const std::string text = Satz(art, was);
     if (text.empty())
         return roh;  // unbekannt: dann lieber das Original als gar nichts
 
     return text + "  (" + code + ")";
 }
 
-// Warum ein laufendes Programm mittendrin gestorben ist. Windows sagt das ueber
-// den Rueckgabewert des Prozesses - eine Zahl, die niemand auswendig kann.
-std::string AbsturzText(unsigned long code)
-{
-    switch (code)
-    {
-    case 0xC0000005ul:
-        return "The program reached somewhere that does not exist. Usually a pointer or "
-               "an index past the end of an array - e.g. numbers[10] with only 10 slots (0 to 9).";
-    case 0xC0000094ul:
-    case 0xC0000095ul:
-        return "Divided by zero. Before every / ask whether the divisor really is "
-               "not zero.";
-    case 0xC00000FDul:
-        return "The memory overflowed. Almost always a function calls itself endlessly - "
-               "is it missing its stopping if?";
-    case 0xC0000409ul:
-    case 3ul:
-        return "The program aborted itself. Usually an access out of bounds that C++ "
-               "caught just in time.";
-    default:
-        break;
-    }
+#else  // Linux
 
-    char buf[96];
-    std::snprintf(buf, sizeof(buf), "The program died halfway through (code 0x%08lX).", code);
-    return buf;
+// g++ hat keine Fehlernummern, es schreibt ganze Saetze. Uebersetzt wird
+// deshalb ueber Textstuecke, die sich zwischen den Versionen nicht aendern:
+// "was not declared in this scope" sagt gcc seit jeher so.
+std::string Erklaere(const std::string& roh)
+{
+    const std::string wort = KurzerName(roh);
+    const std::string was  = wort.empty() ? std::string("This") : ("\"" + wort + "\"");
+
+    auto hat = [&roh](const char* teil) { return roh.find(teil) != std::string::npos; };
+
+    Fehlerart art = Fehlerart::Unbekannt;
+
+    if (hat("was not declared in this scope") || hat("has not been declared") ||
+        hat("there are no arguments to") || hat("is not a member of"))
+        art = Fehlerart::NichtBekannt;
+    else if (hat("has no member named"))
+        art = Fehlerart::KeinMitglied;
+    else if (hat("request for member") || hat("which is of non-class type"))
+        art = Fehlerart::KeinPunkt;
+    else if (hat("missing terminating"))
+        art = Fehlerart::TextOhneEnde;
+    else if (hat("at end of input"))
+        art = Fehlerart::KlammerFehlt;
+    else if (hat("without a previous"))
+        art = Fehlerart::ElseOhneIf;
+    else if (hat("too few arguments") || hat("too many arguments"))
+        art = Fehlerart::FalscheAnzahl;
+    else if (hat("cannot convert") || hat("invalid conversion") || hat("no matching function"))
+        art = Fehlerart::FalscheArt;
+    else if (hat("redefinition of") || hat("redeclared"))
+        art = Fehlerart::GibtEsSchon;
+    else if (hat("No such file or directory"))
+        art = Fehlerart::IncludeFehlt;
+    else if (hat("undefined reference to"))
+        art = Fehlerart::KeinRumpf;
+    // Die Schreibweise ganz zuletzt: "expected" steht auch in Meldungen, die
+    // oben schon genauer erklaert sind.
+    else if (hat("expected"))
+        art = Fehlerart::Schreibweise;
+
+    const std::string text = Satz(art, was);
+    return text.empty() ? roh : text;
 }
 
-// Aus der Ausgabe von cl.exe die erste Fehlermeldung holen - samt der Konsole
-// und der Zeile, in der sie steht.
+#endif
+
+// Aus der Ausgabe des Compilers die erste Fehlermeldung holen - samt der
+// Konsole und der Zeile, in der sie steht.
 //
 // Moeglich ist das durch die #line-Anweisungen: der Compiler meldet Fehler
-// dadurch als  konsole2(7,5): error ...  statt als Zeile in der
-// zusammengesetzten Datei.
+// dadurch als  konsole2(7,5): error ...  (cl.exe) bzw.  konsole2:7:5: error:
+// ...  (g++), statt als Zeile in der zusammengesetzten Datei.
 void ParseCompilerError(const std::string& out, std::string& message, int& console, int& line)
 {
     std::size_t pos = 0;
@@ -693,21 +833,30 @@ void ParseCompilerError(const std::string& out, std::string& message, int& conso
             continue;
 
         const std::size_t open = entry.find("konsole");
-        if (open != std::string::npos)
-        {
-            console = std::atoi(entry.c_str() + open + 7);
-
-            const std::size_t paren = entry.find('(', open);
-            if (paren != std::string::npos)
-                line = std::atoi(entry.c_str() + paren + 1);
-
-            const std::size_t close = entry.find("): ", open);
-            message = Erklaere((close != std::string::npos) ? entry.substr(close + 3) : entry);
-        }
-        else
+        if (open == std::string::npos)
         {
             message = Erklaere(entry);
+            return;
         }
+
+        console = std::atoi(entry.c_str() + open + 7);
+
+        // Hinter dem Konsolennamen steht die Stelle: cl.exe schreibt sie als
+        // (zeile,spalte), g++ als :zeile:spalte. Gesucht wird also die Zahl
+        // direkt hinter dem Namen - egal, welches Zeichen davor steht.
+        std::size_t i = open + 7;
+        while (i < entry.size() && entry[i] >= '0' && entry[i] <= '9')
+            ++i;  // die Nummer der Konsole selbst ueberspringen
+
+        if (i < entry.size() && (entry[i] == '(' || entry[i] == ':'))
+            line = std::atoi(entry.c_str() + i + 1);
+
+        // Der Text dahinter. Beide Compiler leiten ihn mit ": error" ein.
+        const std::size_t fehler = entry.find(": error", open);
+        const std::size_t fatal  = entry.find(": fatal error", open);
+        const std::size_t start  = (fehler != std::string::npos) ? fehler : fatal;
+
+        message = Erklaere((start != std::string::npos) ? Trim(entry.substr(start + 2)) : entry);
         return;
     }
 
@@ -756,8 +905,8 @@ std::string CombineSources(const std::vector<SourceFile>& files)
 // ---------------------------------------------------------------------------
 
 static Native::Build CompileToExe(const std::vector<SourceFile>& files, int runId,
-                                  const std::string& lastCombined, const std::wstring& lastExe,
-                                  const std::wstring& lastDir);
+                                  const std::string& lastCombined, const std::string& lastExe,
+                                  const std::string& lastDir);
 
 Native::~Native()
 {
@@ -784,8 +933,8 @@ void Native::start(const std::vector<SourceFile>& files)
     const int  id      = ++counter;
 
     const std::string  lastCombined = mLastCombined;
-    const std::wstring lastExe      = mLastExe;
-    const std::wstring lastDir      = mLastDir;
+    const std::string lastExe      = mLastExe;
+    const std::string lastDir      = mLastDir;
 
     mBuild = std::async(std::launch::async, [files, id, lastCombined, lastExe, lastDir]
                         { return CompileToExe(files, id, lastCombined, lastExe, lastDir); });
@@ -836,23 +985,7 @@ RunState Native::state() const
 
 void Native::closeChild()
 {
-    if (mProcess != nullptr)
-    {
-        if (WaitForSingleObject(mProcess, 0) != WAIT_OBJECT_0)
-            TerminateProcess(mProcess, 1);
-        CloseHandle(mProcess);
-        mProcess = nullptr;
-    }
-    if (mFromChild != nullptr)
-    {
-        CloseHandle(mFromChild);
-        mFromChild = nullptr;
-    }
-    if (mToChild != nullptr)
-    {
-        CloseHandle(mToChild);
-        mToChild = nullptr;
-    }
+    mChild.close();
 }
 
 void Native::finish(const char* reason)
@@ -868,77 +1001,25 @@ void Native::finish(const char* reason)
 
 void Native::sendChild(const char* text)
 {
-    if (mToChild == nullptr)
-        return;
-    DWORD written = 0;
-    WriteFile(mToChild, text, (DWORD)std::strlen(text), &written, nullptr);
+    mChild.write(text);
 }
 
 bool Native::launch(const Build& build)
 {
-    SECURITY_ATTRIBUTES sa{sizeof(sa), nullptr, TRUE};
-
-    HANDLE outRead = nullptr, outWrite = nullptr;
-    HANDLE inRead = nullptr, inWrite = nullptr;
-
-    if (!CreatePipe(&outRead, &outWrite, &sa, 0))
-        return false;
-    if (!CreatePipe(&inRead, &inWrite, &sa, 0))
-    {
-        CloseHandle(outRead);
-        CloseHandle(outWrite);
-        return false;
-    }
-    SetHandleInformation(outRead, HANDLE_FLAG_INHERIT, 0);
-    SetHandleInformation(inWrite, HANDLE_FLAG_INHERIT, 0);
-
-    STARTUPINFOW si{};
-    si.cb         = sizeof(si);
-    si.dwFlags    = STARTF_USESTDHANDLES;
-    si.hStdOutput = outWrite;
-    si.hStdError  = outWrite;
-    si.hStdInput  = inRead;
-
-    std::wstring cmd = L"\"" + build.exe + L"\"";
-    cmd.push_back(L'\0');
-
-    PROCESS_INFORMATION pi{};
-    const BOOL          ok = CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, TRUE,
-                                            CREATE_NO_WINDOW, nullptr, build.dir.c_str(), &si, &pi);
-
-    CloseHandle(outWrite);
-    CloseHandle(inRead);
-
-    if (!ok)
-    {
-        CloseHandle(outRead);
-        CloseHandle(inWrite);
-        return false;
-    }
-
-    CloseHandle(pi.hThread);
-    mProcess   = pi.hProcess;
-    mFromChild = outRead;
-    mToChild   = inWrite;
-    return true;
+    return mChild.start(build.exe, build.dir);
 }
 
 void Native::pump(World& world, const OrePlan& ores, const CraftPlan& craft,
                   const AlloyPlan& alloys, const Limits& limits)
 {
-    if (mFromChild == nullptr)
+    if (!mChild.started())
         return;
 
-    DWORD available = 0;
-    while (PeekNamedPipe(mFromChild, nullptr, 0, nullptr, &available, nullptr) && available > 0)
-    {
-        char        buf[2048];
-        const DWORD want = (available < sizeof(buf)) ? available : (DWORD)sizeof(buf);
-        DWORD       got  = 0;
-        if (!ReadFile(mFromChild, buf, want, &got, nullptr) || got == 0)
-            break;
+    // Holen, was da ist - read() bleibt nicht stehen, wenn gerade nichts kommt.
+    char        buf[2048];
+    std::size_t got = 0;
+    while ((got = mChild.read(buf, sizeof(buf))) > 0)
         mPending.append(buf, got);
-    }
 
     std::size_t nl;
     while ((nl = mPending.find('\n')) != std::string::npos)
@@ -1158,13 +1239,12 @@ void Native::update(float dt, World& world, const OrePlan& ores, const CraftPlan
         }
     }
 
-    if (mProcess != nullptr && WaitForSingleObject(mProcess, 0) == WAIT_OBJECT_0)
+    if (mChild.started() && !mChild.alive())
     {
         pump(world, ores, craft, alloys, limits);
         if (mPhase == Phase::Running || mPhase == Phase::Paused)
         {
-            DWORD code = 0;
-            GetExitCodeProcess(mProcess, &code);
+            const unsigned long code = mChild.exitCode();
             if (code == 0)
             {
                 finish("Done.");
@@ -1182,7 +1262,7 @@ void Native::update(float dt, World& world, const OrePlan& ores, const CraftPlan
                 mPhase   = Phase::Failed;
                 mConsole = 0;
                 mLine    = 0;
-                mMsg     = AbsturzText(code);
+                mMsg     = CrashText(code);
                 closeChild();
             }
         }
@@ -1192,8 +1272,8 @@ void Native::update(float dt, World& world, const OrePlan& ores, const CraftPlan
 // ---------------------------------------------------------------------------
 
 static Native::Build CompileToExe(const std::vector<SourceFile>& files, int runId,
-                                  const std::string& lastCombined, const std::wstring& lastExe,
-                                  const std::wstring& lastDir)
+                                  const std::string& lastCombined, const std::string& lastExe,
+                                  const std::string& lastDir)
 {
     Native::Build build;
 
@@ -1218,13 +1298,12 @@ static Native::Build CompileToExe(const std::vector<SourceFile>& files, int runI
         return build;
     }
 
-    // Hat sich seit dem letzten Mal nichts geaendert? Dann die fertige
-    // run.exe einfach noch einmal starten. Beim Klicken am Spielanfang ist
+    // Hat sich seit dem letzten Mal nichts geaendert? Dann das fertige
+    // Programm einfach noch einmal starten. Beim Klicken am Spielanfang ist
     // genau das der Normalfall.
     build.combined = CombineSources(files);
 
-    if (!lastExe.empty() && build.combined == lastCombined &&
-        GetFileAttributesW(lastExe.c_str()) != INVALID_FILE_ATTRIBUTES)
+    if (!lastExe.empty() && build.combined == lastCombined && FileExists(lastExe))
     {
         build.ok     = true;
         build.reused = true;
@@ -1233,42 +1312,41 @@ static Native::Build CompileToExe(const std::vector<SourceFile>& files, int runI
         return build;
     }
 
-    const std::wstring base = WorkDir();
+    const std::string base = WorkDir();
     if (base.empty())
     {
         build.error = "No temp folder available.";
         return build;
     }
 
-    const std::wstring dir = base + L"r" + std::to_wstring(runId) + L"\\";
-    CreateDirectoryW(dir.c_str(), nullptr);
+    const std::string dir = base + "r" + std::to_string(runId) + Sep();
+    MakeDir(dir);
     build.dir = dir;
 
-    const std::wstring headerPath = dir + L"klicker.h";
+    const std::string headerPath = dir + "klicker.h";
 
     if (!WriteTextFile(headerPath, kKlickerHeader) ||
-        !WriteTextFile(dir + L"klicker.cpp", kKlickerSource) ||
-        !WriteTextFile(dir + L"run.cpp", build.combined))
+        !WriteTextFile(dir + "klicker.cpp", kKlickerSource) ||
+        !WriteTextFile(dir + "run.cpp", build.combined))
     {
         build.error = "Files could not be written.";
         return build;
     }
 
     const Toolchain& tc = GetToolchain();
-    if (tc.clExe.empty())
+    if (tc.compiler.empty())
     {
         build.error = tc.problem.empty() ? "The C++ compiler was not found." : tc.problem;
         return build;
     }
 
-    // /utf-8: damit Umlaute in print("...") richtig ankommen - der Editor
-    // liefert UTF-8, und ImGui erwartet ebenfalls UTF-8.
-    const std::wstring cmd = L"\"" + tc.clExe +
-                             L"\" /nologo /EHsc /std:c++17 /W1 /utf-8 /FI\"" + headerPath +
-                             L"\" /Fe\"run.exe\" run.cpp klicker.cpp";
+    // Der Name ist ohne Pfad, damit er auf beiden Systemen gleich aussieht -
+    // gebaut wird ohnehin im Arbeitsordner dir.
+    const std::string exeName = std::string("run") + ExeSuffix();
 
     std::string out;
-    const bool  ok = RunCapture(cmd, dir, out, tc.env.data(), 60000);
+    const bool  ok = RunCapture(CompileCommand(tc, headerPath, exeName), dir, out,
+                                tc.env.empty() ? nullptr : &tc.env, 60000);
 
     if (!ok)
     {
@@ -1277,6 +1355,6 @@ static Native::Build CompileToExe(const std::vector<SourceFile>& files, int runI
     }
 
     build.ok  = true;
-    build.exe = dir + L"run.exe";
+    build.exe = dir + exeName;
     return build;
 }

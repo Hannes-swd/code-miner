@@ -1,7 +1,8 @@
-// Code Klicker - Stufe 1
+// Code Miner
 //
-// Fenster (Win32) + Grafik (DirectX 11) + Oberflaeche (Dear ImGui).
-// Beides gehoert zu Windows, es wird also nichts weiter installiert.
+// Das Spiel selbst - plattformfrei. Fenster und Grafik stehen in platform.h
+// (Win32+DirectX 11 bzw. GLFW+OpenGL 3), alles, was mit Prozessen und Dateien
+// zu tun hat, in proc.h. Hier drin kommt kein #ifdef mehr vor.
 
 #include "alloy.h"
 #include "codecheck.h"
@@ -10,6 +11,7 @@
 #include "native.h"
 #include "ore.h"
 #include "oregen.h"
+#include "platform.h"
 #include "round.h"
 #include "save.h"
 #include "skillfile.h"
@@ -20,123 +22,10 @@
 #include "world.h"
 
 #include "imgui.h"
-#include "imgui_impl_dx11.h"
-#include "imgui_impl_win32.h"
-
-#include <d3d11.h>
 
 #include <algorithm>
 #include <memory>
 #include <vector>
-
-static ID3D11Device*           g_device      = nullptr;
-static ID3D11DeviceContext*    g_context     = nullptr;
-static IDXGISwapChain*         g_swapChain   = nullptr;
-static ID3D11RenderTargetView* g_renderTarget = nullptr;
-static UINT                    g_resizeW     = 0;
-static UINT                    g_resizeH     = 0;
-
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
-
-static void CreateRenderTarget()
-{
-    ID3D11Texture2D* backBuffer = nullptr;
-    g_swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer));
-    if (backBuffer)
-    {
-        g_device->CreateRenderTargetView(backBuffer, nullptr, &g_renderTarget);
-        backBuffer->Release();
-    }
-}
-
-static void CleanupRenderTarget()
-{
-    if (g_renderTarget)
-    {
-        g_renderTarget->Release();
-        g_renderTarget = nullptr;
-    }
-}
-
-static bool CreateDeviceD3D(HWND hwnd)
-{
-    DXGI_SWAP_CHAIN_DESC sd{};
-    sd.BufferCount                        = 2;
-    sd.BufferDesc.Width                   = 0;
-    sd.BufferDesc.Height                  = 0;
-    sd.BufferDesc.Format                  = DXGI_FORMAT_R8G8B8A8_UNORM;
-    sd.BufferDesc.RefreshRate.Numerator   = 60;
-    sd.BufferDesc.RefreshRate.Denominator = 1;
-    sd.Flags                              = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-    sd.BufferUsage                        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    sd.OutputWindow                       = hwnd;
-    sd.SampleDesc.Count                   = 1;
-    sd.Windowed                           = TRUE;
-    sd.SwapEffect                         = DXGI_SWAP_EFFECT_DISCARD;
-
-    const D3D_FEATURE_LEVEL levels[] = {D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0};
-    D3D_FEATURE_LEVEL       got      = D3D_FEATURE_LEVEL_11_0;
-
-    HRESULT hr = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0,
-                                               levels, 2, D3D11_SDK_VERSION, &sd, &g_swapChain,
-                                               &g_device, &got, &g_context);
-    if (hr == DXGI_ERROR_UNSUPPORTED)  // Rechner ohne Grafikkarte
-        hr = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, 0, levels, 2,
-                                           D3D11_SDK_VERSION, &sd, &g_swapChain, &g_device, &got,
-                                           &g_context);
-    if (FAILED(hr))
-        return false;
-
-    CreateRenderTarget();
-    return true;
-}
-
-static void CleanupDeviceD3D()
-{
-    CleanupRenderTarget();
-    if (g_swapChain)
-    {
-        g_swapChain->Release();
-        g_swapChain = nullptr;
-    }
-    if (g_context)
-    {
-        g_context->Release();
-        g_context = nullptr;
-    }
-    if (g_device)
-    {
-        g_device->Release();
-        g_device = nullptr;
-    }
-}
-
-static LRESULT WINAPI WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-    if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam))
-        return 1;
-
-    switch (msg)
-    {
-    case WM_SIZE:
-        if (wParam != SIZE_MINIMIZED)
-        {
-            g_resizeW = (UINT)LOWORD(lParam);
-            g_resizeH = (UINT)HIWORD(lParam);
-        }
-        return 0;
-
-    case WM_SYSCOMMAND:
-        if ((wParam & 0xfff0) == SC_KEYMENU)  // Alt-Menue nicht oeffnen
-            return 0;
-        break;
-
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        return 0;
-    }
-    return DefWindowProcW(hwnd, msg, wParam, lParam);
-}
 
 static void ApplyStyle()
 {
@@ -338,65 +227,15 @@ static void DrawMoney(const World& world, float rechts)
 
 // Consolas liegt auf jedem Windows - damit braucht das Programm keine
 // mitgelieferte Schriftdatei.
-static void LoadFont()
+int main(int, char**)
 {
-    ImGuiIO& io = ImGui::GetIO();
-
-    const char* path = "C:\\Windows\\Fonts\\consola.ttf";
-    FILE*       f    = nullptr;
-    if (fopen_s(&f, path, "rb") == 0 && f != nullptr)
-    {
-        fclose(f);
-        if (io.Fonts->AddFontFromFileTTF(path, 17.0f) != nullptr)
-        {
-            // Zweite, groessere Schrift. Der Skilltree zeichnet damit die
-            // Karten - herunterskaliert sieht das sauber aus, hochskaliert
-            // wuerde es verlaufen.
-            io.Fonts->AddFontFromFileTTF(path, 32.0f);
-            return;
-        }
-    }
-    io.Fonts->AddFontDefault();
-}
-
-int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
-{
-    ImGui_ImplWin32_EnableDpiAwareness();
-
-    WNDCLASSEXW wc{};
-    wc.cbSize        = sizeof(wc);
-    wc.style         = CS_CLASSDC;
-    wc.lpfnWndProc   = WndProc;
-    wc.hInstance     = hInstance;
-    wc.hCursor       = LoadCursorW(nullptr, (LPCWSTR)IDC_ARROW);
-    wc.lpszClassName = L"CodeKlickerWindow";
-    RegisterClassExW(&wc);
-
-    HWND hwnd = CreateWindowW(wc.lpszClassName, L"Code Klicker", WS_OVERLAPPEDWINDOW, 100, 100,
-                              1280, 800, nullptr, nullptr, hInstance, nullptr);
-    if (!hwnd)
+    if (!plat::Init("Code Miner", 1280, 800))
         return 1;
 
-    if (!CreateDeviceD3D(hwnd))
-    {
-        CleanupDeviceD3D();
-        UnregisterClassW(wc.lpszClassName, hInstance);
-        MessageBoxW(nullptr, L"DirectX 11 could not be started.", L"Code Klicker",
-                    MB_OK | MB_ICONERROR);
-        return 1;
-    }
-
-    ShowWindow(hwnd, SW_SHOWDEFAULT);
-    UpdateWindow(hwnd);
-
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    // Erst das Fenster, dann das Aussehen: ApplyStyle und die Schrift brauchen
+    // den ImGui-Kontext, den plat::Init aufmacht.
     ApplyStyle();
-    LoadFont();
-
-    ImGui_ImplWin32_Init(hwnd);
-    ImGui_ImplDX11_Init(g_device, g_context);
+    plat::LoadFont();
 
     // ---- Testschalter ----------------------------------------------------
     //
@@ -512,32 +351,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
         return files;
     };
 
-    bool running = true;
-    while (running)
+    while (plat::BeginFrame())
     {
-        MSG msg;
-        while (PeekMessageW(&msg, nullptr, 0u, 0u, PM_REMOVE))
-        {
-            TranslateMessage(&msg);
-            DispatchMessageW(&msg);
-            if (msg.message == WM_QUIT)
-                running = false;
-        }
-        if (!running)
-            break;
-
-        if (g_resizeW != 0 && g_resizeH != 0)
-        {
-            CleanupRenderTarget();
-            g_swapChain->ResizeBuffers(0, g_resizeW, g_resizeH, DXGI_FORMAT_UNKNOWN, 0);
-            g_resizeW = 0;
-            g_resizeH = 0;
-            CreateRenderTarget();
-        }
-
-        ImGui_ImplDX11_NewFrame();
-        ImGui_ImplWin32_NewFrame();
-        ImGui::NewFrame();
 
         const float dt = ImGui::GetIO().DeltaTime;
 
@@ -875,27 +690,13 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
             if (!consoles[i]->open)
                 consoles.erase(consoles.begin() + (long long)i);
 
-        ImGui::Render();
-
         // Der Seitengrund. Alles andere sind Karten darauf.
-        const ImVec4 grund   = ui::V(ui::kPage);
-        const float  clear[4] = {grund.x, grund.y, grund.z, 1.0f};
-        g_context->OMSetRenderTargets(1, &g_renderTarget, nullptr);
-        g_context->ClearRenderTargetView(g_renderTarget, clear);
-        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-
-        g_swapChain->Present(1, 0);  // mit VSync
+        plat::EndFrame(ui::V(ui::kPage));
     }
 
     SaveGame(world, tree, consoles, ores, alloys);
 
-    ImGui_ImplDX11_Shutdown();
-    ImGui_ImplWin32_Shutdown();
-    ImGui::DestroyContext();
-
-    CleanupDeviceD3D();
-    DestroyWindow(hwnd);
-    UnregisterClassW(wc.lpszClassName, hInstance);
+    plat::Shutdown();
     return 0;
 }
 

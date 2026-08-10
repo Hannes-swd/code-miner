@@ -1,8 +1,8 @@
 #include "ore.h"
+#include "datapath.h"
 
 #include "json.h"
 
-#include <windows.h>
 
 #include <cmath>
 #include <fstream>
@@ -75,27 +75,7 @@ namespace
 
 std::vector<std::string> Candidates()
 {
-    std::vector<std::string> out;
-
-    char        exe[MAX_PATH] = {0};
-    const DWORD len           = GetModuleFileNameA(nullptr, exe, MAX_PATH);
-    if (len > 0)
-    {
-        std::string       dir(exe, len);
-        const std::size_t cut = dir.find_last_of("\\/");
-        if (cut != std::string::npos)
-            dir.resize(cut);
-
-        out.push_back(dir + "\\..\\..\\data\\erze.json");  // build/Debug -> Projekt
-        out.push_back(dir + "\\..\\..\\..\\data\\erze.json");
-        out.push_back(dir + "\\..\\data\\erze.json");
-        out.push_back(dir + "\\data\\erze.json");
-        out.push_back(dir + "\\erze.json");
-    }
-
-    out.push_back("data/erze.json");
-    out.push_back("erze.json");
-    return out;
+    return DataPaths("erze.json");
 }
 
 // ---- Rauschen -------------------------------------------------------------

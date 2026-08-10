@@ -1,4 +1,5 @@
 #include "save.h"
+#include "proc.h"
 
 #include "alloy.h"
 #include "console.h"
@@ -6,7 +7,6 @@
 #include "skilltree.h"
 #include "world.h"
 
-#include <windows.h>
 
 #include <cstdio>
 #include <fstream>
@@ -20,16 +20,8 @@ namespace
 // man findet die Datei sofort, wenn man sie mal wegwerfen will.
 std::string SavePath()
 {
-    char        exe[MAX_PATH] = {0};
-    const DWORD len           = GetModuleFileNameA(nullptr, exe, MAX_PATH);
-    if (len == 0)
-        return "spielstand.txt";
-
-    std::string       dir(exe, len);
-    const std::size_t cut = dir.find_last_of("\\/");
-    if (cut != std::string::npos)
-        dir.resize(cut);
-    return dir + "\\spielstand.txt";
+    const std::string dir = ExeDir();
+    return dir.empty() ? std::string("spielstand.txt") : (dir + "/spielstand.txt");
 }
 
 // Zeilenweise lesen, ohne am Ende ein \r zu behalten (falls die Datei mal in

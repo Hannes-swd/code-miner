@@ -1,6 +1,6 @@
 #include "skillfile.h"
+#include "datapath.h"
 
-#include <windows.h>
 
 #include <cstdlib>
 #include <fstream>
@@ -103,27 +103,7 @@ std::string Where(int line)
 // kommt zuerst: wer dort etwas aendert, will es sofort im Spiel sehen.
 std::vector<std::string> Candidates()
 {
-    std::vector<std::string> out;
-
-    char        exe[MAX_PATH] = {0};
-    const DWORD len           = GetModuleFileNameA(nullptr, exe, MAX_PATH);
-    if (len > 0)
-    {
-        std::string       dir(exe, len);
-        const std::size_t cut = dir.find_last_of("\\/");
-        if (cut != std::string::npos)
-            dir.resize(cut);
-
-        out.push_back(dir + "\\..\\..\\data\\skills.txt");  // build/Debug -> Projekt
-        out.push_back(dir + "\\..\\..\\..\\data\\skills.txt");
-        out.push_back(dir + "\\..\\data\\skills.txt");
-        out.push_back(dir + "\\data\\skills.txt");  // neben der exe
-        out.push_back(dir + "\\skills.txt");
-    }
-
-    out.push_back("data/skills.txt");
-    out.push_back("skills.txt");
-    return out;
+    return DataPaths("skills.txt");
 }
 
 }  // namespace

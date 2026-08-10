@@ -1,4 +1,5 @@
 #include "wiki.h"
+#include "datapath.h"
 
 #include "craft.h"
 #include "json.h"
@@ -9,13 +10,6 @@
 #include "world.h"
 
 #include "imgui.h"
-
-// Ohne NOMINMAX macht windows.h aus min und max Makros - dann laesst sich
-// std::max hier nicht mehr aufrufen.
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
 
 #include <algorithm>
 #include <cmath>
@@ -385,27 +379,7 @@ std::vector<int> KnownOres(const World& world, const OrePlan& ores)
 // Spiel sehen.
 std::vector<std::string> Candidates()
 {
-    std::vector<std::string> out;
-
-    char        exe[MAX_PATH] = {0};
-    const DWORD len           = GetModuleFileNameA(nullptr, exe, MAX_PATH);
-    if (len > 0)
-    {
-        std::string       dir(exe, len);
-        const std::size_t cut = dir.find_last_of("\\/");
-        if (cut != std::string::npos)
-            dir.resize(cut);
-
-        out.push_back(dir + "\\..\\..\\data\\wiki.json");  // build/Debug -> Projekt
-        out.push_back(dir + "\\..\\..\\..\\data\\wiki.json");
-        out.push_back(dir + "\\..\\data\\wiki.json");
-        out.push_back(dir + "\\data\\wiki.json");
-        out.push_back(dir + "\\wiki.json");
-    }
-
-    out.push_back("data/wiki.json");
-    out.push_back("wiki.json");
-    return out;
+    return DataPaths("wiki.json");
 }
 
 // Das wievielte Vorkommen? hit zaehlt ab 1.
