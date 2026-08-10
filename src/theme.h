@@ -2,6 +2,9 @@
 
 #include "imgui.h"
 
+#include <cstdio>
+#include <string>
+
 // Die Farben des Spiels - an EINER Stelle.
 //
 // Vorher standen sie als IM_COL32(...) ueber fuenf Dateien verstreut, jede
@@ -81,6 +84,55 @@ inline void Bar(ImDrawList* dl, ImVec2 a, float breite, float hoehe, float antei
     dl->AddRectFilled(a, ImVec2(a.x + breite, a.y + hoehe), kSunken, r);
     if (anteil > 0.0f)
         dl->AddRectFilled(a, ImVec2(a.x + breite * anteil, a.y + hoehe), farbe, r);
+}
+
+// Geld kurz schreiben: 5000 wird zu "5k", 5400 zu "5.4k", 2300000 zu "2.3M".
+//
+// Man verdient schnell viel, und dann stehen ueberall siebenstellige Zahlen -
+// die kann beim Spielen niemand mehr auf einen Blick lesen. Unter 1000 bleibt
+// die Zahl genau, denn da zaehlt am Anfang wirklich jede Muenze.
+inline std::string Money(long long wert)
+{
+    const bool      minus = (wert < 0);
+    unsigned long long v  = minus ? (unsigned long long)(-wert) : (unsigned long long)wert;
+
+    // Von gross nach klein: die erste Stufe, die passt, gewinnt.
+    static const struct
+    {
+        unsigned long long teiler;
+        char               zeichen;
+    } stufen[] = {{1000000000000ULL, 'T'},
+                  {1000000000ULL, 'B'},
+                  {1000000ULL, 'M'},
+                  {1000ULL, 'k'}};
+
+    char text[32];
+    text[0] = 0;
+
+    for (const auto& s : stufen)
+    {
+        if (v < s.teiler)
+            continue;
+
+        // Eine Nachkommastelle nur, solange sie etwas sagt: bei 12.3k ja, bei
+        // 123.4k waere sie nur noch Rauschen.
+        const double z = (double)v / (double)s.teiler;
+        if (z < 10.0)
+            std::snprintf(text, sizeof(text), "%.1f%c", z, s.zeichen);
+        else
+            std::snprintf(text, sizeof(text), "%.0f%c", z, s.zeichen);
+
+        // "5.0k" liest sich schlechter als "5k".
+        std::string kurz = text;
+        const std::size_t punkt = kurz.find(".0");
+        if (punkt != std::string::npos)
+            kurz.erase(punkt, 2);
+
+        return minus ? ("-" + kurz) : kurz;
+    }
+
+    std::snprintf(text, sizeof(text), "%llu", v);
+    return minus ? (std::string("-") + text) : std::string(text);
 }
 
 }  // namespace ui

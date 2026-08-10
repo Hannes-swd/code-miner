@@ -1002,7 +1002,7 @@ void DrawOreCollection(World& world, const OrePlan& ores, const CraftPlan& craft
 
             ImGui::TableNextColumn();
             if (known)
-                ImGui::Text("%d", liste[0].price);
+                ImGui::Text("%s", ui::Money(liste[0].price).c_str());
             else
                 ImGui::TextDisabled("?");
         }
@@ -1043,7 +1043,7 @@ void DrawOreCollection(World& world, const OrePlan& ores, const CraftPlan& craft
                 ImGui::TableNextColumn();
                 ImGui::Text("%d %%", w.purity);
                 ImGui::TableNextColumn();
-                ImGui::Text("%d", w.price);
+                ImGui::Text("%s", ui::Money(w.price).c_str());
             }
             ImGui::EndTable();
 
@@ -1061,8 +1061,9 @@ void DrawOreCollection(World& world, const OrePlan& ores, const CraftPlan& craft
 
             if (lohntSich)
                 ImGui::TextDisabled(
-                    "Same state, %d instead of %d money - purity along the way is the only difference.", oben,
-                    unten);
+                    "Same state, %s instead of %s money - purity along the way is the only "
+                    "difference.",
+                    ui::Money(oben).c_str(), ui::Money(unten).c_str());
             else
                 ImGui::TextDisabled(
                     "All worth the same: here the shortest way is the best one.");

@@ -90,9 +90,9 @@
 # This many steps the tree has. 0 = no end, it keeps growing forever.
 steps       0
 
-# The further out, the more expensive: every step costs 1.7 times as much.
+# The further out, the more expensive: every step costs 1.8 times as much.
 # That is why you clear out the nearby points first and then work outwards.
-growth      1.7
+growth      1.8
 
 # This many new points one purchase opens up (smallest and largest number).
 children    1 3
@@ -119,19 +119,19 @@ spacing     9
 # The ranges may overlap - the spacing above makes sure there is still air
 # in between.
 
-mine            1        6    once 1
-sell            2        6    once 1
-while           3        8    once 1
-if              4-9     18    once 2
-variables       6-11    16    once 1
-print           7-13    12    once 1
-bag             6-11    16    once 2   needs if
-check           8-14    14    once 1
-else           10-16    18    once 1   needs if
-for            11-17    20    once 1   needs while
-functions      12-18    20    once 1   needs variables
-classes        14-24    22    once 1   needs functions
-shared         15-24    24    once 1
+mine           1            6   once 1
+sell           2            6   once 1
+while          3            8   once 1
+if             4-9         18   once 2
+variables      6-11        16   once 1
+print          7-13        12   once 1
+bag            6-11        16   once 2   needs if
+check          8-14        14   once 1
+else           10-16       18   once 1   needs if
+for            11-17       20   once 1   needs while
+functions      12-18       20   once 1   needs variables
+classes        14-24       22   once 1   needs functions
+shared         15-24       24   once 1
 
 
 # ---- processing --------------------------------------------------------
@@ -144,14 +144,14 @@ shared         15-24    24    once 1
 # needs smelting, hardening needs casting, refining needs polishing.
 # Everything else may come in any order.
 
-wash            8-16    10    once 2   needs bag
-smelt          10-18    20    once 1   needs wash
-clean          12-20    18    once 1   needs wash
-press          13-21    22    once 1   needs wash
-cast           14-22    26    once 1   needs smelt
-polish         16-24    28    once 1   needs cast
-harden         18-26    32    once 1   needs cast
-refine         20-32    40    once 1   needs polish
+wash           8-16        10   once 2   needs bag
+smelt          10-18       20   once 1   needs wash
+clean          12-20       18   once 1   needs wash
+press          13-21       22   once 1   needs wash
+cast           14-22       26   once 1   needs smelt
+polish         16-24       28   once 1   needs cast
+harden         18-26       32   once 1   needs cast
+refine         20-32       40   once 1   needs polish
 
 # Processing is a chain: washing is the start, everything else hangs off it
 # through "needs". And washing itself needs "bag" - that is item.has(...).
@@ -160,21 +160,21 @@ refine         20-32    40    once 1   needs polish
 #
 # Alloying needs smelting: the ingredients have to be molten before you can
 # pour them together (see "von" in data/legierungen.json).
-alloy          18-28    34    once 1   needs smelt
+alloy          18-28       34   once 1   needs smelt
 
 
 # ---- more of it --------------------------------------------------------
 #
 # These points only show up once the matching thing has been bought.
 
-loop+           4-      16    often 1    rise 1.20   needs while
-condition+      6-      16    often 1    rise 1.20   needs if
-variable+       8-      12    often 1    rise 1.20   needs variables
-function+      14-      16    often 1    rise 1.22   needs functions
-class+         16-      18    often 1    rise 1.22   needs classes
+loop+          4-          16   often 1    rise 1.20   needs while
+condition+     6-          16   often 1    rise 1.20   needs if
+variable+      8-          12   often 1    rise 1.20   needs variables
+function+      14-         16   often 1    rise 1.22   needs functions
+class+         16-         18   often 1    rise 1.22   needs classes
 
 # One more console is a big step - so it is rare.
-console+        7-      22    often 1    rise 1.10
+console+       7-          22   often 1    rise 1.10
 
 
 # ---- values ------------------------------------------------------------
@@ -182,6 +182,6 @@ console+        7-      22    often 1    rise 1.10
 # The bread-and-butter stuff. High weights: most of what comes should be
 # this, so that money comes in at all.
 
-speed           2-      10    often 6
-money           2-      12    often 6
-regrow          2-      10    often 4
+speed          2-          10   often 6
+money          2-          12   often 6
+regrow         2-          10   often 4

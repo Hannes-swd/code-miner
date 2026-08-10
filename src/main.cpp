@@ -295,9 +295,8 @@ static bool CountTab(const char* name, int count, bool active)
 // um sich davor zu setzen - deshalb steht die Rechnung an einer Stelle.
 static float MoneyWidth(const World& world)
 {
-    char text[32];
-    std::snprintf(text, sizeof(text), "%d", world.money);
-    return 14.0f * 2.0f + 5.0f * 2.0f + 9.0f + ImGui::CalcTextSize(text).x;
+    const std::string text = ui::Money(world.money);
+    return 14.0f * 2.0f + 5.0f * 2.0f + 9.0f + ImGui::CalcTextSize(text.c_str()).x;
 }
 
 // Wie breit der Menue-Knopf ganz rechts ist.
@@ -313,11 +312,10 @@ static float MenuWidth()
 // lagen uebereinander.
 static void DrawMoney(const World& world, float rechts)
 {
-    char text[32];
-    std::snprintf(text, sizeof(text), "%d", world.money);
+    const std::string text = ui::Money(world.money);
 
     const float punkt = 5.0f;
-    const float textW = ImGui::CalcTextSize(text).x;
+    const float textW = ImGui::CalcTextSize(text.c_str()).x;
     const float innen = 14.0f;
     const float breit = MoneyWidth(world);
     const float hoch  = ImGui::GetTextLineHeight() + 12.0f;
@@ -333,7 +331,7 @@ static void DrawMoney(const World& world, float rechts)
     const float cy = y0 + hoch * 0.5f;
     dl->AddCircleFilled(ImVec2(p.x + innen + punkt, cy), punkt, ui::kCoin);
     dl->AddText(ImVec2(p.x + innen + punkt * 2.0f + 9.0f, cy - ImGui::GetTextLineHeight() * 0.5f),
-                ui::kText, text);
+                ui::kText, text.c_str());
 
     ImGui::Dummy(ImVec2(breit, 0.0f));
 }

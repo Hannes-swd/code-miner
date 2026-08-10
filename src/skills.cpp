@@ -171,13 +171,13 @@ void DrawCard(ImDrawList* dl, const SkillNode& n, State st, ImVec2 c, float z, b
     {
         ring  = kBuyRing;
         state = kTextGreen;
-        std::snprintf(label, sizeof(label), "Buy - %d", n.cost);
+        std::snprintf(label, sizeof(label), "Buy - %s", ui::Money(n.cost).c_str());
     }
     else
     {
         name  = ui::kTextDim;
         glyph = ui::kTextWk;
-        std::snprintf(label, sizeof(label), "Locked - %d", n.cost);
+        std::snprintf(label, sizeof(label), "Locked - %s", ui::Money(n.cost).c_str());
     }
 
     GradientRect(dl, a, b, round, top, bottom);
@@ -430,12 +430,13 @@ void DrawSkillPage(World& world, SkillTree& tree)
             }
             else if (world.money < n.cost)
             {
-                ImGui::TextDisabled("Kostet %d - dir fehlen %d", n.cost, n.cost - world.money);
+                ImGui::TextDisabled("Costs %s - you are %s short", ui::Money(n.cost).c_str(),
+                                    ui::Money(n.cost - world.money).c_str());
             }
             else
             {
                 ImGui::TextColored(ImVec4(0.70f, 0.89f, 0.48f, 1.0f),
-                                   "Doppelklick zum Kaufen - %d Geld", n.cost);
+                                   "Double click to buy - %s money", ui::Money(n.cost).c_str());
             }
             ImGui::EndTooltip();
         }
@@ -502,7 +503,7 @@ void DrawStatus(const Limits& limits, const World& world)
         ImGui::TextColored(ui::V(ui::kTextDim), "MONEY");
         ImGui::PushFont(BigFont());
         ImGui::SetWindowFontScale(0.62f);
-        ImGui::TextColored(ui::V(ui::kAccent), "%d", world.money);
+        ImGui::TextColored(ui::V(ui::kAccent), "%s", ui::Money(world.money).c_str());
         ImGui::SetWindowFontScale(1.0f);
         ImGui::PopFont();
         ImGui::EndGroup();

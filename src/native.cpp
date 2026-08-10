@@ -1,5 +1,7 @@
 #include "native.h"
 
+#include "theme.h"
+
 #include "alloy.h"
 #include "craft.h"
 #include "instrument.h"
@@ -993,7 +995,7 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
         }
 
         sendChild((std::to_string(geld) + "\n").c_str());
-        mMsg = (geld > 0) ? ("Sold: " + std::to_string(geld) + " money.")
+        mMsg = (geld > 0) ? ("Sold: " + ui::Money(geld) + " money.")
                           : std::string("Nothing to sell.");
         break;
     }

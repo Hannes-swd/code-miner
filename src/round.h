@@ -31,8 +31,19 @@ struct RoundPlan
     // Am Ende der Runde musst du mindestens so viel Geld haben, sonst ist das
     // Spiel vorbei. Der Betrag waechst mit jeder Runde - sonst waere Runde 10
     // so leicht wie Runde 1.
-    int   targetStart  = 500;
-    float targetGrowth = 1.6f;
+    // Das Wachstum flacht ab. Am Anfang verdoppelt sich dein Verdienst fast von
+    // Runde zu Runde: der erste Ofen, das erste Legieren, die ersten Schleifen
+    // sind je ein Sprung. Spaeter bleiben es dieselben Techniken, nur ein
+    // bisschen schneller - und dann waere ein Ziel, das stur mal 1.85 nimmt,
+    // irgendwann nicht mehr einzuholen.
+    //
+    // Deshalb faellt der Faktor je Runde von targetGrowth in Richtung
+    // targetGrowthEnd, mit targetFlatten als Tempo. Der Kurve sieht man das an:
+    // erst steil, dann immer flacher.
+    int   targetStart     = 500;
+    float targetGrowth    = 2.4f;   // Faktor fuer die erste Runde
+    float targetGrowthEnd = 1.2f;   // ... auf den er ganz spaet zulaeuft
+    float targetFlatten   = 0.85f;  // wie schnell er dorthin faellt (0..1)
 
     // Was passiert, wenn du es nicht schaffst:
     //   true  = alles auf Anfang (so ist es gedacht)

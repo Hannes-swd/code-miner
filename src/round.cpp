@@ -128,12 +128,32 @@ RoundPlan LoadRoundPlan()
             plan.problems.push_back("ziel.start is negative.");
             plan.targetStart = 0;
         }
+        plan.targetGrowthEnd = (float)ziel->number("wachstum_ende", (double)plan.targetGrowthEnd);
+        plan.targetFlatten   = (float)ziel->number("abflachen", (double)plan.targetFlatten);
+
         if (plan.targetGrowth < 1.0f)
         {
             // Unter 1 wuerde das Ziel kleiner werden - dann waere jede Runde
             // leichter als die davor.
             plan.problems.push_back("ziel.wachstum must be at least 1.");
             plan.targetGrowth = 1.0f;
+        }
+        if (plan.targetGrowthEnd < 1.0f)
+        {
+            plan.problems.push_back("ziel.wachstum_ende must be at least 1.");
+            plan.targetGrowthEnd = 1.0f;
+        }
+        if (plan.targetGrowthEnd > plan.targetGrowth)
+        {
+            // Andersherum waere es kein Abflachen mehr, sondern ein Anziehen -
+            // sicher nicht gemeint.
+            plan.problems.push_back("ziel.wachstum_ende is larger than ziel.wachstum.");
+            plan.targetGrowthEnd = plan.targetGrowth;
+        }
+        if (plan.targetFlatten <= 0.0f || plan.targetFlatten > 1.0f)
+        {
+            plan.problems.push_back("ziel.abflachen must be greater than 0 and at most 1.");
+            plan.targetFlatten = 1.0f;
         }
     }
 
@@ -149,9 +169,20 @@ int RoundTarget(const RoundPlan& plan, int round)
     if (round < 1)
         round = 1;
 
-    double wert = (double)plan.targetStart;
+    // Der Faktor faellt von Runde zu Runde in Richtung targetGrowthEnd. Runde 1
+    // waechst also fast doppelt so stark wie Runde 10 - genau wie dein
+    // Verdienst, der am Anfang mit jeder neuen Technik springt und spaeter nur
+    // noch feiner wird.
+    const double ende = (double)plan.targetGrowthEnd;
+
+    double wert   = (double)plan.targetStart;
+    double faktor = (double)plan.targetGrowth;
+
     for (int i = 1; i < round; ++i)
-        wert *= (double)plan.targetGrowth;
+    {
+        wert *= faktor;
+        faktor = ende + (faktor - ende) * (double)plan.targetFlatten;
+    }
 
     // Ueber zwei Milliarden passt nicht mehr in einen int - und waere ohnehin
     // nicht mehr zu schaffen.
@@ -300,7 +331,7 @@ bool DrawRoundHud(const World& world, const RoundPlan& plan)
         const float xLabel = x0 + ImGui::CalcTextSize("Round 88").x + 26.0f;
         const float xBar   = xLabel + ImGui::CalcTextSize("Time").x + 16.0f;
         const float xWert  = wp.x + ws.x - 26.0f - rechtsFrei;
-        const float wertW  = ImGui::CalcTextSize("00000 / 00000").x;
+        const float wertW  = ImGui::CalcTextSize("888.8M / 888.8M").x;
 
         float breit = xWert - wertW - 16.0f - xBar;
         if (breit < 60.0f)
@@ -328,13 +359,12 @@ bool DrawRoundHud(const World& world, const RoundPlan& plan)
         // wandern nicht und sie verschwinden nicht - man soll im Augenwinkel
         // sehen koennen, wie beides steht, ohne erst hinsehen zu muessen, was
         // die Zeile diesmal bedeutet.
-        char geld[48];
+        std::string geld = ui::Money(world.money);
         if (ziel > 0)
-            std::snprintf(geld, sizeof(geld), "%d / %d", world.money, ziel);
-        else
-            std::snprintf(geld, sizeof(geld), "%d", world.money);
+            geld += " / " + ui::Money(ziel);
 
-        zeile(y1, "Money", (ziel > 0) ? (float)world.money / (float)ziel : 0.0f, ui::kAccent, geld);
+        zeile(y1, "Money", (ziel > 0) ? (float)world.money / (float)ziel : 0.0f, ui::kAccent,
+              geld.c_str());
 
         if (world.phase == RoundPhase::Run)
         {
@@ -423,7 +453,7 @@ bool DrawRoundReport(const World& world, const RoundPlan& plan)
         {
             ImGui::TextDisabled("%s", name);
             ImGui::SameLine(spalte);
-            ImGui::Text("%d", wert);
+            ImGui::Text("%s", ui::Money(wert).c_str());
         };
 
         zeile("Geld am Anfang", world.roundMoneyStart);
@@ -432,24 +462,27 @@ bool DrawRoundReport(const World& world, const RoundPlan& plan)
         const int verdienst = world.roundMoneyEnd - world.roundMoneyStart;
         ImGui::TextDisabled("Verdienst");
         ImGui::SameLine(spalte);
-        ImGui::TextColored(verdienst < 0 ? rot : gruen, "%+d", verdienst);
+        ImGui::TextColored(verdienst < 0 ? rot : gruen, "%s%s", verdienst < 0 ? "" : "+",
+                           ui::Money(verdienst).c_str());
 
         if (ziel > 0)
         {
             ImGui::TextDisabled("Goal");
             ImGui::SameLine(spalte);
-            ImGui::TextColored(geschafft ? gruen : rot, "%d  (%+d)", ziel,
-                               world.roundMoneyEnd - ziel);
+            const int abstand = world.roundMoneyEnd - ziel;
+            ImGui::TextColored(geschafft ? gruen : rot, "%s  (%s%s)", ui::Money(ziel).c_str(),
+                               abstand < 0 ? "" : "+", ui::Money(abstand).c_str());
 
             if (world.roundPaid > 0)
             {
                 ImGui::TextDisabled("Goal paid");
                 ImGui::SameLine(spalte);
-                ImGui::TextColored(rot, "-%d", world.roundPaid);
+                ImGui::TextColored(rot, "-%s", ui::Money(world.roundPaid).c_str());
 
                 ImGui::TextDisabled("You keep");
                 ImGui::SameLine(spalte);
-                ImGui::TextColored(gruen, "%d", world.roundMoneyEnd - world.roundPaid);
+                ImGui::TextColored(gruen, "%s",
+                                   ui::Money(world.roundMoneyEnd - world.roundPaid).c_str());
             }
         }
 
@@ -457,13 +490,16 @@ bool DrawRoundReport(const World& world, const RoundPlan& plan)
         ImGui::Separator();
         ImGui::Spacing();
 
-        zeile("Blocks mined", world.roundMined);
+        ImGui::TextDisabled("Blocks mined");
+        ImGui::SameLine(spalte);
+        ImGui::Text("%d", world.roundMined);
 
         if (plan.sellAtEnd)
         {
             ImGui::TextDisabled("Bag sold");
             ImGui::SameLine(spalte);
-            ImGui::Text("%d pieces for %d money", world.roundSoldCount, world.roundSoldMoney);
+            ImGui::Text("%d pieces for %s money", world.roundSoldCount,
+                        ui::Money(world.roundSoldMoney).c_str());
         }
         else
         {

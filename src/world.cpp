@@ -855,9 +855,10 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
 
         ImGui::BeginTooltip();
         ImGui::TextUnformatted(erz.name.c_str());
-        ImGui::TextDisabled("%d money when sold  -  %.1f s to mine",
-                            StackValue(ores, craft, world.ore, (int)OreState::Raw, rein, 1,
-                                       world.moneyPerBlock),
+        ImGui::TextDisabled("%s money when sold  -  %.1f s to mine",
+                            ui::Money(StackValue(ores, craft, world.ore, (int)OreState::Raw, rein,
+                                                 1, world.moneyPerBlock))
+                                .c_str(),
                             erz.mineSeconds);
         ImGui::TextDisabled("Purity %d%%  -  processing makes it worth more", rein);
         if (world.blockAlive && (!world.frozen || world.handMine))
@@ -964,7 +965,8 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
         ImGui::PopStyleColor();
 
         ImGui::SameLine();
-        ImGui::TextDisabled("  %d blocks, %d money in total", world.inventoryCount(), wert);
+        ImGui::TextDisabled("  %d blocks, %s money in total", world.inventoryCount(),
+                            ui::Money(wert).c_str());
 
         if (!world.inventory.empty())
         {
@@ -1203,9 +1205,10 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
 
                 // ---- Verkaufen --------------------------------------------
                 char knopf[64];
-                std::snprintf(knopf, sizeof(knopf), "Sell  %d",
-                              StackValue(ores, craft, stapel.ore, stapel.state, rein, wie,
-                                         world.moneyPerBlock));
+                std::snprintf(knopf, sizeof(knopf), "Sell  %s",
+                              ui::Money(StackValue(ores, craft, stapel.ore, stapel.state, rein, wie,
+                                                   world.moneyPerBlock))
+                                  .c_str());
 
                 ImGui::PushStyleColor(ImGuiCol_Button, ui::V(ui::kAccent));
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ui::V(ui::kAccentHot));
@@ -1253,11 +1256,12 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
                         }
 
                         if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                            ImGui::SetTooltip("%d pieces, %.1f s  -  purity %+d%%\nThen %d money",
+                            ImGui::SetTooltip("%d pieces, %.1f s  -  purity %+d%%\nThen %s money",
                                               wie, (double)(s.seconds * (float)wie), s.purity,
-                                              StackValue(ores, craft, stapel.ore, s.to,
-                                                         rein + s.purity, wie,
-                                                         world.moneyPerBlock));
+                                              ui::Money(StackValue(ores, craft, stapel.ore, s.to,
+                                                                   rein + s.purity, wie,
+                                                                   world.moneyPerBlock))
+                                                  .c_str());
                     }
 
                     if (moeglich == 0)
