@@ -24,7 +24,7 @@ bool ReadParts(const JsonValue& e, const OrePlan& ores, AlloyRecipe& r,
     const JsonValue* liste = e.find("aus");
     if (liste == nullptr || liste->type != JsonValue::Type::Array)
     {
-        problems.push_back(r.name + ": \"aus\" muss eine Liste von Zutaten sein.");
+        problems.push_back(r.name + ": \"aus\" must be a list of ingredients.");
         return false;
     }
 

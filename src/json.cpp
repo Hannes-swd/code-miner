@@ -23,7 +23,7 @@ struct Reader
             for (std::size_t i = 0; i < pos && i < src.size(); ++i)
                 if (src[i] == '\n')
                     ++line;
-            error = "Zeile " + std::to_string(line) + ": " + what;
+            error = "Line " + std::to_string(line) + ": " + what;
         }
         return false;
     }
@@ -64,7 +64,7 @@ struct Reader
     {
         skip();
         if (pos >= src.size())
-            return fail("hier fehlt etwas");
+            return fail("something is missing here");
 
         const char c = src[pos];
 
@@ -112,13 +112,13 @@ struct Reader
             return true;
         }
 
-        return fail("das verstehe ich hier nicht");
+        return fail("I do not understand this here");
     }
 
     bool string(std::string& out)
     {
         if (pos >= src.size() || src[pos] != '"')
-            return fail("hier sollte ein Text in Anfuehrungszeichen stehen");
+            return fail("a text in quotation marks belongs here");
 
         ++pos;
         out.clear();
@@ -143,7 +143,7 @@ struct Reader
         }
 
         if (pos >= src.size())
-            return fail("der Text hoert nie auf - fehlt ein \" ?");
+            return fail("the text never ends - is a \" missing?");
 
         ++pos;
         return true;
@@ -158,7 +158,7 @@ struct Reader
         {
             skip();
             if (pos >= src.size())
-                return fail("die Liste hoert nie auf - fehlt ein ] ?");
+                return fail("the list never ends - is a ] missing?");
             if (src[pos] == ']')
             {
                 ++pos;
@@ -181,7 +181,7 @@ struct Reader
         {
             skip();
             if (pos >= src.size())
-                return fail("die Klammer wird nie geschlossen - fehlt ein } ?");
+                return fail("the brace is never closed - is a } missing?");
             if (src[pos] == '}')
             {
                 ++pos;

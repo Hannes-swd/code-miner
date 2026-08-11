@@ -1228,7 +1228,7 @@ void Native::update(float dt, World& world, const OrePlan& ores, const CraftPlan
         if (!launch(build))
         {
             mPhase = Phase::Failed;
-            mMsg   = "run.exe konnte nicht gestartet werden.";
+            mMsg   = "The program could not be started.";
             return;
         }
         mLastCombined = build.combined;
@@ -1316,9 +1316,9 @@ static Native::Build CompileToExe(const std::vector<SourceFile>& files, int runI
     }
     if (withMain.size() > 1)
     {
-        build.error = "Konsole " + std::to_string(withMain[0]) + " und Konsole " +
+        build.error = "Console " + std::to_string(withMain[0]) + " and console " +
                       std::to_string(withMain[1]) +
-                      " haben beide ein main(). Es darf nur eines geben.";
+                      " both have a main(). There may only be one.";
         build.errorConsole = withMain[1];
         return build;
     }

@@ -436,11 +436,11 @@ bool DrawRoundReport(const World& world, const RoundPlan& plan)
             ImGui::Text("%s", ui::Money(wert).c_str());
         };
 
-        zeile("Geld am Anfang", world.roundMoneyStart);
-        zeile("Geld am Ende", world.roundMoneyEnd);
+        zeile("Money at the start", world.roundMoneyStart);
+        zeile("Money at the end", world.roundMoneyEnd);
 
         const int verdienst = world.roundMoneyEnd - world.roundMoneyStart;
-        ImGui::TextDisabled("Verdienst");
+        ImGui::TextDisabled("Earned");
         ImGui::SameLine(spalte);
         ImGui::TextColored(verdienst < 0 ? rot : gruen, "%s%s", verdienst < 0 ? "" : "+",
                            ui::Money(verdienst).c_str());
@@ -485,7 +485,7 @@ bool DrawRoundReport(const World& world, const RoundPlan& plan)
         {
             ImGui::TextDisabled("Bag");
             ImGui::SameLine(spalte);
-            ImGui::Text("bleibt dir");
+            ImGui::Text("you keep it");
         }
 
         ImGui::Spacing();
@@ -500,7 +500,7 @@ bool DrawRoundReport(const World& world, const RoundPlan& plan)
         {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.52f, 0.19f, 0.19f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.66f, 0.24f, 0.24f, 1.0f));
-            if (ImGui::Button("Neu anfangen", ImVec2(160.0f, 0.0f)))
+            if (ImGui::Button("Start over", ImVec2(160.0f, 0.0f)))
                 weiter = true;
             ImGui::PopStyleColor(2);
 

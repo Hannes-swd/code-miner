@@ -66,7 +66,7 @@ std::string StatesText(unsigned bits)
         if ((bits & (1u << (unsigned)i)) == 0)
             continue;
         if (!out.empty())
-            out += " oder ";
+            out += " or ";
         out += OreStateName((OreState)i);
     }
     return out.empty() ? std::string("-") : out;
@@ -828,7 +828,7 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
         const int   alpha = (int)(world.sellFx * 230.0f);
 
         char text[48];
-        std::snprintf(text, sizeof(text), "+%d Geld", world.lastSold);
+        std::snprintf(text, sizeof(text), "+%s money", ui::Money(world.lastSold).c_str());
         const ImVec2 ts = ImGui::CalcTextSize(text);
         dl->AddText(ImVec2(c.x - ts.x * 0.5f, c.y + kHalf + 24.0f - t * 40.0f),
                     IM_COL32(0xCC, 0x5B, 0x1E, alpha), text);
@@ -993,7 +993,7 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
 
             ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ui::V(ui::kAccent));
             char rest[48];
-            std::snprintf(rest, sizeof(rest), "noch %.1f s",
+            std::snprintf(rest, sizeof(rest), "%.1f s left",
                           (double)(world.craftSeconds - world.craftTimer));
             ImGui::ProgressBar(t, ImVec2(320.0f, 0.0f), rest);
             ImGui::PopStyleColor();

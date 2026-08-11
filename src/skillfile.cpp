@@ -275,7 +275,7 @@ SkillPlan LoadSkillPlan()
         if (!ParseRange(words[1], rule.minStep, rule.maxStep))
         {
             plan.problems.push_back(Where(lineNo) + "\"" + words[1] +
-                                    "\" ist kein Schritt (z.B. 4 oder 2-6).");
+                                    "\" is not a step (e.g. 4 or 2-6).");
             continue;
         }
 
@@ -311,7 +311,7 @@ SkillPlan LoadSkillPlan()
         else
         {
             plan.problems.push_back(Where(lineNo) + "\"" + words[3] +
-                                    "\" muss \"einmal\" oder \"oft <zahl>\" sein.");
+                                    "\" must be \"einmal\" or \"oft <zahl>\".");
             continue;
         }
 
@@ -331,7 +331,7 @@ SkillPlan LoadSkillPlan()
             if (!IsNeeds(words[next]))
             {
                 plan.problems.push_back(Where(lineNo) + "\"" + words[next] +
-                                        "\" verstehe ich hier nicht (gemeint war \"braucht\"?).");
+                                        "\" does not belong here (did you mean \"braucht\"?).");
                 continue;
             }
             if (next + 1 >= words.size() || !LookUp(words[next + 1], rule.needs))

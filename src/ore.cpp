@@ -182,7 +182,7 @@ OrePlan LoadOrePlan()
             plan.perLevel = 1;
         if (plan.levelFrom != "bloecke" && plan.levelFrom != "skills")
         {
-            plan.problems.push_back("level.art must be \"bloecke\" oder \"skills\" sein.");
+            plan.problems.push_back("level.art must be \"bloecke\" or \"skills\".");
             plan.levelFrom = "bloecke";
         }
     }

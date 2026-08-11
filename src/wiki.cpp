@@ -1152,7 +1152,7 @@ WikiBook LoadWikiBook()
         if (const JsonValue* v = e.find("siehe_auch"))
         {
             if (v->type != JsonValue::Type::Array)
-                book.problems.push_back(page.title + ": \"siehe_auch\" muss eine Liste sein.");
+                book.problems.push_back(page.title + ": \"siehe_auch\" must be a list.");
             else
                 for (const JsonValue& t : v->items)
                     if (t.type == JsonValue::Type::String)
@@ -1373,7 +1373,7 @@ WikiBook LoadWikiBook()
                     gibtEs = true;
 
             if (!gibtEs)
-                book.problems.push_back(p.title + ": siehe_auch zeigt auf \"" + ziel +
+                book.problems.push_back(p.title + ": siehe_auch points to \"" + ziel +
                                         "\" - that page does not exist.");
         }
 
