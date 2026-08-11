@@ -454,9 +454,34 @@ const Toolchain& GetToolchain()
 
     // vcvars64.bat einmal aufrufen und die Umgebung abschreiben, die es setzt.
     // "set" listet sie danach Zeile fuer Zeile auf.
+    //
+    // Der Umweg ueber eine eigene .bat-Datei ist noetig, weil cmd.exe seine
+    // Kommandozeile nach eigenen Regeln zerlegt: Anfuehrungszeichen INNERHALB
+    // eines Arguments (und der Pfad zu vcvars braucht welche, er hat
+    // Leerzeichen) kommen bei ihm nicht heil an. In einer Datei steht der
+    // Aufruf dagegen genau so da, wie er gemeint ist.
+    const std::string arbeit = WorkDir();
+    if (arbeit.empty())
+    {
+        tc.problem = "No temp folder available.";
+        return tc;
+    }
+
+    const std::string helfer = arbeit + "vcenv.bat";
+    const std::string inhalt = "@echo off\r\n"
+                               "call \"" +
+                               vcvars +
+                               "\" >nul 2>&1\r\n"
+                               "set\r\n";
+
+    if (!WriteTextFile(helfer, inhalt))
+    {
+        tc.problem = "vcenv.bat could not be written.";
+        return tc;
+    }
+
     std::string out;
-    if (!RunCapture({"cmd.exe", "/c", "\"" + vcvars + "\" >nul 2>&1 && set"}, "", out, nullptr,
-                    60000))
+    if (!RunCapture({"cmd.exe", "/c", helfer}, arbeit, out, nullptr, 60000))
     {
         tc.problem = "vcvars64.bat could not be run.";
         return tc;
