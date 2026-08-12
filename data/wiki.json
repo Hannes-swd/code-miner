@@ -366,14 +366,14 @@
         },
         {
           "punkt": "Together with else",
-          "code": "if (block.isThere())\n{\n    block.mine();\n}\nelse\n{\n    print(\"warte\");\n}",
+          "code": "if (block.isThere())\n{\n    block.mine();\n}\nelse\n{\n    print(\"waiting\");\n}",
           "markiere": "else",
           "text": "else means otherwise. If the block happens to be gone, your program does something else.",
           "dauer": 4.5
         },
         {
           "punkt": "Asking the other way round",
-          "code": "if (block.isLoading())\n{\n    print(\"warte\");\n}",
+          "code": "if (block.isLoading())\n{\n    print(\"waiting\");\n}",
           "markiere": "block.isLoading()",
           "text": "isLoading() is the opposite question: is the block regrowing right now? Both exist so that you do not have to think backwards.",
           "dauer": 4.5
@@ -520,7 +520,7 @@
         },
         {
           "punkt": "Finding where it sticks",
-          "code": "while (true)\n{\n    print(\"Runde\");\n    block.mine();\n}",
+          "code": "while (true)\n{\n    print(\"round\");\n    block.mine();\n}",
           "markiere": "print(\"Runde\")",
           "text": "If your program does not run as expected, put a print in. If the text does not appear, your program never gets there either.",
           "dauer": 5.0
@@ -1323,6 +1323,25 @@
           "dauer": 5.0
         },
         {
+          "punkt": "Their names in code",
+          "code": "item.has(Stone)          the ore is called Stone\nitem.has(WhiteGold)      \"White Gold\" - written together\nitem.has(Any)            no matter which one\n\nitem.has(\"Stone\")        works too, but nothing checks it",
+          "markiere": "item.has(Stone)",
+          "text": "Ores stand in your code without quotation marks. They are not text but names the game knows - so a typo is caught right away instead of quietly counting as zero.",
+          "dauer": 5.5
+        },
+        {
+          "punkt": "Names of several words",
+          "markiere": "item.has(WhiteGold)",
+          "text": "Later the game invents ores of its own, and those have names of several words. In code they are written together, without the spaces. Every ore page says at the top what its name looks like there.",
+          "dauer": 5.0
+        },
+        {
+          "punkt": "Any: no matter which",
+          "markiere": "item.has(Any)",
+          "text": "Any stands for all ores at once. item.has(Any) asks whether there is anything at all in your bag, item.sell(Any) sells the lot.",
+          "dauer": 4.5
+        },
+        {
           "punkt": "Your level decides",
           "markiere": "from level 13",
           "text": "At the start there is only Stone and Coal. The higher your level, the more kinds come along - Diamond only from level 13.",
@@ -1501,7 +1520,7 @@
       "schritte": [
         {
           "punkt": "Preparation",
-          "code": "Vorbereitung   ->   Lauf   ->   Abrechnung",
+          "code": "Preparation   ->   Run   ->   Summary",
           "markiere": "Vorbereitung",
           "text": "Here the world stands still: nothing is mined, nothing regrows. You buy in the skill tree, write code, look in the bag. Time does not matter.",
           "dauer": 7.0
@@ -1511,6 +1530,12 @@
           "markiere": "Lauf",
           "text": "Now the clock runs, and everything runs with it: your program, mining, regrowing, processing. A round lasts 15 minutes.",
           "dauer": 6.5
+        },
+        {
+          "punkt": "Pausing",
+          "markiere": "Run",
+          "text": "During the run you can stop the whole game with F9, or with the button at the bottom right. The clock, the block, a running job and your program all stand still, and go on exactly where they stopped. Careful: the pause at the console is a different one - it only stops your program while the clock keeps running.",
+          "dauer": 5.5
         },
         {
           "punkt": "Summary",
@@ -1526,7 +1551,7 @@
         },
         {
           "punkt": "The very first block",
-          "code": "Vorbereitung   ->   Lauf   ->   Abrechnung\n     ^\n     hier darfst du auf den Block klicken",
+          "code": "Preparation   ->   Run   ->   Summary\n     ^\n     here you may click the block",
           "markiere": "hier darfst du auf den Block klicken",
           "text": "During preparation you may click the block by hand. At the very beginning you have neither a program nor money - the first block has to come that way.",
           "dauer": 7.0
@@ -1571,7 +1596,7 @@
         },
         {
           "punkt": "The wiki grows too",
-          "code": "Wiki   ->   Funktionen   ->   nur was du schon hast",
+          "code": "Wiki   ->   Funktionen   ->   nur was you schon hast",
           "markiere": "nur was du schon hast",
           "text": "Here too only the commands you have already bought are listed. Every new card brings new wiki pages with it.",
           "dauer": 6.0
