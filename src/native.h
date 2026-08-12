@@ -49,12 +49,13 @@ public:
         int          errorConsole = 0;
         int          errorLine    = 0;
         std::string  combined;  // der zusammengesetzte Quelltext
+        std::string  cacheKey;  // Quelltext UND Header - siehe Native::start
         bool         reused = false;
     };
 
     ~Native() override;
 
-    void start(const std::vector<SourceFile>& files) override;
+    void start(const std::vector<SourceFile>& files, const OrePlan& ores) override;
     void togglePause() override;
     void stop() override;
     void update(float dt, World& world, const OrePlan& ores, const CraftPlan& craft,

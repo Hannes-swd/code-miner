@@ -268,7 +268,7 @@ std::string RoundClock(float seconds)
 // Zwei Leisten, immer dieselben: oben das Geld mit dem Ziel dahinter, unten die
 // Zeit. Sie stehen auf jeder Seite und in jeder Phase an derselben Stelle -
 // beim Spielen schaut man nicht hin, man sieht nur, wie voll sie sind.
-bool DrawRoundHud(const World& world, const RoundPlan& plan)
+bool DrawRoundHud(const World& world, const RoundPlan& plan, bool paused, bool& togglePause)
 {
     bool start = false;
 
@@ -300,12 +300,14 @@ bool DrawRoundHud(const World& world, const RoundPlan& plan)
         // Vier Spalten: Nummer, Beschriftung, Balken, Wert. Die Breiten sind
         // aus der laengsten Aufschrift gerechnet, damit nichts uebereinander
         // rutscht, wenn aus "Time" mal "Vorbereitung" wird.
-        // Der Knopf steht nur in der Vorbereitung da. Dann muss ihm Platz
-        // gemacht werden - sonst legt er sich ueber das Ende der Balken.
+        // Rechts steht immer ein Knopf: in der Vorbereitung "Runde starten", im
+        // Lauf "Pause". Er braucht Platz - sonst legt er sich ueber das Ende
+        // der Balken.
         const bool  vorbereitung = (world.phase == RoundPhase::Prepare);
+        const bool  lauf         = (world.phase == RoundPhase::Run);
         const float knopfB       = 150.0f;
         const float knopfH       = 34.0f;
-        const float rechtsFrei   = vorbereitung ? (knopfB + 22.0f) : 0.0f;
+        const float rechtsFrei   = (vorbereitung || lauf) ? (knopfB + 22.0f) : 0.0f;
 
         const float x0     = wp.x + 26.0f;
         const float xLabel = x0 + ImGui::CalcTextSize("Round 88").x + 26.0f;
@@ -350,7 +352,36 @@ bool DrawRoundHud(const World& world, const RoundPlan& plan)
         {
             const bool  knapp = world.roundLeft <= 60.0f;
             const float t     = (plan.seconds > 0.0f) ? (world.roundLeft / plan.seconds) : 0.0f;
-            zeile(y2, "Time", t, knapp ? ui::kBad : ui::kDark, RoundClock(world.roundLeft).c_str());
+
+            // In der Pause steht "paused" statt "Time" - die Uhr bleibt ja
+            // sichtbar stehen, und ohne Beschriftung sieht das aus wie ein
+            // haengendes Spiel.
+            zeile(y2, paused ? "paused" : "Time", t, knapp ? ui::kBad : ui::kDark,
+                  RoundClock(world.roundLeft).c_str());
+
+            // Der Pausenknopf steht an derselben Stelle wie "Runde starten" -
+            // rechts ist im Lauf immer der eine Knopf, der die Zeit steuert.
+            ImGui::SetCursorScreenPos(
+                ImVec2(wp.x + ws.x - 26.0f - knopfB, wp.y + (ws.y - knopfH) * 0.5f));
+
+            if (paused)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Button, ui::V(ui::kAccent));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ui::V(ui::kAccentHot));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ui::V(ui::kAccent));
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+            }
+
+            if (ImGui::Button(paused ? "Continue (F9)" : "Pause (F9)", ImVec2(knopfB, knopfH)))
+                togglePause = true;
+
+            if (paused)
+                ImGui::PopStyleColor(4);
+
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Stops the whole game: the clock, the block,\n"
+                                  "a running job and your program.\n"
+                                  "Nothing is lost - it goes on where it stopped.");
         }
         else if (world.phase == RoundPhase::Report)
         {

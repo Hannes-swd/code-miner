@@ -16,6 +16,21 @@ namespace
 // Wie gross der Block auf dem Schirm ist.
 constexpr float kHalf = 62.0f;
 
+// Heisst der Name "any"? Das ist kein Erz, sondern "egal was" - siehe das enum
+// Ore im Spielercode. Gross- und Kleinschreibung ist egal, wie bei Erznamen.
+bool IsAnyName(const std::string& name)
+{
+    if (name.size() != 3)
+        return false;
+
+    std::string klein = name;
+    for (char& c : klein)
+        if (c >= 'A' && c <= 'Z')
+            c = (char)(c - 'A' + 'a');
+
+    return klein == "any";
+}
+
 // So viele Kaestchen pro Kante. Feiner sieht kaum besser aus, kostet aber
 // Zeichenarbeit - 26 mal 26 sind schon 676 Rechtecke.
 constexpr int kCells = 26;
@@ -119,8 +134,12 @@ SellUi g_sell;
 
 }  // namespace
 
-bool World::mine()
+bool World::mine(BlockCare mit)
 {
+    // Die Behandlung gilt ab sofort, auch mitten im Abbau: wer im naechsten
+    // Schleifendurchgang umschwenkt, soll das auch merken.
+    mineCare = mit;
+
     // In der Vorbereitung steht die Welt still. Ein Programm laeuft dort
     // ohnehin nicht - der Riegel ist trotzdem hier, damit es nur EINE Stelle
     // gibt, die das entscheidet.
@@ -262,11 +281,20 @@ int World::sell(const OrePlan& ores, const CraftPlan& craft, Item was, int anzah
 
 int World::inventoryOf(const OrePlan& ores, const std::string& name) const
 {
+    // item.has(Any): egal was - dann zaehlt einfach alles, was da ist.
+    if (IsAnyName(name) && FindOre(ores, name) < 0)
+    {
+        int alles = 0;
+        for (const auto& e : inventory)
+            alles += e.second.count;
+        return alles;
+    }
+
     const int nummer = FindOre(ores, name);
     if (nummer < 0)
         return 0;
 
-    // Ueber alle Zustaende: item.has("Stein") fragt nach dem Erz, nicht
+    // Ueber alle Zustaende: item.has(Stein) fragt nach dem Erz, nicht
     // danach, ob es gewaschen oder geschmolzen ist.
     int summe = 0;
     for (const auto& e : inventory)
@@ -358,10 +386,20 @@ void World::tickMining(float dt, const OrePlan& ores, const CraftPlan& craft)
     Item frisch;
     frisch.ore   = ore;
     frisch.state = (int)OreState::Raw;
-    addToBag(frisch, 1, StartPurity(ores, craft, ore));
+
+    // Falsch behandelt kostet Reinheit - nicht Zeit. Der Block kommt genauso
+    // schnell heraus, er ist nur weniger wert. Das sieht man in der Tasche, und
+    // mit Reinigen laesst sich ein Teil davon wieder aufholen.
+    int rein = StartPurity(ores, craft, ore) - CareLoss(ores.care, care, mineCare);
+    if (rein < 0)
+        rein = 0;
+
+    lastCareLoss = StartPurity(ores, craft, ore) - rein;
+
+    addToBag(frisch, 1, rein);
 
     // Ab jetzt kennt man dieses Erz - im Wiki bekommt es eine Seite.
-    noteOre(ore, (int)OreState::Raw, StartPurity(ores, craft, ore));
+    noteOre(ore, (int)OreState::Raw, rein);
 
     lastOre = ore;
     ++minedCount;
@@ -370,6 +408,7 @@ void World::tickMining(float dt, const OrePlan& ores, const CraftPlan& craft)
     mining       = false;
     byHand       = false;
     mineTimer    = 0.0f;
+    mineCare     = BlockCare::Plain;
     respawnTimer = respawnSeconds;
     fx           = 1.0f;
 }
@@ -379,6 +418,7 @@ void World::cancelMining()
     mining    = false;
     mineTimer = 0.0f;
     byHand    = false;
+    mineCare  = BlockCare::Plain;
 }
 
 int World::startCraft(const OrePlan& ores, const Limits& limits, const CraftStep& step, Item was,
@@ -687,6 +727,12 @@ void World::update(float dt, const OrePlan& ores)
             if (!ores.empty())
                 ore = RollOre(ores, level, rng);
             oreSeed = (unsigned)rng();
+
+            // Und was er diesmal verlangt. Dasselbe Erz kann einmal so und
+            // einmal anders dastehen - deshalb muss man den Block fragen und
+            // kann es nicht am Erz ablesen.
+            care     = RollCare(ores, ore, rng);
+            mineCare = BlockCare::Plain;
         }
     }
 
@@ -802,6 +848,25 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
         ui::Bar(dl, ImVec2(fa.x, kb.y - 20.0f), fb.x - fa.x, 5.0f, t, ui::kAccent);
     }
 
+    // Was der Block verlangt, steht ueber ihm. Ohne das muesste man mit der
+    // Maus hinfahren, um es zu erfahren - und beim Zuschauen faellt sonst gar
+    // nicht auf, warum ein Block auf einmal ewig braucht.
+    if (world.blockAlive && world.care != BlockCare::Plain)
+    {
+        const ImU32 farbe = (world.care == BlockCare::Cool) ? IM_COL32(0x2E, 0x6F, 0xA8, 255)
+                                                            : IM_COL32(0xC4, 0x3D, 0x2F, 255);
+
+        char text[64];
+        std::snprintf(text, sizeof(text), "wants %s", BlockCareName(world.care));
+
+        const ImVec2 ts = ImGui::CalcTextSize(text);
+        const ImVec2 tp(c.x - ts.x * 0.5f, a.y - ts.y - 10.0f);
+
+        dl->AddRectFilled(ImVec2(tp.x - 8.0f, tp.y - 3.0f),
+                          ImVec2(tp.x + ts.x + 8.0f, tp.y + ts.y + 3.0f), farbe, ui::kRoundS);
+        dl->AddText(tp, IM_COL32(255, 255, 255, 255), text);
+    }
+
     // Abbau-Effekt: aufgehender Rahmen plus "+1 Stein" in der Farbe des Erzes.
     // Geld steht da bewusst nicht - das gibt es erst beim Verkaufen.
     if (world.fx > 0.0f)
@@ -814,8 +879,12 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
         dl->AddRect(ImVec2(c.x - grow, c.y - grow), ImVec2(c.x + grow, c.y + grow),
                     Mix(letzt.color2, letzt.color1, 0.9f, alpha), 6.0f, 0, 3.0f);
 
-        char gain[64];
-        std::snprintf(gain, sizeof(gain), "+1 %s", letzt.name.c_str());
+        char gain[96];
+        if (world.lastCareLoss > 0)
+            std::snprintf(gain, sizeof(gain), "+1 %s  (-%d%% purity)", letzt.name.c_str(),
+                          world.lastCareLoss);
+        else
+            std::snprintf(gain, sizeof(gain), "+1 %s", letzt.name.c_str());
         const ImVec2 gs = ImGui::CalcTextSize(gain);
         dl->AddText(ImVec2(c.x - gs.x * 0.5f, c.y - kHalf - 18.0f - t * 34.0f),
                     Mix(letzt.color2, letzt.color1, 1.0f, alpha), gain);
@@ -861,10 +930,22 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
                                 .c_str(),
                             erz.mineSeconds);
         ImGui::TextDisabled("Purity %d%%  -  processing makes it worth more", rein);
+
+        // Was der Block verlangt, gehoert ganz oben hin - danach richtet sich
+        // ja, ob das Programm ihn ueberhaupt vernuenftig aufbekommt.
+        if (world.care != BlockCare::Plain)
+        {
+            ImGui::TextColored(ui::V(ui::kBad), "Wants %s  -  block.mine(%s)",
+                               BlockCareName(world.care), BlockCareName(world.care));
+            ImGui::TextDisabled("Untreated it loses %d%% purity, wrongly treated %d%%",
+                                ores.care.purityNone, ores.care.purityWrong);
+        }
+
         if (world.blockAlive && (!world.frozen || world.handMine))
             ImGui::TextDisabled("Click to mine");
         else if (world.frozen)
-            ImGui::TextDisabled("Start the round first");
+            ImGui::TextDisabled(world.phase == RoundPhase::Run ? "The game is paused"
+                                                              : "Start the round first");
         ImGui::EndTooltip();
     }
 
@@ -873,9 +954,10 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
     // passiert. Es steht IN der Karte, mittig unter dem Block: die Leiste ganz
     // unten sagt es zwar auch, aber wer auf den Block starrt, schaut nicht
     // dorthin.
-    if (world.frozen && world.phase == RoundPhase::Prepare)
+    if (world.frozen && world.phase != RoundPhase::Report)
     {
-        const char*  hinweis = "paused";
+        const char*  hinweis =
+            (world.phase == RoundPhase::Run) ? "paused - F9 continues" : "paused";
         const ImVec2 hs      = ImGui::CalcTextSize(hinweis);
         dl->AddText(ImVec2(c.x - hs.x * 0.5f, fb.y - hs.y - 8.0f), ui::kTextWk, hinweis);
     }
@@ -1267,7 +1349,9 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
                     if (moeglich == 0)
                         ImGui::TextDisabled("Nothing works from here.");
                     else if (world.frozen)
-                        ImGui::TextDisabled("Start the round first.");
+                        ImGui::TextDisabled(world.phase == RoundPhase::Run
+                                                ? "The game is paused."
+                                                : "Start the round first.");
                     else if (world.crafting)
                         ImGui::TextDisabled("A job is already running.");
 

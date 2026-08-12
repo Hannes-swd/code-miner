@@ -342,6 +342,14 @@ int main(int, char**)
     // zu schreiben waere Unsinn.
     float saveTimer = 0.0f;
 
+    // Das ganze Spiel anhalten. Nicht dasselbe wie die Pause an der Konsole:
+    // die haelt nur das Programm an, waehrend die Runde weiterlaeuft. Hier
+    // steht ALLES - Uhr, Block, Auftrag und Programm.
+    //
+    // Steht bewusst nicht im Spielstand: eine gespeicherte Pause waere beim
+    // naechsten Start nur ein Spiel, das sich nicht ruehrt.
+    bool paused = false;
+
     // Sammelt den Inhalt aller Konsolen ein - daraus wird ein Programm.
     auto collectSources = [&consoles]()
     {
@@ -354,7 +362,17 @@ int main(int, char**)
     while (plat::BeginFrame())
     {
 
-        const float dt = ImGui::GetIO().DeltaTime;
+        // Pausieren geht nur im Lauf - in der Vorbereitung steht die Welt
+        // ohnehin still, und in der Abrechnung gibt es nichts mehr anzuhalten.
+        if (world.phase != RoundPhase::Run)
+            paused = false;
+        else if (ImGui::IsKeyPressed(ImGuiKey_F9, false))
+            paused = !paused;
+
+        // Die Pause ist einfach "es vergeht keine Zeit". Dadurch stehen Uhr,
+        // Abbau, Auftrag und Nachwachsen von selbst still - ohne dass jede
+        // einzelne Stelle die Pause kennen muesste.
+        const float dt = paused ? 0.0f : ImGui::GetIO().DeltaTime;
 
         // Das Level entscheidet, welche Erze ueberhaupt vorkommen. Woraus es
         // sich ergibt, steht in data/erze.json.
@@ -381,11 +399,13 @@ int main(int, char**)
         // In der Vorbereitung steht die Welt still: nichts wird abgebaut,
         // nichts waechst nach, kein Auftrag laeuft. Die Welt selbst kennt
         // keine Runden - sie bekommt nur diese zwei Schalter.
-        world.frozen = rounds.freezeWorld && world.phase != RoundPhase::Run;
+        world.frozen = (rounds.freezeWorld && world.phase != RoundPhase::Run) || paused;
 
         // Waehrend der Abrechnung nicht: was danach noch in die Tasche faellt,
-        // steht in keiner Rechnung mehr.
-        world.handMine = rounds.handInPrepare && world.phase != RoundPhase::Report;
+        // steht in keiner Rechnung mehr. In der Pause auch nicht - sonst waere
+        // sie die beste Gelegenheit, in aller Ruhe von Hand abzubauen.
+        world.handMine =
+            rounds.handInPrepare && world.phase != RoundPhase::Report && !paused;
 
         if (world.phase == RoundPhase::Run)
         {
@@ -597,7 +617,12 @@ int main(int, char**)
         // Das Programm laeuft weiter, egal welche Seite offen ist - aber nur
         // waehrend der Runde. In der Vorbereitung ruehrt sich der Motor nicht.
         if (world.phase == RoundPhase::Run)
-            engine.update(dt, world, ores, crafts, alloys, limits);
+            // In der Pause gar nicht erst hinein: mit dt = 0 bekaeme das
+            // Programm zwar keine Zeile mehr frei, aber ein gerade fertig
+            // uebersetztes Programm wuerde noch starten und seine erste Zeile
+            // ausfuehren. Was wartet, wartet eben bis nach der Pause.
+            if (!paused)
+                engine.update(dt, world, ores, crafts, alloys, limits);
 
         if (page == Page::Welt)
         {
@@ -647,7 +672,7 @@ int main(int, char**)
                     if (!problem.empty())
                         engine.fail(problem, errConsole, errLine);
                     else
-                        engine.start(sources);
+                        engine.start(sources, ores);
                 }
             }
         }
@@ -671,8 +696,12 @@ int main(int, char**)
         // Die Abrechnung liegt ueber allem - sie ist der Weg zur naechsten
         // Runde, egal auf welcher Seite man gerade ist.
         // Die Runde schwebt ueber jeder Seite - sie gehoert zu allen.
-        if (world.phase != RoundPhase::Report && DrawRoundHud(world, rounds))
+        bool togglePause = false;
+        if (world.phase != RoundPhase::Report && DrawRoundHud(world, rounds, paused, togglePause))
             StartRound(world, rounds);
+
+        if (togglePause)
+            paused = !paused;
 
         if (world.phase == RoundPhase::Report && DrawRoundReport(world, rounds))
         {

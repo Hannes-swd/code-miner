@@ -70,6 +70,12 @@ Das Spiel läuft in **Runden**, und die haben zwei Phasen:
 | **Vorbereitung** | Die Welt steht still. Zeit kostet nichts. Du schreibst Code, kaufst im Skilltree ein, schaust in die Tasche. |
 | **Lauf** | Die Uhr läuft (voreingestellt 5 Minuten). Jetzt arbeitet dein Programm, Blöcke wachsen nach, Aufträge laufen. |
 
+Im Lauf kannst du das **ganze Spiel jederzeit anhalten** — mit **F9** oder dem Knopf unten
+rechts in der Rundenleiste. Dann steht alles: die Uhr, der Abbau, ein laufender Auftrag und
+dein Programm. Weiter geht es genau an der Stelle, an der es stehengeblieben ist. Das ist
+etwas anderes als die Pause an der Konsole: die hält nur dein Programm an, während die Uhr
+weiterläuft.
+
 Am Ende jeder Runde musst du ein **Geldziel** erreicht haben, sonst ist das Spiel vorbei.
 Das Ziel wird abgezogen — es ist die Miete für die Runde, nicht nur eine Hürde. Nur was
 darüber liegt, bleibt dir zum Einkaufen.
@@ -101,19 +107,24 @@ block.mine();          // abbauen (dauert, je nach Erz)
 block.isThere();       // liegt gerade einer da?
 block.isLoading();     // wächst er gerade nach?
 
+block.needs(Cool);     // will der Block gekühlt werden?
+block.needs();         // -> Plain, Cool oder Heat
+block.mine(Cool);      // abbauen und dabei kühlen
+
 // ---- Die Tasche ---------------------------------------------------------
 item.sell();                    // alles verkaufen -> Geld
-item.sell("Stone");             // nur eine Sorte
-item.sell("Stone", 10);         // höchstens zehn Stück
+item.sell(Stone);               // nur eine Sorte
+item.sell(Stone, 10);           // höchstens zehn Stück
 
-item.has("Stone");              // liegt etwas davon in der Tasche?
-item.has("Stone", 10);          // mindestens zehn?
+item.has(Stone);                // liegt etwas davon in der Tasche?
+item.has(Stone, 10);            // mindestens zehn?
+item.has(Any);                  // überhaupt irgendetwas?
 
-item.wash("Stone");             // verarbeiten - ebenso smelt, clean, press,
-item.wash("Stone", 5);          // cast, polish, harden, refine
+item.wash(Stone);               // verarbeiten - ebenso smelt, clean, press,
+item.wash(Stone, 5);            // cast, polish, harden, refine
 
-item.alloy("Electrum");         // legieren
-item.canAlloy("Electrum");      // wie viele gingen gerade?
+item.alloy(Electrum);           // legieren
+item.canAlloy(Electrum);        // wie viele gingen gerade?
 
 // ---- Ausgabe und geteilte Werte -----------------------------------------
 print("Text");                  // eine Zeile unter der Konsole
@@ -127,8 +138,8 @@ int main() {
     while (true) {
         block.mine();
 
-        if (item.has("Stone", 10)) {
-            item.wash("Stone");
+        if (item.has(Stone, 10)) {
+            item.wash(Stone);
         }
         item.sell();
     }
@@ -136,23 +147,62 @@ int main() {
 }
 ```
 
-### Erznamen: immer vollständig schreiben
+### Behandlung: teure Blöcke wollen mehr als `mine()`
 
-Später würfelt das Spiel eigene Erze aus, die es in `data/erze.json` gar nicht gibt. Deren
-Namen bestehen aus **mehreren Wörtern** — `Glacier Sheen`, `Night Ash Stone Vein`. Der Name
-muss vollständig dastehen; Groß- und Kleinschreibung ist egal, ein Teilstück reicht aber
-nicht:
+`while (true) { block.mine(); }` trägt dich durch die ersten Runden — danach nicht mehr. Je
+wertvoller ein Erz, desto häufiger verlangt sein Block eine **Behandlung**: er muss beim
+Abbau gekühlt oder erhitzt werden. Was er will, wird bei jedem Nachwachsen neu gewürfelt —
+man kann es also nicht am Erz ablesen, sondern muss den Block fragen:
 
 ```cpp
-item.has("Glacier Sheen")   // findet es
-item.has("glacier sheen")   // findet es auch
-item.has("Glacier")         // 0 - kein Teiltreffer
-item.has("GlacierSheen")    // 0 - Leerzeichen fehlt
+while (true) {
+    if (block.needs(Cool))      block.mine(Cool);
+    else if (block.needs(Heat)) block.mine(Heat);
+    else                        block.mine();
+
+    item.sell();
+}
 ```
 
-Den genauen Namen findest du auf der Wiki-Seite des Erzes. Achtung bei der Fehlersuche:
-ein unbekannter Name gibt einfach `0` zurück — genau wie eine leere Tasche. Ein Tippfehler
-sieht also aus wie „hab ich gerade nicht".
+Der Block kommt **immer gleich schnell** heraus — die Strafe ist die **Reinheit**. Gar nicht
+behandelt kostet 25 Punkte, falsch behandelt 50. Reinheit wirkt linear von 0,5× bis 1,5× auf
+den Preis, ein falsch abgebauter Block bringt also fast die Hälfte weniger. Deshalb lohnt
+sich blindes `block.mine(Cool)` nie. Über dem Block steht, was er will, und die Wikiseite
+jedes Erzes sagt, wie oft es etwas verlangt und was dich ein Fehler dort konkret kostet.
+
+Verloren ist es nicht ganz: **Reinigen** holt einen Teil zurück — kostet aber einen Auftrag,
+und es läuft immer nur einer.
+
+Freigeschaltet wird das über den Punkt **care** im Skilltree, und er braucht `check`.
+Die Wahrscheinlichkeiten stehen in `data/erze.json` unter `"behandlung"`: unter Grundwert 8
+verlangt nie ein Erz etwas, nach oben läuft die Kurve gegen 80 %. Dort stehen auch die
+beiden Verluste (`verlust_ohne`, `verlust_falsch`).
+
+### Erznamen: ein `enum`, keine Zeichenkette
+
+Erze sind kein Text, sondern Werte eines `enum Ore` — deshalb stehen sie **ohne
+Anführungszeichen** da. Das Spiel baut dieses `enum` bei jedem Start aus der Erzliste,
+also stehen auch die Erze darin, die es sich selbst ausgewürfelt hat.
+
+Namen aus mehreren Wörtern (`Glacier Sheen`, `Night Ash Stone Vein`) werden dabei
+zusammengezogen; alles, was in einem C++-Namen nichts zu suchen hat, fällt weg:
+
+```cpp
+item.has(GlacierSheen)      // so heißt das Erz "Glacier Sheen" im Code
+item.has(WhiteGold)         // "White Gold"
+item.has(Any)               // egal was - liegt überhaupt etwas in der Tasche?
+```
+
+Der Vorteil gegenüber früher: ein Tippfehler ist jetzt ein **Übersetzungsfehler** und
+keine stille `0` mehr. Ein Erz, das es noch nicht gibt, kennt der Compiler auch noch
+nicht — es taucht auf, sobald das Spiel es kennt.
+
+`Any` gibt es zusätzlich zu jedem Erz: `item.has(Any)` zählt alles zusammen,
+`item.sell(Any)` verkauft alles.
+
+Die Schreibweise mit Anführungszeichen (`item.has("Glacier Sheen")`) funktioniert weiter,
+damit alter Code nicht auf einmal stehenbleibt — dort gilt weiter: vollständig schreiben,
+Groß- und Kleinschreibung egal, kein Teiltreffer, und ein unbekannter Name gibt `0`.
 
 Mehrere Konsolen sind zusammen **ein** Programm: genau eine davon hat `main()`, die anderen
 steuern Funktionen und Variablen bei. Details in **[KONZEPT.md](KONZEPT.md)**.

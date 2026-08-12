@@ -14,6 +14,7 @@ enum class Skill
     // Baum, und sie bringt genau eine Verwendung mit. Mehr gibt es nur ueber
     // die Erweiterungen weiter unten.
     Mine,  // block.mine() - abbauen per Programm statt per Klick
+    Care,  // block.needs(...) und block.mine(Cool) - Bloecke behandeln
     Sell,  // item.sell() - die Tasche zu Geld machen
     While,
     If,

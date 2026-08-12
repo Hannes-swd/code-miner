@@ -42,6 +42,10 @@ struct Limits
     bool allowCheck    = false;
     bool allowShared   = false;
     bool allowMine     = false;
+
+    // block.needs(...) und block.mine(Cool): teure Bloecke wollen behandelt
+    // werden, und ohne diesen Punkt kann man sie nur langsam abbauen.
+    bool allowCare     = false;
     bool allowSell     = false;
     bool allowBag      = false;
     bool allowVariable = false;

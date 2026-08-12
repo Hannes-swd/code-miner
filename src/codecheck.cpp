@@ -219,6 +219,15 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
                 if (!limits.allowMine)
                     return locked("block.mine()");
             }
+            // Behandeln. "Cool" und "Heat" haengen mit dran: ohne den Punkt
+            // gibt es die beiden Woerter gar nicht, und ein block.mine(Cool)
+            // waere sonst erst beim Compiler aufgefallen - mit einer Meldung,
+            // die niemandem sagt, dass ein Skill fehlt.
+            else if (t.word == "needs" || t.word == "Cool" || t.word == "Heat")
+            {
+                if (!limits.allowCare)
+                    return locked("block.needs(...)");
+            }
             else if (t.word == "has")
             {
                 if (!limits.allowBag)

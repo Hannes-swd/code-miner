@@ -234,21 +234,33 @@ const Block block;
 
 // Alles, was die Tasche betrifft. Was einmal abgebaut ist, gehoert nicht mehr
 // dem Block - deshalb steht es hier und nicht bei Block.
+// Welche Erze es gibt, steht nicht im Programm, sondern in data/erze.json -
+// und spaeter wuerfelt das Spiel weitere aus. Deshalb wird dieses enum bei
+// jedem Start neu erzeugt (native.cpp, OreEnumSource). Aus "White Gold" wird
+// WhiteGold: was in einem C++-Namen nichts zu suchen hat, faellt weg.
+enum Ore {
+    Any = -1,   // egal was: has(Any) zaehlt alles, sell(Any) verkauft alles
+    Stone = 0, Coal = 1, /* ... */
+};
+
 struct Item {
     int  sell();                            // alles verkaufen -> Geld
-    int  sell(const std::string& erz);      // nur eine Sorte
-    int  sell(const std::string& erz, int anzahl);
+    int  sell(Ore erz);                     // nur eine Sorte
+    int  sell(Ore erz, int anzahl);
 
-    bool has(const std::string& erz);       // liegt etwas davon in der Tasche?
-    bool has(const std::string& erz, int anzahl);
+    bool has(Ore erz);                      // liegt etwas davon in der Tasche?
+    bool has(Ore erz, int anzahl);
 
     // Verarbeiten. Ohne Zahl: alles, was gerade passt.
-    int wash(const std::string& erz);       // dazu smelt, cast, clean,
-    int wash(const std::string& erz, int anzahl);  // polish, harden, refine, press
+    int wash(Ore erz);                      // dazu smelt, cast, clean,
+    int wash(Ore erz, int anzahl);          // polish, harden, refine, press
 
-    int alloy(const std::string& stoff);    // legieren
-    int alloy(const std::string& stoff, int anzahl);
-    int canAlloy(const std::string& stoff); // wie viele gingen gerade?
+    int alloy(Ore stoff);                   // legieren
+    int alloy(Ore stoff, int anzahl);
+    int canAlloy(Ore stoff);                // wie viele gingen gerade?
+
+    // Dasselbe noch einmal mit const std::string& statt Ore. Das war frueher
+    // der einzige Weg - es bleibt, damit alter Code weiter uebersetzt.
 };
 
 const Item item;

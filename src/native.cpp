@@ -21,13 +21,18 @@ namespace
 // Die Spiel-API, die dem Spielercode zur Verfuegung steht.
 // Wird per /FI erzwungen - dadurch steht KEINE Zeile vor dem Code des
 // Spielers und alle Zeilennummern bleiben unveraendert.
+//
+// Der Header hat drei Teile: das Stueck vor der Erzliste, die Erzliste selbst
+// (die haengt von data/erze.json und den gewuerfelten Erzen ab, wird also erst
+// beim Start zusammengebaut) und das Stueck danach.
 // ---------------------------------------------------------------------------
-const char* kKlickerHeader = R"KLICKER(#pragma once
+const char* kHeaderTop = R"KLICKER(#pragma once
 #include <string>
 
 namespace ck {
 void line(int console, int n);
-void mine();
+void mine(int care);
+int  needs();
 int  sell();
 int  sellSome(const char* erz, int anzahl);
 int  inBag(const char* erz);
@@ -114,12 +119,36 @@ struct CkShared
 
 static CkShared shared;
 
+// Was ein Block beim Abbau verlangt.
+//
+// Je wertvoller das Erz, desto oefter will sein Block behandelt werden. Er
+// kommt immer gleich schnell heraus - aber falsch behandelt verliert er
+// Reinheit und ist damit weniger wert. Die falsche Behandlung kostet mehr als
+// gar keine. Deshalb steht das nicht einfach so da, sondern in einem if:
+//
+//     if (block.needs(Cool))      block.mine(Cool);
+//     else if (block.needs(Heat)) block.mine(Heat);
+//     else                        block.mine();
+enum Care
+{
+    Plain = 0,  // will nichts - einfach abbauen
+    Cool  = 1,  // muss gekuehlt werden
+    Heat  = 2   // muss erhitzt werden
+};
+
 // Der Block da draussen in der Welt. Hier steht nur, was mit IHM zu tun hat:
 // abbauen und nachschauen, ob er ueberhaupt da ist. Alles, was danach kommt -
 // Tasche, Verarbeiten, Verkaufen - gehoert zu "item" weiter unten.
 struct CkBlock
 {
-    void mine() const { ck::mine(); }
+    void mine() const { ck::mine((int)Plain); }
+    void mine(Care womit) const { ck::mine((int)womit); }
+
+    // Was will dieser Block? block.needs() gibt Plain, Cool oder Heat zurueck.
+    Care needs() const { return (Care)ck::needs(); }
+
+    // Und dieselbe Frage als Ja/Nein - so passt sie direkt in ein if.
+    bool needs(Care was) const { return (Care)ck::needs() == was; }
 
     // Ist der Block gerade da?
     //   true  = da, man kann ihn abbauen
@@ -133,7 +162,11 @@ struct CkBlock
 };
 
 static const CkBlock block;
+)KLICKER";
 
+// Hierher kommt die Erzliste als enum (siehe OreEnumSource). Danach geht es
+// mit diesem Stueck weiter.
+const char* kHeaderBottom = R"KLICKER(
 // Deine Tasche. Was einmal abgebaut ist, gehoert nicht mehr dem Block, sondern
 // dir - deshalb steht das alles hier und nicht bei "block".
 struct CkItem
@@ -141,17 +174,26 @@ struct CkItem
     // Verkauft alles aus der Tasche und gibt zurueck, wie viel Geld es gab.
     int sell() const { return ck::sell(); }
 
-    // Nur eine Sorte: item.sell("Stein") verkauft alle Steine,
-    // item.sell("Stein", 3) genau drei davon.
-    int sell(const std::string& erz) const { return ck::sellSome(erz.c_str(), -1); }
-    int sell(const std::string& erz, int anzahl) const
+    // Nur eine Sorte: item.sell(Stone) verkauft alle Steine,
+    // item.sell(Stone, 3) genau drei davon. item.sell(Any) ist dasselbe wie
+    // item.sell() - alles.
+    int sell(Ore erz) const
     {
-        return ck::sellSome(erz.c_str(), anzahl);
+        return (erz == Any) ? ck::sell() : ck::sellSome(CkOreName(erz), -1);
     }
+    int sell(Ore erz, int anzahl) const { return ck::sellSome(CkOreName(erz), anzahl); }
 
     // In die Tasche schauen, ohne zu verkaufen:
-    //     if (item.has("Stein")) ...        mindestens einer
-    //     if (item.has("Stein", 10)) ...    mindestens zehn
+    //     if (item.has(Stone)) ...        mindestens einer
+    //     if (item.has(Stone, 10)) ...    mindestens zehn
+    //     if (item.has(Any)) ...          ueberhaupt irgendetwas
+    bool has(Ore erz) const { return ck::inBag(CkOreName(erz)) > 0; }
+    bool has(Ore erz, int anzahl) const { return ck::inBag(CkOreName(erz)) >= anzahl; }
+
+    // Dasselbe mit Text. Das war frueher der einzige Weg - es geht weiter,
+    // damit alter Code nicht auf einmal nicht mehr uebersetzt.
+    int  sell(const std::string& erz) const { return ck::sellSome(erz.c_str(), -1); }
+    int  sell(const std::string& erz, int anzahl) const { return ck::sellSome(erz.c_str(), anzahl); }
     bool has(const std::string& erz) const { return ck::inBag(erz.c_str()) > 0; }
     bool has(const std::string& erz, int anzahl) const
     {
@@ -161,8 +203,8 @@ struct CkItem
     // Verarbeiten. Roh verkaufen bringt wenig - verarbeitet ist ein Block
     // deutlich mehr wert.
     //
-    //     item.wash("Gold");        alles, was gerade passt
-    //     item.smelt("Gold", 3);    genau drei Stueck
+    //     item.wash(Gold);        alles, was gerade passt
+    //     item.smelt(Gold, 3);    genau drei Stueck
     //
     // Rueckgabe: wie viele Stuecke wirklich in Arbeit gegeben wurden.
     // 0 heisst: ging nicht - falscher Zustand, nichts da, noch nicht
@@ -171,6 +213,25 @@ struct CkItem
     //
     // Was von wo nach wo geht, steht in data/verarbeitung.json - dort ist es
     // ein Netz und keine feste Kette.
+    int wash(Ore erz)   const { return ck::craft("wash", CkOreName(erz), -1); }
+    int smelt(Ore erz)  const { return ck::craft("smelt", CkOreName(erz), -1); }
+    int cast(Ore erz)   const { return ck::craft("cast", CkOreName(erz), -1); }
+    int clean(Ore erz)  const { return ck::craft("clean", CkOreName(erz), -1); }
+    int polish(Ore erz) const { return ck::craft("polish", CkOreName(erz), -1); }
+    int harden(Ore erz) const { return ck::craft("harden", CkOreName(erz), -1); }
+    int refine(Ore erz) const { return ck::craft("refine", CkOreName(erz), -1); }
+    int press(Ore erz)  const { return ck::craft("press", CkOreName(erz), -1); }
+
+    int wash(Ore erz, int anzahl)   const { return ck::craft("wash", CkOreName(erz), anzahl); }
+    int smelt(Ore erz, int anzahl)  const { return ck::craft("smelt", CkOreName(erz), anzahl); }
+    int cast(Ore erz, int anzahl)   const { return ck::craft("cast", CkOreName(erz), anzahl); }
+    int clean(Ore erz, int anzahl)  const { return ck::craft("clean", CkOreName(erz), anzahl); }
+    int polish(Ore erz, int anzahl) const { return ck::craft("polish", CkOreName(erz), anzahl); }
+    int harden(Ore erz, int anzahl) const { return ck::craft("harden", CkOreName(erz), anzahl); }
+    int refine(Ore erz, int anzahl) const { return ck::craft("refine", CkOreName(erz), anzahl); }
+    int press(Ore erz, int anzahl)  const { return ck::craft("press", CkOreName(erz), anzahl); }
+
+    // ... und dasselbe mit Text, wie oben bei has() und sell().
     int wash(const std::string& erz)   const { return ck::craft("wash", erz.c_str(), -1); }
     int smelt(const std::string& erz)  const { return ck::craft("smelt", erz.c_str(), -1); }
     int cast(const std::string& erz)   const { return ck::craft("cast", erz.c_str(), -1); }
@@ -193,8 +254,8 @@ struct CkItem
     // wert ist als seine Teile - und der sich danach normal weiterverarbeiten
     // laesst.
     //
-    //     item.alloy("Elektrum");       ein Stueck
-    //     item.alloy("Elektrum", 3);    drei Stueck
+    //     item.alloy(Electrum);       ein Stueck
+    //     item.alloy(Electrum, 3);    drei Stueck
     //
     // Rueckgabe: wie viele Stuecke wirklich in Arbeit gegeben wurden.
     // 0 heisst: ging nicht - Zutaten fehlen, falscher Zustand, noch nicht
@@ -203,6 +264,9 @@ struct CkItem
     //
     // Welche Rezepte es gibt und in welchem Zustand die Zutaten sein muessen,
     // steht in data/legierungen.json.
+    int alloy(Ore stoff) const { return ck::alloy(CkOreName(stoff), 1); }
+    int alloy(Ore stoff, int anzahl) const { return ck::alloy(CkOreName(stoff), anzahl); }
+
     int alloy(const std::string& stoff) const { return ck::alloy(stoff.c_str(), 1); }
     int alloy(const std::string& stoff, int anzahl) const
     {
@@ -212,8 +276,9 @@ struct CkItem
     // Wie viele Stueck koenntest du gerade davon machen? 0 = keins.
     // Damit kannst du dich VORHER entscheiden:
     //
-    //     if (item.canAlloy("Elektrum")) item.alloy("Elektrum");
-    //     else                           item.sell("Gold");
+    //     if (item.canAlloy(Electrum)) item.alloy(Electrum);
+    //     else                         item.sell(Gold);
+    int canAlloy(Ore stoff) const { return ck::canAlloy(CkOreName(stoff)); }
     int canAlloy(const std::string& stoff) const { return ck::canAlloy(stoff.c_str()); }
 };
 
@@ -225,7 +290,78 @@ inline void print(int value)               { ck::out(std::to_string(value).c_str
 inline void print(double value)            { ck::out(std::to_string(value).c_str()); }
 inline void print(bool value)              { ck::out(value ? "true" : "false"); }
 inline void print(const CkSharedValue& v)  { ck::out(std::to_string((int)v).c_str()); }
+
+// print(Stone) soll "Stone" schreiben und nicht die Nummer dahinter.
+inline void print(Ore erz)                 { ck::out(CkOreName(erz)); }
+inline void print(Care c)
+{
+    ck::out((c == Cool) ? "Cool" : ((c == Heat) ? "Heat" : "Plain"));
+}
 )KLICKER";
+
+// ---------------------------------------------------------------------------
+// Die Erzliste als enum.
+//
+// Erze stehen in data/erze.json, kommen aus data/legierungen.json dazu oder
+// wuerfelt sich das Spiel selbst aus - im Programm steht davon nichts. Deshalb
+// wird dieses Stueck Header bei jedem Start neu gebaut.
+// ---------------------------------------------------------------------------
+
+std::string CEscape(const std::string& s)
+{
+    std::string out;
+    for (const char c : s)
+    {
+        if (c == '\\' || c == '"')
+            out.push_back('\\');
+        out.push_back(c);
+    }
+    return out;
+}
+
+std::string OreEnumSource(const OrePlan& ores)
+{
+    // Die Namen kommen aus ore.cpp - das Wiki zeigt dieselben an, und beide
+    // muessen sich einig sein. Die Nummer im enum ist die Nummer in der
+    // Erzliste, deshalb wird nie eines uebersprungen.
+    const std::vector<std::string> idents = OreCodeNames(ores);
+
+    std::string out =
+        "\n"
+        "// Alle Erze, die es gibt. Das ist ein enum - deshalb ohne\n"
+        "// Anfuehrungszeichen:\n"
+        "//\n"
+        "//     item.has(Stone)\n"
+        "//     item.sell(Gold, 3)\n"
+        "//\n"
+        "// Any heisst \"egal was\": item.has(Any) fragt, ob ueberhaupt etwas in\n"
+        "// der Tasche liegt, item.sell(Any) verkauft alles.\n"
+        "enum Ore\n"
+        "{\n"
+        "    Any = -1,\n";
+
+    for (std::size_t i = 0; i < idents.size(); ++i)
+        out += "    " + idents[i] + " = " + std::to_string(i) + ",\n";
+
+    out +=
+        "};\n"
+        "\n"
+        "// Der Name zum enum. Das Spiel draussen kennt nur Namen, keine Nummern.\n"
+        "inline const char* CkOreName(Ore erz)\n"
+        "{\n"
+        "    switch (erz)\n"
+        "    {\n";
+
+    for (std::size_t i = 0; i < idents.size(); ++i)
+        out += "    case " + idents[i] + ": return \"" + CEscape(ores.ores[i].name) + "\";\n";
+
+    out +=
+        "    default: return \"any\";\n"
+        "    }\n"
+        "}\n";
+
+    return out;
+}
 
 const char* kKlickerSource = R"KLICKER(#include <cstdio>
 #include <cstdlib>
@@ -246,10 +382,22 @@ void line(int console, int n)
     waitForGo();
 }
 
-void mine()
+void mine(int care)
 {
-    std::printf("M\n");
+    std::printf("M %d\n", care);
     std::fflush(stdout);
+}
+
+// Was der Block gerade verlangt. Das Spiel antwortet mit einer Zahl, deshalb
+// wird hier gewartet - wie bei exists().
+int needs()
+{
+    std::printf("N\n");
+    std::fflush(stdout);
+    char buf[32];
+    if (!std::fgets(buf, sizeof(buf), stdin))
+        std::exit(0);
+    return std::atoi(buf);
 }
 
 // Verkaufen. Das Spiel antwortet mit dem Geld - deshalb wird hier gewartet.
@@ -929,9 +1077,9 @@ std::string CombineSources(const std::vector<SourceFile>& files)
 // Uebersetzen (laeuft auf einem eigenen Thread, damit das Fenster fluessig bleibt)
 // ---------------------------------------------------------------------------
 
-static Native::Build CompileToExe(const std::vector<SourceFile>& files, int runId,
-                                  const std::string& lastCombined, const std::string& lastExe,
-                                  const std::string& lastDir);
+static Native::Build CompileToExe(const std::vector<SourceFile>& files, const std::string& header,
+                                  int runId, const std::string& lastCombined,
+                                  const std::string& lastExe, const std::string& lastDir);
 
 Native::~Native()
 {
@@ -940,7 +1088,7 @@ Native::~Native()
         mBuild.wait();
 }
 
-void Native::start(const std::vector<SourceFile>& files)
+void Native::start(const std::vector<SourceFile>& files, const OrePlan& ores)
 {
     stop();
 
@@ -957,12 +1105,18 @@ void Native::start(const std::vector<SourceFile>& files)
     static int counter = 0;
     const int  id      = ++counter;
 
-    const std::string  lastCombined = mLastCombined;
+    const std::string lastCombined = mLastCombined;
     const std::string lastExe      = mLastExe;
     const std::string lastDir      = mLastDir;
 
-    mBuild = std::async(std::launch::async, [files, id, lastCombined, lastExe, lastDir]
-                        { return CompileToExe(files, id, lastCombined, lastExe, lastDir); });
+    // Die Erzliste kann sich zwischen zwei Laeufen aendern - das Spiel wuerfelt
+    // ja neue Erze aus. Deshalb wird der Header hier gebaut und wandert mit in
+    // den Vergleich: sonst startete das Spiel eine .exe mit einer alten Liste
+    // noch einmal.
+    const std::string header = std::string(kHeaderTop) + OreEnumSource(ores) + kHeaderBottom;
+
+    mBuild = std::async(std::launch::async, [files, header, id, lastCombined, lastExe, lastDir]
+                        { return CompileToExe(files, header, id, lastCombined, lastExe, lastDir); });
 }
 
 void Native::fail(const std::string& message, int console, int line)
@@ -1075,12 +1229,38 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
         break;
     }
 
-    case 'M':
-        mMsg = world.mine() ? "Block mined." : "The block is already mined.";
+    case 'M':  // abbauen:  M <behandlung>
+    {
+        int womit = (msg.size() > 2) ? std::atoi(msg.c_str() + 2) : 0;
+        if (womit < 0 || womit >= (int)BlockCare::Count)
+            womit = 0;
+
+        if (!world.mine((BlockCare)womit))
+        {
+            mMsg = "The block is already mined.";
+        }
+        else if ((BlockCare)womit != world.care)
+        {
+            // Falsch behandelt sieht man dem Block nicht an - er kommt genauso
+            // schnell heraus, nur schmutziger. Deshalb steht es in der Zeile
+            // unter der Konsole.
+            mMsg = std::string("Mining with ") + BlockCareName((BlockCare)womit) +
+                   ", but the block wants " + BlockCareName(world.care) + " - purity -" +
+                   std::to_string(CareLoss(ores.care, world.care, (BlockCare)womit)) + "%.";
+        }
+        else
+        {
+            mMsg = "Block mined.";
+        }
         break;
+    }
 
     case 'Q':
         sendChild(world.blockAlive ? "1\n" : "0\n");
+        break;
+
+    case 'N':  // block.needs() - was verlangt der Block gerade?
+        sendChild((std::to_string((int)world.care) + "\n").c_str());
         break;
 
     case 'K':  // verkaufen. Ohne Zusatz alles, sonst "K <anzahl> <erz>"
@@ -1231,7 +1411,7 @@ void Native::update(float dt, World& world, const OrePlan& ores, const CraftPlan
             mMsg   = "The program could not be started.";
             return;
         }
-        mLastCombined = build.combined;
+        mLastCombined = build.cacheKey;
         mLastExe      = build.exe;
         mLastDir      = build.dir;
 
@@ -1296,9 +1476,9 @@ void Native::update(float dt, World& world, const OrePlan& ores, const CraftPlan
 
 // ---------------------------------------------------------------------------
 
-static Native::Build CompileToExe(const std::vector<SourceFile>& files, int runId,
-                                  const std::string& lastCombined, const std::string& lastExe,
-                                  const std::string& lastDir)
+static Native::Build CompileToExe(const std::vector<SourceFile>& files, const std::string& header,
+                                  int runId, const std::string& lastCombined,
+                                  const std::string& lastExe, const std::string& lastDir)
 {
     Native::Build build;
 
@@ -1326,9 +1506,15 @@ static Native::Build CompileToExe(const std::vector<SourceFile>& files, int runI
     // Hat sich seit dem letzten Mal nichts geaendert? Dann das fertige
     // Programm einfach noch einmal starten. Beim Klicken am Spielanfang ist
     // genau das der Normalfall.
+    // Der Header steht mit im Vergleich, sonst zaehlte eine neue Erzliste als
+    // "hat sich nichts geaendert".
     build.combined = CombineSources(files);
 
-    if (!lastExe.empty() && build.combined == lastCombined && FileExists(lastExe))
+    const std::string key = header + build.combined;
+
+    build.cacheKey = key;
+
+    if (!lastExe.empty() && key == lastCombined && FileExists(lastExe))
     {
         build.ok     = true;
         build.reused = true;
@@ -1350,7 +1536,7 @@ static Native::Build CompileToExe(const std::vector<SourceFile>& files, int runI
 
     const std::string headerPath = dir + "klicker.h";
 
-    if (!WriteTextFile(headerPath, kKlickerHeader) ||
+    if (!WriteTextFile(headerPath, header) ||
         !WriteTextFile(dir + "klicker.cpp", kKlickerSource) ||
         !WriteTextFile(dir + "run.cpp", build.combined))
     {

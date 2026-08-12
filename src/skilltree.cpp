@@ -96,6 +96,7 @@ const char* SkillName(Skill skill)
     {
     case Skill::Root: return "Console";
     case Skill::Mine: return "block.mine()";
+    case Skill::Care: return "block.needs()";
     case Skill::Sell: return "item.sell()";
     case Skill::While: return "while";
     case Skill::If: return "if";
@@ -137,6 +138,7 @@ const char* SkillInfo(Skill skill)
     {
     case Skill::Root: return "Your first console. At the start you can only mine by hand - click the block.";
     case Skill::Mine: return "block.mine() - let a program mine instead of clicking. The first step towards a machine.";
+    case Skill::Care: return "block.needs(Cool) and block.mine(Cool) - valuable blocks want to be cooled or heated. The wrong treatment is worse than none. Needs if.";
     case Skill::Sell: return "item.sell() sells everything in your bag at once. Without it you sell by hand.";
     case Skill::While: return "while and do. Comes with your first loop.";
     case Skill::If: return "if. Comes with your first condition.";
@@ -144,20 +146,20 @@ const char* SkillInfo(Skill skill)
     case Skill::For: return "for. Comes with one more loop - all loops count together.";
     case Skill::Print: return "print(...) writes into the line below the editor.";
     case Skill::Check: return "block.isThere() and block.isLoading() - check whether the block is there.";
-    case Skill::Bag: return "item.has(\"Stone\") - look into your bag. With a count: item.has(\"Stone\", 5). Needs if.";
+    case Skill::Bag: return "item.has(Stone) - look into your bag. With a count: item.has(Stone, 5). Needs if.";
     case Skill::Shared: return "shared[\"name\"] - values that survive a restart.";
     case Skill::Variable: return "Your own variables: int, float, bool, auto ... exactly one for now.";
     case Skill::Class: return "struct and class. Exactly one for now.";
     case Skill::Function: return "Your own functions and methods. Exactly one for now.";
-    case Skill::Wash: return "item.wash(\"Stone\") - washing. The first step that makes a block worth more.";
-    case Skill::Smelt: return "item.smelt(\"Copper\") - smelting. Costs purity, but adds a lot of value.";
-    case Skill::Cast: return "item.cast(\"Copper\") - casting. Only works on smelted material.";
-    case Skill::Clean: return "item.clean(\"Stone\") - cleaning. The big jump in purity.";
-    case Skill::Polish: return "item.polish(\"Diamond\") - polishing. Needs something cast, cleaned or hardened.";
-    case Skill::Harden: return "item.harden(\"Iron\") - hardening. Possible from several states.";
-    case Skill::Refine: return "item.refine(\"Gold\") - refining. The most valuable thing a single ore can become.";
-    case Skill::Press: return "item.press(\"Coal\") - pressing. Fast and cheap, but little profit.";
-    case Skill::Alloy: return "item.alloy(\"Electrum\") - melt two ores into a new material worth more than both together. item.canAlloy(\"Electrum\") tells you beforehand how many would work. Needs smelting.";
+    case Skill::Wash: return "item.wash(Stone) - washing. The first step that makes a block worth more.";
+    case Skill::Smelt: return "item.smelt(Copper) - smelting. Costs purity, but adds a lot of value.";
+    case Skill::Cast: return "item.cast(Copper) - casting. Only works on smelted material.";
+    case Skill::Clean: return "item.clean(Stone) - cleaning. The big jump in purity.";
+    case Skill::Polish: return "item.polish(Diamond) - polishing. Needs something cast, cleaned or hardened.";
+    case Skill::Harden: return "item.harden(Iron) - hardening. Possible from several states.";
+    case Skill::Refine: return "item.refine(Gold) - refining. The most valuable thing a single ore can become.";
+    case Skill::Press: return "item.press(Coal) - pressing. Fast and cheap, but little profit.";
+    case Skill::Alloy: return "item.alloy(Electrum) - melt two ores into a new material worth more than both together. item.canAlloy(Electrum) tells you beforehand how many would work. Needs smelting.";
     case Skill::ExtraLoop: return "One more loop allowed in your code.";
     case Skill::ExtraIf: return "One more condition allowed in your code.";
     case Skill::ExtraConsole: return "One more console.";
@@ -178,6 +180,7 @@ const char* SkillTag(Skill skill)
     {
     case Skill::Root: return ">_";
     case Skill::Mine: return "M";
+    case Skill::Care: return "C/H";
     case Skill::Sell: return "$>";
     case Skill::While: return "W";
     case Skill::If: return "IF";
@@ -525,6 +528,7 @@ Limits SkillTree::limits() const
         case Skill::Else: limits.allowElse = true; break;
         case Skill::Print: limits.allowPrint = true; break;
         case Skill::Check: limits.allowCheck = true; break;
+        case Skill::Care: limits.allowCare = true; break;
         case Skill::Shared: limits.allowShared = true; break;
 
         case Skill::Wash: limits.allowWash = true; break;

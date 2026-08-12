@@ -53,22 +53,25 @@
 #   check         block.isThere(), isLoading(), exists(), isGone()
 #   shared        shared["name"] - survives a restart
 #   mine          block.mine() - let a program mine instead of clicking
+#   care          block.needs(Cool) and block.mine(Cool) - valuable blocks
+#                 want to be cooled or heated. The wrong treatment is worse
+#                 than none, so this one only pays off together with "if".
 #   sell          item.sell() - turn your bag into money
-#   bag           item.has("Stone") - look at what is in your bag
+#   bag           item.has(Stone) - look at what is in your bag
 #   variables     your own variables (int, float, ...), plus the first one
 #   classes       struct and class, plus the first one
 #   functions     your own functions and methods, plus the first one
 #
-#   wash          item.wash("Stone")   - processing
-#   clean         item.clean("Stone")
-#   press         item.press("Coal")
-#   smelt         item.smelt("Copper")
-#   cast          item.cast("Copper")
-#   harden        item.harden("Iron")
-#   polish        item.polish("Diamond")
-#   refine        item.refine("Gold")
+#   wash          item.wash(Stone)   - processing
+#   clean         item.clean(Stone)
+#   press         item.press(Coal)
+#   smelt         item.smelt(Copper)
+#   cast          item.cast(Copper)
+#   harden        item.harden(Iron)
+#   polish        item.polish(Diamond)
+#   refine        item.refine(Gold)
 #
-#   alloy         item.alloy("Electrum") and item.canAlloy("Electrum")
+#   alloy         item.alloy(Electrum) and item.canAlloy(Electrum)
 #                 - melt two ores into one new material
 #
 #   What works from which state is in data/verarbeitung.json - that is a net,
@@ -127,6 +130,7 @@ variables      6-11        16   once 1
 print          7-13        12   once 1
 bag            6-11        16   once 2   needs if
 check          8-14        14   once 1
+care           12-20       22   once 1   needs check
 else           10-16       18   once 1   needs if
 for            11-17       20   once 1   needs while
 functions      12-18       20   once 1   needs variables

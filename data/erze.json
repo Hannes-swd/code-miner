@@ -2,6 +2,27 @@
 {
   "level": { "art": "bloecke", "pro_level": 20 },
 
+  // Behandlung beim Abbau. Je wertvoller ein Erz, desto oefter will sein Block
+  // gekuehlt oder erhitzt werden - dann reicht ein blosses block.mine() nicht
+  // mehr, und man muss fragen: if (block.needs(Cool)) block.mine(Cool);
+  //
+  //   ab_wert         bis zu diesem Grundwert verlangt ein Erz nie etwas
+  //   chance_max      hoechste Wahrscheinlichkeit, die dabei herauskommt
+  //   wert_halb       bei "ab_wert + wert_halb" ist die Haelfte davon erreicht
+  //   verlust_ohne    wie viele Punkte Reinheit es kostet, wenn man nichts tut
+  //   verlust_falsch  ... und wenn man das Falsche tut
+  //
+  // Die Zeit bleibt gleich: ein falsch abgebauter Block kommt genauso schnell
+  // heraus, er ist nur weniger wert. Reinheit wirkt linear von 0.5x (0 %) bis
+  // 1.5x (100 %) auf den Preis - siehe data/verarbeitung.json.
+  "behandlung": {
+    "ab_wert": 8,
+    "chance_max": 0.8,
+    "wert_halb": 45,
+    "verlust_ohne": 25,
+    "verlust_falsch": 50
+  },
+
   "erze": [
     {
       "name": "Stone",

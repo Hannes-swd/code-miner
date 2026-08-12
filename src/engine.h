@@ -32,7 +32,9 @@ class Engine
 public:
     virtual ~Engine() = default;
 
-    virtual void start(const std::vector<SourceFile>& files) = 0;
+    // Die Erzliste gehoert schon zum Start dazu: aus ihr wird das enum Ore
+    // gebaut, mit dem der Spieler  item.has(Stone)  schreiben kann.
+    virtual void start(const std::vector<SourceFile>& files, const OrePlan& ores) = 0;
     virtual void togglePause()                               = 0;
     virtual void stop()                                      = 0;
     // Die Erzliste braucht der Motor fuers Verkaufen: item.sell() muss

@@ -26,7 +26,7 @@
     "  titel       how it appears in the list.",
     "  kurz        one sentence below the title.",
     "  braucht     the key of a skill tree point - the same ones as in",
-    "              data/skills.txt: mine, sell, bag, check, print, shared, while,",
+    "              data/skills.txt: mine, care, sell, bag, check, print, shared, while,",
     "              if, else, for, variables, classes, functions, wash, smelt,",
     "              cast, clean, polish, harden, refine, press, alloy.",
     "              If the point is not bought, the page does NOT show up at all.",
@@ -215,8 +215,8 @@
         },
         {
           "punkt": "Looking inside",
-          "code": "if (item.has(\"Stone\"))\n{\n    item.sell(\"Stone\");\n}",
-          "markiere": "item.has(\"Stone\")",
+          "code": "if (item.has(Stone))\n{\n    item.sell(Stone);\n}",
+          "markiere": "item.has(Stone)",
           "text": "has only looks, without taking anything out. That way you sell exactly what you have enough of.",
           "braucht": [
             "bag",
@@ -227,8 +227,8 @@
         },
         {
           "punkt": "Make it better first",
-          "code": "item.wash(\"Stone\", 3);",
-          "markiere": "item.wash(\"Stone\", 3)",
+          "code": "item.wash(Stone, 3);",
+          "markiere": "item.wash(Stone, 3)",
           "text": "Selling raw brings little. Washing, smelting, polishing, alloying - all these steps work in the bag, never on the block.",
           "braucht": "wash",
           "dauer": 6.0
@@ -281,6 +281,60 @@
         "while",
         "Ores",
         "Bag and selling"
+      ]
+    },
+    {
+      "kategorie": "functions",
+      "titel": "block.needs(...)",
+      "unter": "block",
+      "braucht": "care",
+      "kurz": "Valuable blocks want to be cooled or heated first.",
+      "schritte": [
+        {
+          "punkt": "Why at all",
+          "code": "block.needs(Cool)",
+          "markiere": "block.needs(Cool)",
+          "text": "The more a block is worth, the more often it wants something: cooling or heating. It always comes out equally fast - but untreated it comes out dirty, and purity is what it is worth.",
+          "dauer": 4.5
+        },
+        {
+          "punkt": "Ask the block",
+          "markiere": "needs",
+          "text": "Asks: does this block want to be cooled? The answer is true or false. Heat is the other one, and Plain means it wants nothing at all.",
+          "dauer": 4.0
+        },
+        {
+          "punkt": "Treat it while mining",
+          "code": "if (block.needs(Cool))\n{\n    block.mine(Cool);\n}",
+          "markiere": "block.mine(Cool)",
+          "text": "Into the brackets of mine goes what you do to it. Done right, the block keeps its full purity.",
+          "dauer": 4.5
+        },
+        {
+          "punkt": "The wrong treatment hurts",
+          "markiere": "Cool",
+          "text": "No treatment costs 25 points of purity, the wrong one 50 - heating what wants cooling is worse than doing nothing. So never treat blindly: ask first, every time.",
+          "dauer": 4.5
+        },
+        {
+          "punkt": "All three cases",
+          "code": "while (true)\n{\n    if (block.needs(Cool))\n    {\n        block.mine(Cool);\n    }\n    else if (block.needs(Heat))\n    {\n        block.mine(Heat);\n    }\n    else\n    {\n        block.mine();\n    }\n}",
+          "markiere": "else if",
+          "text": "Which one it is changes with every block that regrows. That is why the question belongs inside the loop and not in front of it.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "Where you see it",
+          "markiere": "block.needs(Cool)",
+          "text": "It says over the block what it wants, and every ore page in the wiki says how often that ore asks for it and what it costs you. Cheap ores like stone never ask.",
+          "dauer": 4.0
+        }
+      ],
+      "siehe_auch": [
+        "block.mine()",
+        "if",
+        "else",
+        "Ores"
       ]
     },
     {
@@ -348,29 +402,36 @@
         },
         {
           "punkt": "Only one kind",
-          "code": "item.sell(\"Stone\");",
-          "markiere": "\"Stone\"",
-          "text": "Into the brackets you write an ore name. Then only that kind goes over the counter, your gold stays put.",
+          "code": "item.sell(Stone);",
+          "markiere": "Stone",
+          "text": "Into the brackets you write an ore name - plain, without quotation marks. Then only that kind goes over the counter, your gold stays put.",
+          "dauer": 4.0
+        },
+        {
+          "punkt": "Any: no matter what",
+          "code": "item.sell(Any);",
+          "markiere": "Any",
+          "text": "Any stands for every ore at once. item.sell(Any) is the same as item.sell() - everything goes.",
           "dauer": 4.0
         },
         {
           "punkt": "Only a few of them",
-          "code": "item.sell(\"Stone\", 3);",
+          "code": "item.sell(Stone, 3);",
           "markiere": "3",
           "text": "The number says how many pieces. Here exactly three stones, the rest stays in the bag.",
           "dauer": 4.0
         },
         {
           "punkt": "What comes back",
-          "code": "int money = item.sell(\"Stone\", 3);\nprint(money);",
+          "code": "int money = item.sell(Stone, 3);\nprint(money);",
           "markiere": "int money",
           "text": "sell gives you back how much money there was. You can remember that and look at it.",
           "dauer": 4.5
         },
         {
           "punkt": "Process it first",
-          "code": "item.wash(\"Stone\");\nint money = item.sell(\"Stone\");",
-          "markiere": "item.wash(\"Stone\")",
+          "code": "item.wash(Stone);\nint money = item.sell(Stone);",
+          "markiere": "item.wash(Stone)",
           "text": "Raw, a block is worth little. Washed, pressed or polished it brings many times as much. Better sell afterwards.",
           "dauer": 5.0
         }
@@ -390,29 +451,36 @@
       "schritte": [
         {
           "punkt": "The command",
-          "code": "item.has(\"Stone\")",
-          "markiere": "item.has(\"Stone\")",
-          "text": "Asks: is there at least one stone in my bag? The answer is yes or no.",
+          "code": "item.has(Stone)",
+          "markiere": "item.has(Stone)",
+          "text": "Asks: is there at least one stone in my bag? The answer is yes or no. The ore name stands there plainly - no quotation marks.",
           "dauer": 3.5
         },
         {
+          "punkt": "Any: no matter what",
+          "code": "if (item.has(Any))\n{\n    item.sell();\n}",
+          "markiere": "Any",
+          "text": "Any means every ore at once: is there anything at all in my bag? With a number too - item.has(Any, 20) asks for twenty pieces, whatever they are.",
+          "dauer": 4.5
+        },
+        {
           "punkt": "With a count",
-          "code": "item.has(\"Stone\", 10)",
+          "code": "item.has(Stone, 10)",
           "markiere": "10",
           "text": "With a number you ask for at least that many. Here: do I have ten stones or more?",
           "dauer": 4.0
         },
         {
           "punkt": "Waiting until there is enough",
-          "code": "if (item.has(\"Stone\", 10))\n{\n    item.sell(\"Stone\");\n}",
+          "code": "if (item.has(Stone, 10))\n{\n    item.sell(Stone);\n}",
           "markiere": "if",
           "text": "That way you only sell once something has piled up - and not every single stone right away.",
           "dauer": 4.5
         },
         {
           "punkt": "Collect first, then smelt",
-          "code": "if (item.has(\"Copper\", 5))\n{\n    item.smelt(\"Copper\");\n}",
-          "markiere": "item.smelt(\"Copper\")",
+          "code": "if (item.has(Copper, 5))\n{\n    item.smelt(Copper);\n}",
+          "markiere": "item.smelt(Copper)",
           "text": "The same before processing: only one job runs at a time, and it costs time. Five at once pays off more than one five times.",
           "dauer": 5.0
         }
@@ -492,7 +560,7 @@
         },
         {
           "punkt": "All consoles share it",
-          "code": "// Konsole 1\nshared[\"gold\"] = 5;\n\n// Konsole 2\nif (shared[\"gold\"] > 0)\n{\n    item.sell(\"Gold\");\n}",
+          "code": "// Konsole 1\nshared[\"gold\"] = 5;\n\n// Konsole 2\nif (shared[\"gold\"] > 0)\n{\n    item.sell(Gold);\n}",
           "markiere": "// Konsole 2",
           "text": "The note belongs to all consoles together. One writes, another reads - that is how your programs talk to each other.",
           "dauer": 5.5
@@ -511,35 +579,35 @@
       "schritte": [
         {
           "punkt": "Raw is worth little",
-          "code": "item.sell(\"Copper\");",
-          "markiere": "item.sell(\"Copper\")",
+          "code": "item.sell(Copper);",
+          "markiere": "item.sell(Copper)",
           "text": "Fresh out of the ground a block is raw. Sold like that it brings the very least.",
           "dauer": 4.0
         },
         {
           "punkt": "One step in between",
-          "code": "item.smelt(\"Copper\");\nitem.sell(\"Copper\");",
-          "markiere": "item.smelt(\"Copper\")",
+          "code": "item.smelt(Copper);\nitem.sell(Copper);",
+          "markiere": "item.smelt(Copper)",
           "text": "Smelting turns raw copper into smelted copper. Smelted is worth twice as much as raw.",
           "dauer": 4.5
         },
         {
           "punkt": "Further still",
-          "code": "item.smelt(\"Copper\");\nitem.cast(\"Copper\");\nitem.polish(\"Copper\");\nitem.sell(\"Copper\");",
-          "markiere": "item.polish(\"Copper\")",
+          "code": "item.smelt(Copper);\nitem.cast(Copper);\nitem.polish(Copper);\nitem.sell(Copper);",
+          "markiere": "item.polish(Copper)",
           "text": "Every step makes the block worth more: polished brings four and a half times as much as raw. But every step costs time too.",
           "dauer": 5.5
         },
         {
           "punkt": "There are eight commands",
-          "code": "item.wash(\"Copper\");\nitem.clean(\"Copper\");\nitem.smelt(\"Copper\");\nitem.cast(\"Copper\");\nitem.harden(\"Copper\");\nitem.polish(\"Copper\");\nitem.refine(\"Copper\");\nitem.press(\"Stone\");",
-          "markiere": "item.press(\"Stone\")",
+          "code": "item.wash(Copper);\nitem.clean(Copper);\nitem.smelt(Copper);\nitem.cast(Copper);\nitem.harden(Copper);\nitem.polish(Copper);\nitem.refine(Copper);\nitem.press(Stone);",
+          "markiere": "item.press(Stone)",
           "text": "Not every command fits every ore. Stone can be pressed but not smelted. The bag shows you what works right now.",
           "dauer": 6.0
         },
         {
           "punkt": "It is a net",
-          "markiere": "item.clean(\"Copper\")",
+          "markiere": "item.clean(Copper)",
           "text": "There is not just one way. Cleaning, for example, works from raw, washed, cast and pressed. And: only one job runs at a time, the next one has to wait.",
           "dauer": 6.0
         }
@@ -569,21 +637,21 @@
       "schritte": [
         {
           "punkt": "The command",
-          "code": "item.wash(\"Copper\");",
-          "markiere": "item.wash(\"Copper\")",
+          "code": "item.wash(Copper);",
+          "markiere": "item.wash(Copper)",
           "text": "Washes all the raw copper in your bag. Washed is worth 1.2 times as much as raw.",
           "dauer": 4.0
         },
         {
           "punkt": "Only a few",
-          "code": "item.wash(\"Copper\", 2);",
+          "code": "item.wash(Copper, 2);",
           "markiere": "2",
           "text": "With a number you wash exactly that many pieces. Without a number it takes everything that fits.",
           "dauer": 4.0
         },
         {
           "punkt": "It gets cleaner too",
-          "markiere": "\"Copper\"",
+          "markiere": "Copper",
           "text": "Washing lifts the purity by 10 points, and it only takes 0.6 seconds per piece. But it only works from raw.",
           "dauer": 5.0
         }
@@ -603,22 +671,22 @@
       "schritte": [
         {
           "punkt": "The command",
-          "code": "item.smelt(\"Copper\");",
-          "markiere": "item.smelt(\"Copper\")",
+          "code": "item.smelt(Copper);",
+          "markiere": "item.smelt(Copper)",
           "text": "Melts copper in the furnace. Smelted is worth twice as much as raw - but the purity drops by 5 points.",
           "dauer": 4.5
         },
         {
           "punkt": "What it works from",
-          "code": "item.smelt(\"Copper\", 3);",
+          "code": "item.smelt(Copper, 3);",
           "markiere": "3",
           "text": "Smelting works from raw, washed and pressed. With a number you take only that many pieces - that takes 1.5 seconds each.",
           "dauer": 5.0
         },
         {
           "punkt": "It goes on from there",
-          "code": "item.smelt(\"Copper\");\nitem.cast(\"Copper\");",
-          "markiere": "item.cast(\"Copper\")",
+          "code": "item.smelt(Copper);\nitem.cast(Copper);",
+          "markiere": "item.cast(Copper)",
           "text": "From smelted comes cast, hardened or alloyed. Casting only works from smelted - that is why the furnace comes first.",
           "dauer": 5.5
         }
@@ -638,22 +706,22 @@
       "schritte": [
         {
           "punkt": "The command",
-          "code": "item.cast(\"Copper\");",
-          "markiere": "item.cast(\"Copper\")",
+          "code": "item.cast(Copper);",
+          "markiere": "item.cast(Copper)",
           "text": "Pours smelted copper into a mould. Cast is worth 2.8 times as much as raw.",
           "dauer": 4.0
         },
         {
           "punkt": "The furnace first",
-          "code": "item.smelt(\"Copper\");\nitem.cast(\"Copper\");",
-          "markiere": "item.smelt(\"Copper\")",
+          "code": "item.smelt(Copper);\nitem.cast(Copper);",
+          "markiere": "item.smelt(Copper)",
           "text": "Casting only works from smelted. Without the furnace first nothing happens at all.",
           "dauer": 4.5
         },
         {
           "punkt": "And then?",
-          "code": "item.smelt(\"Copper\");\nitem.cast(\"Copper\");\nitem.polish(\"Copper\");",
-          "markiere": "item.polish(\"Copper\")",
+          "code": "item.smelt(Copper);\nitem.cast(Copper);\nitem.polish(Copper);",
+          "markiere": "item.polish(Copper)",
           "text": "From cast it goes on to polished, hardened or cleaned. Casting leaves the purity unchanged.",
           "dauer": 5.0
         }
@@ -673,21 +741,21 @@
       "schritte": [
         {
           "punkt": "The command",
-          "code": "item.clean(\"Copper\");",
-          "markiere": "item.clean(\"Copper\")",
+          "code": "item.clean(Copper);",
+          "markiere": "item.clean(Copper)",
           "text": "Cleaning gets the dirt out: the purity rises by 18 points. Only refining does more.",
           "dauer": 4.5
         },
         {
           "punkt": "Possible almost always",
-          "markiere": "\"Copper\"",
+          "markiere": "Copper",
           "text": "It works from four states: raw, washed, cast and pressed. So you can clean almost any time.",
           "dauer": 5.0
         },
         {
           "punkt": "The short way up",
-          "code": "item.clean(\"Copper\");\nitem.refine(\"Copper\");",
-          "markiere": "item.refine(\"Copper\")",
+          "code": "item.clean(Copper);\nitem.refine(Copper);",
+          "markiere": "item.refine(Copper)",
           "text": "Cleaned is worth 2.4 times as much as raw - and from there it goes straight to refining, the most expensive state.",
           "dauer": 5.5
         }
@@ -706,21 +774,21 @@
       "schritte": [
         {
           "punkt": "The command",
-          "code": "item.polish(\"Diamond\");",
-          "markiere": "item.polish(\"Diamond\")",
+          "code": "item.polish(Diamond);",
+          "markiere": "item.polish(Diamond)",
           "text": "Polishes a block until it shines. Polished is worth 4.5 times as much as raw.",
           "dauer": 4.0
         },
         {
           "punkt": "Not from raw",
-          "markiere": "\"Diamond\"",
+          "markiere": "Diamond",
           "text": "Polishing works from cast, cleaned and hardened. You cannot polish a raw block.",
           "dauer": 4.5
         },
         {
           "punkt": "With a diamond",
-          "code": "item.clean(\"Diamond\");\nitem.polish(\"Diamond\");",
-          "markiere": "item.clean(\"Diamond\")",
+          "code": "item.clean(Diamond);\nitem.polish(Diamond);",
+          "markiere": "item.clean(Diamond)",
           "text": "So clean first, then polish. The purity rises by another 8 points in the process.",
           "dauer": 5.0
         }
@@ -740,21 +808,21 @@
       "schritte": [
         {
           "punkt": "The command",
-          "code": "item.harden(\"Iron\");",
-          "markiere": "item.harden(\"Iron\")",
+          "code": "item.harden(Iron);",
+          "markiere": "item.harden(Iron)",
           "text": "Hardens iron in the fire. Hardened is worth 3.4 times as much as raw, the purity drops by 4 points.",
           "dauer": 4.5
         },
         {
           "punkt": "Not every ore",
-          "markiere": "\"Iron\"",
+          "markiere": "Iron",
           "text": "Hardening works from smelted, cast, pressed and cleaned. And not every ore can do it: gold, for example, cannot.",
           "dauer": 5.0
         },
         {
           "punkt": "A good middle step",
-          "code": "item.smelt(\"Iron\");\nitem.harden(\"Iron\");\nitem.refine(\"Iron\");",
-          "markiere": "item.refine(\"Iron\")",
+          "code": "item.smelt(Iron);\nitem.harden(Iron);\nitem.refine(Iron);",
+          "markiere": "item.refine(Iron)",
           "text": "From hardened it goes on to polished or refined. That is how you get iron all the way to the top.",
           "dauer": 5.5
         }
@@ -773,21 +841,21 @@
       "schritte": [
         {
           "punkt": "The command",
-          "code": "item.refine(\"Gold\");",
-          "markiere": "item.refine(\"Gold\")",
+          "code": "item.refine(Gold);",
+          "markiere": "item.refine(Gold)",
           "text": "Refining is the last step. Refined is worth six times as much as raw - there is nothing above it.",
           "dauer": 4.5
         },
         {
           "punkt": "Only from high up",
-          "markiere": "\"Gold\"",
+          "markiere": "Gold",
           "text": "It only works from cleaned, hardened or polished. You cannot refine raw gold.",
           "dauer": 4.5
         },
         {
           "punkt": "Slow, but clean",
-          "code": "item.clean(\"Gold\");\nitem.refine(\"Gold\");",
-          "markiere": "item.clean(\"Gold\")",
+          "code": "item.clean(Gold);\nitem.refine(Gold);",
+          "markiere": "item.clean(Gold)",
           "text": "Clean first, then refine. Refining takes 3 seconds per piece - the slowest step. In return the purity rises by 25 points.",
           "dauer": 6.0
         }
@@ -806,21 +874,21 @@
       "schritte": [
         {
           "punkt": "The command",
-          "code": "item.press(\"Stone\");",
-          "markiere": "item.press(\"Stone\")",
+          "code": "item.press(Stone);",
+          "markiere": "item.press(Stone)",
           "text": "Presses stone together. Pressed is worth 1.8 times as much as raw.",
           "dauer": 4.0
         },
         {
           "punkt": "What it works from",
-          "markiere": "\"Stone\"",
+          "markiere": "Stone",
           "text": "Pressing works from raw, washed and cleaned. For cheap ores like stone it is the fastest profit.",
           "dauer": 4.5
         },
         {
           "punkt": "Worth more, not cleaner",
-          "code": "item.wash(\"Stone\");\nitem.press(\"Stone\");\nitem.sell(\"Stone\");",
-          "markiere": "item.press(\"Stone\")",
+          "code": "item.wash(Stone);\nitem.press(Stone);\nitem.sell(Stone);",
+          "markiere": "item.press(Stone)",
           "text": "Pressing drops the purity by 3 points. So wash first - that brings 10 points and makes up for it.",
           "dauer": 5.5
         }
@@ -840,35 +908,35 @@
       "schritte": [
         {
           "punkt": "The command",
-          "code": "item.alloy(\"Bronze\");",
-          "markiere": "item.alloy(\"Bronze\")",
+          "code": "item.alloy(Bronze);",
+          "markiere": "item.alloy(Bronze)",
           "text": "Makes one piece of bronze. Bronze does not lie in the ground - it only comes into being here.",
           "dauer": 4.0
         },
         {
           "punkt": "What bronze is made of",
-          "markiere": "\"Bronze\"",
+          "markiere": "Bronze",
           "text": "Bronze needs 2 copper and 1 iron. Both have to be smelted, raw does not work.",
           "dauer": 4.5
         },
         {
           "punkt": "Smelt first",
-          "code": "item.smelt(\"Copper\");\nitem.smelt(\"Iron\");\nitem.alloy(\"Bronze\");",
-          "markiere": "item.smelt(\"Iron\")",
+          "code": "item.smelt(Copper);\nitem.smelt(Iron);\nitem.alloy(Bronze);",
+          "markiere": "item.smelt(Iron)",
           "text": "So both ingredients into the furnace first, then alloy. Only one job runs at a time - one after the other.",
           "dauer": 5.5
         },
         {
           "punkt": "Several pieces",
-          "code": "item.smelt(\"Copper\");\nitem.smelt(\"Iron\");\nitem.alloy(\"Bronze\", 3);",
+          "code": "item.smelt(Copper);\nitem.smelt(Iron);\nitem.alloy(Bronze, 3);",
           "markiere": "3",
           "text": "The number says how many pieces you want to make. Without a number it makes exactly one.",
           "dauer": 4.5
         },
         {
           "punkt": "Alloying again",
-          "code": "item.smelt(\"Gold\");\nitem.smelt(\"Silver\");\nitem.alloy(\"Electrum\");\nitem.alloy(\"Weissgold\");",
-          "markiere": "item.alloy(\"Weissgold\")",
+          "code": "item.smelt(Gold);\nitem.smelt(Silver);\nitem.alloy(Electrum);\nitem.alloy(WhiteGold);",
+          "markiere": "item.alloy(WhiteGold)",
           "text": "An alloy can itself be an ingredient: Electrum and Silver make White Gold. Gold alone is worth 70, White Gold 360.",
           "dauer": 6.5
         }
@@ -889,29 +957,29 @@
       "schritte": [
         {
           "punkt": "The command",
-          "code": "item.canAlloy(\"Bronze\")",
-          "markiere": "item.canAlloy(\"Bronze\")",
+          "code": "item.canAlloy(Bronze)",
+          "markiere": "item.canAlloy(Bronze)",
           "text": "Asks: how many pieces of bronze could I make right now? The answer is a number.",
           "dauer": 4.0
         },
         {
           "punkt": "Zero means no",
-          "code": "if (item.canAlloy(\"Bronze\"))\n{\n    item.alloy(\"Bronze\");\n}",
+          "code": "if (item.canAlloy(Bronze))\n{\n    item.alloy(Bronze);\n}",
           "markiere": "if",
           "text": "0 means: not enough. Any other number means yes. That is why the question fits straight into an if.",
           "dauer": 5.0
         },
         {
           "punkt": "Otherwise do something else",
-          "code": "if (item.canAlloy(\"Bronze\"))\n{\n    item.alloy(\"Bronze\");\n}\nelse\n{\n    item.smelt(\"Copper\");\n}",
-          "markiere": "item.smelt(\"Copper\")",
+          "code": "if (item.canAlloy(Bronze))\n{\n    item.alloy(Bronze);\n}\nelse\n{\n    item.smelt(Copper);\n}",
+          "markiere": "item.smelt(Copper)",
           "text": "If it is not enough, you simply smelt some more. That way your program does not wait, it keeps working.",
           "dauer": 5.5
         },
         {
           "punkt": "As many as possible",
-          "code": "int n = item.canAlloy(\"Bronze\");\nitem.alloy(\"Bronze\", n);",
-          "markiere": "int n = item.canAlloy(\"Bronze\")",
+          "code": "int n = item.canAlloy(Bronze);\nitem.alloy(Bronze, n);",
+          "markiere": "int n = item.canAlloy(Bronze)",
           "text": "You can also remember the number and make exactly as many pieces as are possible right now.",
           "dauer": 5.0
         }
@@ -1040,7 +1108,7 @@
         },
         {
           "punkt": "Two questions at once",
-          "code": "if (block.isThere() && item.has(\"Stone\"))\n{\n    block.mine();\n}",
+          "code": "if (block.isThere() && item.has(Stone))\n{\n    block.mine();\n}",
           "markiere": "&&",
           "text": "&& means and: both have to be true. || means or - then one of the two is enough.",
           "dauer": 5.0
@@ -1080,7 +1148,7 @@
         },
         {
           "punkt": "One more question after it",
-          "code": "if (item.has(\"Gold\"))\n{\n    item.sell(\"Gold\");\n}\nelse if (item.has(\"Stone\"))\n{\n    item.sell(\"Stone\");\n}",
+          "code": "if (item.has(Gold))\n{\n    item.sell(Gold);\n}\nelse if (item.has(Stone))\n{\n    item.sell(Stone);\n}",
           "markiere": "else if",
           "text": "else if attaches one more question. It is only asked if the first one was no.",
           "dauer": 5.5
@@ -1368,8 +1436,8 @@
         },
         {
           "punkt": "The new stack",
-          "code": "item.smelt(\"Gold\");\nitem.smelt(\"Silver\");\nitem.alloy(\"Electrum\");",
-          "markiere": "item.alloy(\"Electrum\")",
+          "code": "item.smelt(Gold);\nitem.smelt(Silver);\nitem.alloy(Electrum);",
+          "markiere": "item.alloy(Electrum)",
           "text": "Afterwards there is a stack of its own in the bag, with its own name and its own colour. You can sell it like any ore.",
           "dauer": 6.0
         }
@@ -1408,8 +1476,8 @@
         },
         {
           "punkt": "Selling by code",
-          "code": "item.sell();\nitem.sell(\"Gold\");\nitem.sell(\"Gold\", 3);",
-          "markiere": "item.sell(\"Gold\", 3)",
+          "code": "item.sell();\nitem.sell(Gold);\nitem.sell(Gold, 3);",
+          "markiere": "item.sell(Gold, 3)",
           "text": "In a program you have three options: everything, only one kind, or exactly that many pieces.",
           "dauer": 6.0
         },

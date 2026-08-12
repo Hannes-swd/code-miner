@@ -4,6 +4,7 @@
 #include "json.h"
 
 
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <sstream>
@@ -187,6 +188,33 @@ OrePlan LoadOrePlan()
         }
     }
 
+    if (const JsonValue* b = wurzel.find("behandlung"))
+    {
+        plan.care.fromValue    = (int)b->number("ab_wert", plan.care.fromValue);
+        plan.care.chanceMax    = (float)b->number("chance_max", plan.care.chanceMax);
+        plan.care.halfValue    = (int)b->number("wert_halb", plan.care.halfValue);
+        plan.care.purityNone  = (int)b->number("verlust_ohne", plan.care.purityNone);
+        plan.care.purityWrong = (int)b->number("verlust_falsch", plan.care.purityWrong);
+
+        if (plan.care.chanceMax < 0.0f)
+            plan.care.chanceMax = 0.0f;
+        if (plan.care.chanceMax > 1.0f)
+            plan.care.chanceMax = 1.0f;
+        if (plan.care.halfValue < 1)
+            plan.care.halfValue = 1;
+
+        // Unter 0 waere die Strafe eine Belohnung - dann lohnte es sich, alles
+        // falsch zu machen. Ueber 100 ist sinnlos: tiefer als 0 % geht nicht.
+        if (plan.care.purityNone < 0)
+            plan.care.purityNone = 0;
+        if (plan.care.purityWrong < 0)
+            plan.care.purityWrong = 0;
+        if (plan.care.purityNone > 100)
+            plan.care.purityNone = 100;
+        if (plan.care.purityWrong > 100)
+            plan.care.purityWrong = 100;
+    }
+
     const JsonValue* liste = wurzel.find("erze");
     if (liste == nullptr || liste->type != JsonValue::Type::Array)
     {
@@ -335,6 +363,135 @@ int FindOre(const OrePlan& plan, const std::string& name)
             return (int)i;
 
     return -1;
+}
+
+namespace
+{
+
+// Alles wegwerfen, was in einem C++-Namen nichts zu suchen hat.
+std::string Ident(const std::string& name)
+{
+    std::string out;
+    for (const char c : name)
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_')
+            out.push_back(c);
+
+    // Mit einer Ziffer darf kein Name anfangen - und leer schon gar nicht.
+    if (out.empty() || (out[0] >= '0' && out[0] <= '9'))
+        out.insert(out.begin(), '_');
+
+    return out;
+}
+
+// Namen, die es im erzeugten Header schon gibt oder die C++ fuer sich behaelt.
+bool IsTakenIdent(const std::string& w)
+{
+    static const char* const taken[] = {
+        "Any",   "Ore",    "CkOreName", "CkItem", "CkBlock", "CkShared", "CkSharedValue",
+        "item",  "block",  "shared",    "print",  "main",    "ck",
+        "int",   "float",  "double",    "bool",   "char",    "void",     "auto",
+        "class", "struct", "if",        "else",   "while",   "for",      "do",
+        "true",  "false",  "return",    "const",  "static",  "namespace"};
+
+    for (const char* t : taken)
+        if (w == t)
+            return true;
+    return false;
+}
+
+}  // namespace
+
+std::vector<std::string> OreCodeNames(const OrePlan& plan)
+{
+    std::vector<std::string> out;
+    out.reserve(plan.ores.size());
+
+    for (const Ore& o : plan.ores)
+    {
+        const std::string roh = Ident(o.name);
+        std::string       id  = IsTakenIdent(roh) ? (roh + "_") : roh;
+
+        // Schon vergeben? Dann haengt eine Nummer dran. Verglichen wird nur mit
+        // den Erzen davor - so bleibt der Name eines Erzes derselbe, auch wenn
+        // spaeter eines mit aehnlichem Namen dazukommt.
+        int versuch = 2;
+        while (std::find(out.begin(), out.end(), id) != out.end())
+            id = roh + std::to_string(versuch++);
+
+        out.push_back(id);
+    }
+
+    return out;
+}
+
+std::string OreCodeName(const OrePlan& plan, int index)
+{
+    if (index < 0 || index >= (int)plan.ores.size())
+        return "Any";
+
+    return OreCodeNames(plan)[(std::size_t)index];
+}
+
+const char* BlockCareName(BlockCare care)
+{
+    switch (care)
+    {
+    case BlockCare::Cool: return "Cool";
+    case BlockCare::Heat: return "Heat";
+    default: return "Plain";
+    }
+}
+
+float CareChance(const OrePlan& plan, int ore)
+{
+    if (ore < 0 || ore >= (int)plan.ores.size())
+        return 0.0f;
+
+    const int wert = plan.ores[(std::size_t)ore].value;
+    if (wert <= plan.care.fromValue)
+        return 0.0f;
+
+    // Eine Saettigungskurve: ueber fromValue steigt sie schnell, kommt aber nie
+    // ganz bei chanceMax an. Auch das teuerste Erz steht deshalb ab und zu
+    // einfach so da - sonst waere die Behandlung keine Frage mehr, sondern nur
+    // noch eine zweite Pflichtzeile.
+    const float ueber = (float)(wert - plan.care.fromValue);
+    const float halb  = (plan.care.halfValue > 0) ? (float)plan.care.halfValue : 1.0f;
+
+    return plan.care.chanceMax * (ueber / (ueber + halb));
+}
+
+BlockCare RollCare(const OrePlan& plan, int ore, std::mt19937& rng)
+{
+    const float chance = CareChance(plan, ore);
+    if (chance <= 0.0f)
+        return BlockCare::Plain;
+
+    const float wurf = (float)(rng() % 1000000u) / 1000000.0f;
+    if (wurf >= chance)
+        return BlockCare::Plain;
+
+    // Welche der beiden Behandlungen es wird, ist reiner Zufall - man kann es
+    // also nicht am Erz ablesen, sondern muss den Block fragen.
+    return ((rng() & 1u) != 0u) ? BlockCare::Cool : BlockCare::Heat;
+}
+
+int CareLoss(const CarePlan& plan, BlockCare verlangt, BlockCare getan)
+{
+    if (verlangt == getan)
+        return 0;  // genau richtig - auch "beide nichts" zaehlt hier
+
+    // Behandelt, obwohl der Block nichts wollte: das stoert. Deshalb steht die
+    // Abfrage im Programm nicht umsonst da.
+    if (verlangt == BlockCare::Plain)
+        return plan.purityWrong;
+
+    // Der Block wollte etwas und bekam nichts.
+    if (getan == BlockCare::Plain)
+        return plan.purityNone;
+
+    // Er wollte etwas und bekam das Gegenteil.
+    return plan.purityWrong;
 }
 
 int RollOre(const OrePlan& plan, int level, std::mt19937& rng)

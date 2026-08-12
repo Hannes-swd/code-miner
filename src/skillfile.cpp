@@ -26,6 +26,7 @@ const KeyEntry kKeys[] = {
     {"check", Skill::Check},
     {"shared", Skill::Shared},
     {"mine", Skill::Mine},
+    {"care", Skill::Care},
     {"sell", Skill::Sell},
     {"bag", Skill::Bag},
     {"variables", Skill::Variable},

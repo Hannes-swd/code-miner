@@ -72,6 +72,12 @@ bool SaveGame(const World& world, const SkillTree& tree,
         << " " << world.respawnTimer
         << "\n";
 
+    // Was der Block verlangt, steht in einer EIGENEN Zeile und nicht hinten an
+    // "block" dran: ein aelterer Spielstand hat sie einfach nicht, und ein
+    // aelteres Spiel ueberliest sie. Haengte die Zahl an "block", waere jeder
+    // alte Stand beim Einlesen kaputt.
+    out << "block_care " << (int)world.care << "\n";
+
     // Die Tasche: was abgebaut, aber noch nicht verkauft ist. Ein laufender
     // Auftrag steht mit Absicht nicht drin - beim Beenden bricht er ab und das
     // Material liegt wieder in der Tasche.
@@ -279,6 +285,13 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
             int lebt = 1;
             in >> neueWelt.ore >> neueWelt.oreSeed >> lebt >> neueWelt.respawnTimer;
             neueWelt.blockAlive = (lebt != 0);
+        }
+        else if (wort == "block_care")
+        {
+            int c = 0;
+            in >> c;
+            if (c > 0 && c < (int)BlockCare::Count)
+                neueWelt.care = (BlockCare)c;
         }
         else if (wort == "wiki")
         {

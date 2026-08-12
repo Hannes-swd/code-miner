@@ -88,8 +88,13 @@ std::string RoundClock(float seconds);
 // Die Runden-Anzeige, oben in der Mitte ueber der Seite. Sie steht bewusst
 // NICHT in der Menueleiste: dort war sie eine Textzeile zwischen Reitern, und
 // gerade die Uhr und der Abstand zum Ziel gehen so unter.
+//
+// paused sagt, ob das Spiel gerade steht - dann steht es auch hier, und aus
+// dem Knopf wird "Weiter". Umgeschaltet wird ueber togglePause: die Anzeige
+// entscheidet das nicht selbst, sie meldet nur den Klick.
+//
 // Rueckgabe: true = "Runde starten" wurde gedrueckt.
-bool DrawRoundHud(const World& world, const RoundPlan& plan);
+bool DrawRoundHud(const World& world, const RoundPlan& plan, bool paused, bool& togglePause);
 
 // Die Abrechnung, mitten im Bild.
 // Rueckgabe: true = weitergeklickt. Bei einer Niederlage mit "alles auf

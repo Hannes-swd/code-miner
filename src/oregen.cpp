@@ -154,7 +154,7 @@ std::string MakeName(std::mt19937& rng, const OreGenPlan& gen,
 }
 
 // Denselben Namen zweimal darf es nicht geben: der Spieler ruft ein Erz ueber
-// seinen Namen auf, item.sell("Glutquarz") wuerde sonst das falsche treffen.
+// seinen Namen auf, item.sell(Glutquarz) wuerde sonst das falsche treffen.
 std::string UniqueName(std::mt19937& rng, const OreGenPlan& gen,
                        const std::vector<std::string>& cores, const OrePlan& ores)
 {

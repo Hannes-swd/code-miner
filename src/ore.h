@@ -91,9 +91,56 @@ struct Ore
     }
 };
 
+// Wie ein Block behandelt werden will, waehrend man ihn abbaut.
+//
+// Je wertvoller ein Erz, desto oefter verlangt es etwas: der Anfang bleibt
+// schlicht, spaeter reicht  while (true) { block.mine(); }  nicht mehr. Was der
+// Block gerade braucht, sieht man ihm an - und im Programm fragt man nach:
+//
+//     if (block.needs(Cool)) block.mine(Cool);
+//     else                   block.mine();
+enum class BlockCare
+{
+    Plain,  // will gar nichts - einfach abbauen
+    Cool,   // muss gekuehlt werden
+    Heat,   // muss erhitzt werden
+    Count
+};
+
+// Was in der Anzeige steht ("Cool", "Heat").
+const char* BlockCareName(BlockCare care);
+
+// Alles zur Behandlung, aus data/erze.json. Hier stehen die Werte, die
+// einspringen, wenn die Datei nichts dazu sagt.
+struct CarePlan
+{
+    // Bis zu welchem Grundwert ein Erz nie etwas verlangt. Stein und Kohle
+    // sollen einfach bleiben - die Mechanik kommt erst mit dem Wert.
+    int fromValue = 8;
+
+    // Wie wahrscheinlich eine Behandlung hoechstens wird, und bei welchem
+    // Grundwert die Haelfte davon erreicht ist. Daraus wird eine Kurve, die
+    // nie ganz bei 1 ankommt: auch das teuerste Erz laesst sich manchmal
+    // einfach so abbauen.
+    float chanceMax  = 0.8f;
+    int   halfValue  = 45;
+
+    // Wie viele Punkte Reinheit der Block verliert, wenn man nichts tut - und
+    // wenn man das Falsche tut. Falsch ist teurer als gar nichts: kuehlen, was
+    // erhitzt werden will, macht es schlimmer.
+    //
+    // Die Zeit bleibt davon unberuehrt: ein falsch abgebauter Block kommt genau
+    // so schnell heraus wie sonst, er ist nur weniger wert. Das sieht man in
+    // der Tasche - und mit Reinigen laesst es sich zum Teil wieder aufholen.
+    int purityNone  = 25;
+    int purityWrong = 50;
+};
+
 struct OrePlan
 {
     std::vector<Ore> ores;
+
+    CarePlan care;
 
     // Wie viele Erze aus den Dateien kommen: data/erze.json und die Ergebnisse
     // aus data/legierungen.json. Alles ab dieser Nummer hat sich das Spiel
@@ -127,9 +174,30 @@ bool ParseOreColor(const std::string& text, Color& out);
 // vorkommt, und je seltener, desto unwahrscheinlicher.
 int RollOre(const OrePlan& plan, int level, std::mt19937& rng);
 
+// Wie wahrscheinlich verlangt dieses Erz eine Behandlung? 0..1.
+float CareChance(const OrePlan& plan, int ore);
+
+// Was der naechste Block verlangt. Gewuerfelt wird beim Nachwachsen: dasselbe
+// Erz kann einmal so und einmal anders dastehen.
+BlockCare RollCare(const OrePlan& plan, int ore, std::mt19937& rng);
+
+// Wie viele Punkte Reinheit es kostet, wenn ein Block "verlangt" bekommt und
+// man "getan" tut. 0 = richtig gemacht.
+int CareLoss(const CarePlan& plan, BlockCare verlangt, BlockCare getan);
+
 // Erz-Nummer zu einem Namen, -1 = kenne ich nicht. Gross- und Kleinschreibung
 // ist egal: "stein" findet auch "Stein".
 int FindOre(const OrePlan& plan, const std::string& name);
+
+// Wie das Erz im Spielercode heisst: aus "White Gold" wird WhiteGold. Erze sind
+// dort ein enum und kein Text - deshalb muss aus dem Namen ein gueltiger
+// C++-Name werden. Zwei Erze bekommen nie denselben; entschieden wird nach der
+// Reihenfolge in der Liste, das spaetere weicht aus.
+//
+// native.cpp baut daraus das enum, das Wiki zeigt denselben Namen an - beide
+// muessen sich einig sein, deshalb steht es hier und nicht dort.
+std::vector<std::string> OreCodeNames(const OrePlan& plan);
+std::string              OreCodeName(const OrePlan& plan, int index);
 
 // Perlin-artiges Rauschen, 0..1. Gleicher Startwert = gleiches Muster.
 float OreNoise(float x, float y, unsigned seed);

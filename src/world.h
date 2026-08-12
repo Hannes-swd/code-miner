@@ -1,5 +1,9 @@
 #pragma once
 
+// Wegen BlockCare: was ein Block beim Abbau verlangt, gehoert zum Block und
+// damit in die Welt.
+#include "ore.h"
+
 #include "round.h"
 
 // Wegen ImVec2 in DrawOreTile - die Tasche und das Wiki zeichnen dasselbe
@@ -109,6 +113,16 @@ struct World
     int      ore     = 0;
     unsigned oreSeed = 1;
 
+    // Was DIESER Block beim Abbau verlangt. Wird beim Nachwachsen gewuerfelt,
+    // je wertvoller das Erz desto oefter - siehe RollCare in ore.h. Steht im
+    // Spielstand: sonst haette derselbe Block nach dem Laden auf einmal eine
+    // andere Laune.
+    BlockCare care = BlockCare::Plain;
+
+    // Womit gerade abgebaut wird. Das setzt block.mine(Cool) bei jedem Aufruf
+    // neu - man kann also mitten im Abbau umschwenken.
+    BlockCare mineCare = BlockCare::Plain;
+
     // Abbau braucht Zeit. Solange der Zaehler laeuft, steht der Block noch da.
     bool  mining    = false;
     float mineTimer = 0.0f;
@@ -173,6 +187,11 @@ struct World
     int moneyPerBlock = 1;
 
     int   lastOre  = 0;     // was zuletzt in die Tasche ging (fuer die Anzeige)
+
+    // Wie viele Punkte Reinheit der letzte Block durch eine falsche oder
+    // fehlende Behandlung verloren hat. Nur fuer die Anzeige: sonst merkt man
+    // gar nicht, dass gerade etwas schiefgeht - der Block kommt ja normal.
+    int   lastCareLoss = 0;
     int   lastSold = 0;     // was der letzte Verkauf gebracht hat
     float sellFx   = 0.0f;  // laeuft nach einem Verkauf von 1 auf 0
 
@@ -204,7 +223,10 @@ struct World
     // Was dafuer aus der Tasche genommen wurde.
     std::vector<Taken> craftTaken;
 
-    bool mine();       // faengt an abzubauen; false = da ist nichts (mehr)
+    // Faengt an abzubauen; false = da ist nichts (mehr). Mit welcher Behandlung
+    // gearbeitet wird, sagt der Aufrufer bei JEDEM Aufruf mit - block.mine()
+    // ohne Angabe ist einfach Plain.
+    bool mine(BlockCare mit = BlockCare::Plain);
     bool mineByHand();  // dasselbe, aber per Mausklick - laeuft ohne Programm
 
     // Verkaufen. Ohne Angabe geht alles ueber die Theke.
@@ -212,7 +234,7 @@ struct World
     int sell(const OrePlan& ores, const CraftPlan& craft);
     int sell(const OrePlan& ores, const CraftPlan& craft, Item was, int anzahl);  // ein Stapel
 
-    // Fuer item.sell("Stein", 3): diese Sorte in jedem Zustand, hoechstens so
+    // Fuer item.sell(Stein, 3): diese Sorte in jedem Zustand, hoechstens so
     // viele. anzahl < 0 heisst alles davon.
     int sell(const OrePlan& ores, const CraftPlan& craft, const std::string& name, int anzahl);
 
@@ -255,7 +277,7 @@ struct World
 
     int inventoryCount() const;  // wie viele Bloecke insgesamt in der Tasche
 
-    // Fuer item.has("Stein"): wie viele davon liegen in der Tasche.
+    // Fuer item.has(Stein): wie viele davon liegen in der Tasche.
     int inventoryOf(const OrePlan& ores, const std::string& name) const;
 
     // Wie viele Stuecke dieses Erzes in einem der Zustaende liegen (ein Bit je

@@ -885,10 +885,107 @@ void DrawOreCollection(World& world, const OrePlan& ores, const CraftPlan& craft
 
         ImGui::BeginGroup();
         ImGui::TextUnformatted(erz.name.c_str());
+
+        // So heisst das Erz im Code. Bei "White Gold" ist das WhiteGold - ohne
+        // diese Zeile muesste man raten, wie ein Erz mit Leerzeichen im Namen
+        // geschrieben wird.
+        ImGui::TextDisabled("in code: %s", OreCodeName(ores, g_wiki.ore).c_str());
+
         ImGui::TextDisabled("Base value %d   -   from level %d", erz.value, erz.minLevel);
         ImGui::TextDisabled("found as %s at %d %% purity",
                             OreStateName((OreState)anfang.state), anfang.purity);
         ImGui::EndGroup();
+    }
+
+    // ---- Wie man es richtig abbaut ----------------------------------------
+    //
+    // Nur bei Erzen, die ueberhaupt etwas verlangen koennen. Bei Stein waere
+    // der Kasten nur Rauschen - und genau daran soll man ja merken, dass die
+    // billigen Erze einfach bleiben.
+    {
+        const float chance = CareChance(ores, g_wiki.ore) * 100.0f;
+        if (chance > 0.0f)
+        {
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            ImGui::TextUnformatted("Mining it properly");
+            ImGui::Spacing();
+
+            ImGui::TextWrapped(
+                "%.0f %% of these blocks want a treatment while you mine them - cooling or "
+                "heating, drawn anew for every block. It says over the block which one it is. "
+                "The block always comes out equally fast; the wrong treatment costs purity, "
+                "and purity is what it is worth.",
+                (double)chance);
+
+            ImGui::Spacing();
+            // Der fertige Code zum Abschreiben. Kein Kasten mit eigenem
+            // Zeichencode - eingerueckter Text auf dem gesenkten Grund reicht,
+            // und er waechst mit der Schriftgroesse mit.
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ui::V(ui::kSunken));
+            ImGui::BeginChild("##carecode", ImVec2(0.0f, ImGui::GetTextLineHeight() * 12.0f),
+                              true);
+            ImGui::TextUnformatted(R"CODE(if (block.needs(Cool))
+{
+    block.mine(Cool);
+}
+else if (block.needs(Heat))
+{
+    block.mine(Heat);
+}
+else
+{
+    block.mine();
+})CODE");
+            ImGui::EndChild();
+            ImGui::PopStyleColor();
+            ImGui::Spacing();
+
+            // Was es kostet, in Geld statt in Prozentpunkten: eine Reinheit von
+            // 50 sagt niemandem etwas, "die Haelfte weniger Geld" schon.
+            const int rein = StartPurity(ores, craft, g_wiki.ore);
+
+            auto geld = [&](int verlust)
+            {
+                int r = rein - verlust;
+                if (r < 0)
+                    r = 0;
+                return StackValue(ores, craft, g_wiki.ore, (int)OreState::Raw, r, 1,
+                                  world.moneyPerBlock);
+            };
+
+            if (ImGui::BeginTable("##care", 3,
+                                  ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp))
+            {
+                ImGui::TableSetupColumn("what you do");
+                ImGui::TableSetupColumn("purity");
+                ImGui::TableSetupColumn("raw it is worth");
+                ImGui::TableHeadersRow();
+
+                auto zeile = [&](const char* was, int verlust)
+                {
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted(was);
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%d %%", (rein - verlust > 0) ? (rein - verlust) : 0);
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted(ui::Money(geld(verlust)).c_str());
+                };
+
+                zeile("the right treatment", 0);
+                zeile("no treatment at all", ores.care.purityNone);
+                zeile("the wrong one", ores.care.purityWrong);
+
+                ImGui::EndTable();
+            }
+
+            ImGui::Spacing();
+            ImGui::TextDisabled(
+                "Cleaning gets part of it back - but that is a job, and only one runs at a time.");
+        }
     }
 
     ImGui::Spacing();
