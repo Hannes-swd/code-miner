@@ -73,6 +73,8 @@ const KeyEntry kKeys[] = {
 
     {"furnace+", Skill::ExtraFurnace},
 
+    {"quests", Skill::Quests},
+
     // Das Ende der Verarbeitungskette.
     {"etch", Skill::Etch},
     {"fuse", Skill::Fuse},

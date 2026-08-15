@@ -295,9 +295,18 @@ int World::sell(const OrePlan& ores, const CraftPlan& craft, Item was, int anzah
     // Zum Tagespreis: was ein Stapel bringt, haengt davon ab, WANN man ihn
     // ueber die Theke schiebt. Genau dafuer gibt es market.price() im
     // Spielercode - sonst waere die Schwankung eine Gemeinheit ohne Gegenmittel.
-    const int geld = StackValue(ores, craft, was.ore, was.state, it->second.purity, wie,
-                                moneyPerBlock, marketFactor(was.ore));
+    const float markt = marketFactor(was.ore);
+    const int   geld  = StackValue(ores, craft, was.ore, was.state, it->second.purity, wie,
+                                   moneyPerBlock, markt);
     money += geld;
+
+    // Fuer die Auftraege.
+    stats.earned += geld;
+    stats.soldPieces += wie;
+    if (markt > 1.0f)
+        stats.soldAbove += wie;
+    if (geld > stats.biggestSale)
+        stats.biggestSale = geld;
 
     it->second.count -= wie;
     if (it->second.count <= 0)
@@ -432,6 +441,15 @@ void World::tickMining(float dt, const OrePlan& ores, const CraftPlan& craft)
 
     lastOre = ore;
     ++minedCount;
+
+    // Fuer die Auftraege. Die saubere Serie bricht bei der kleinsten
+    // Fehlbehandlung ab - das ist der ganze Reiz an ihr.
+    ++stats.mined;
+    ++stats.minedOre[ore];
+    if (lastCareLoss > 0)
+        stats.cleanStreak = 0;
+    else
+        ++stats.cleanStreak;
 
     blockAlive   = false;
     mining       = false;
@@ -783,6 +801,13 @@ void World::tickCraft(float dt, bool programLaeuft)
             job.taken[0].was.state != fertig.state)
             oreSteps.insert(OreStep{fertig.ore, job.taken[0].was.state, fertig.state});
 
+        // Fuer die Auftraege. Legieren wird getrennt gezaehlt: es ist der
+        // aufwendigere Weg und darf eine eigene Aufgabe sein.
+        if (job.to == (int)OreState::Alloy)
+            stats.alloyed += job.count;
+        else
+            stats.crafted += job.count;
+
         job.active = false;
         job.byHand = false;
         job.timer  = 0.0f;
@@ -859,6 +884,7 @@ void World::tickAssay(float dt)
         return;
 
     assayed.insert(assayOre);
+    ++stats.assayed;
     assaying   = false;
     assayTimer = 0.0f;
 }

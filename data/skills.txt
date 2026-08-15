@@ -74,6 +74,9 @@
 #   etch          item.etch(Gold)   - the end of the chain
 #   fuse          item.fuse(Gold)
 #
+#   quests        contracts. Three offers before every round, take one or
+#                 none. Comes very late on purpose - see below.
+#
 #   alloy         item.alloy(Electrum) and item.canAlloy(Electrum)
 #                 - melt two ores into one new material
 #
@@ -236,6 +239,37 @@ refine         20-32       40   once 1   needs polish
 # ore that went the same way as the last one.
 etch           24-38       60   once 1   needs refine
 fuse           28-44       80   once 1   needs etch
+
+
+# ---- contracts ----------------------------------------------------------
+#
+# VERY late on purpose, and this is the reasoning:
+#
+# Up to here the round target is the only structure the game has, and it is
+# something you FEND OFF - it takes your money away every round. A contract is
+# the first thing you actually WANT. That only works once the basics are so
+# familiar that the repetition starts to feel thin. Handed out early it would
+# just be a second target, and two things to fend off at once is not more
+# game, it is more pressure.
+#
+# It also needs the tools to be interesting: by step 30 you have care, the
+# market, several furnaces and the deep processing states, and the catalogue
+# in data/quests.json can offer the good contracts instead of only "mine N
+# blocks".
+#
+# It hangs off selling because a contract pays money, and money means nothing
+# until you can turn ore into it.
+# Schritt 30 war NICHT "spaet", sondern unerreichbar. Jeder Schritt nach aussen
+# kostet das 1.8-fache: bei Schritt 30 ist ein Punkt beim Preisdeckel von einer
+# Milliarde angekommen, und so viel Geld hat man erst um Runde 50 herum. Dazu
+# waechst der Baum vor allem in die BREITE - wer guenstig kauft, steht nach 150
+# Kaeufen erst bei Schritt 18.
+#
+# 14-22 ist dagegen wirklich spaet und trotzdem erreichbar: das ist dieselbe
+# Gegend wie Legieren und Veredeln, also genau der Moment, in dem Abbauen und
+# Verarbeiten sitzen und die Wiederholung duenn wird. In Geld sind das rund
+# 190k bei Schritt 14 und 20M bei Schritt 22.
+quests         14-22       90   once 3   needs sell
 
 # Processing is a chain: washing is the start, everything else hangs off it
 # through "needs". And washing itself needs "bag" - that is item.has(...).

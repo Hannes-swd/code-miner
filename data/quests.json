@@ -1,0 +1,252 @@
+{
+  "hilfe": [
+    "Contracts. One contract runs for exactly ONE round.",
+    "",
+    "Before the round three offers are on the board. You take one, or none -",
+    "a round without a contract is perfectly fine. Each offer says beforehand",
+    "what it pays and what it costs if you fail.",
+    "",
+    "Settled at the end of the round, BEFORE the bag is sold and BEFORE the",
+    "target is taken off:",
+    "  - before selling, so that holding jobs are possible at all. Otherwise",
+    "    the automatic sale would clear out every 'keep 20 stones' contract.",
+    "  - before the target, so a reward can never rescue a round that was",
+    "    lost. A contract is a bonus, not the main event.",
+    "",
+    "The penalty comes off the money you HAVE, and it is steep: 80 % of what",
+    "the contract would have paid. That is deliberate. At 10 % a contract was",
+    "worth taking whatever the odds, and then 'take one or none' was not a",
+    "choice at all. At 80 % you need to finish roughly FOUR OUT OF NINE for it",
+    "to be worth it - and on the round where you sit just above the target,",
+    "one failure is the round.",
+    "",
+    "",
+    "ONE ENTRY",
+    "",
+    "  id        for you, so a problem message can name it",
+    "  text      what it says on the card. Placeholders:",
+    "              %n%       the amount",
+    "              %erz%     the ore",
+    "              %t%       the seconds (holding jobs)",
+    "              %grenze%  the line limit (frugal)",
+    "  art       WHAT is measured, see the list below",
+    "",
+    "  menge          how big the task is in round 1 ...",
+    "  menge_wachstum ... times this per round. 1.15 = 15 % more each round.",
+    "  menge_vom_ziel instead of the two above: a share of the round target.",
+    "                 Everything counted in MONEY should use this - only that",
+    "                 keeps up when the target starts doubling.",
+    "",
+    "  dauer     seconds, for holding jobs. MUST be shorter than a round",
+    "            (300 s in data/runden.json) - otherwise it cannot be done.",
+    "  grenze    for 'frugal': at most this many executed lines.",
+    "  erz       a fixed ore, or \"*\" for a random one. With \"*\" only ores",
+    "            you have already held in your bag are picked, so a contract",
+    "            is never impossible from the start.",
+    "",
+    "  lohn      share of the round target you get for it. 0.6 = 60 %.",
+    "  strafe    share of the REWARD you lose if you fail. 0.80 = 80 %,",
+    "            which is what every contract uses right now. It stays a",
+    "            per-contract field, so the easy ones can be made gentler",
+    "            again if that turns out to be too harsh.",
+    "  braucht   skill tree key. Without it the contract is never offered.",
+    "  ab_runde  not before this round.",
+    "",
+    "",
+    "THE KINDS",
+    "",
+    "Counting - a number goes up and never falls back:",
+    "  mined          blocks mined",
+    "  mined_ore      blocks of one ore",
+    "  earned         money from selling. The automatic sale at the end of the",
+    "                 round does NOT count - you have to sell yourself.",
+    "  crafted        pieces processed",
+    "  alloyed        pieces alloyed",
+    "  assayed        ores examined",
+    "  clean_streak   blocks in a row without a single wrong treatment. One",
+    "                 mistake and it starts over.",
+    "  sold_above     pieces sold above their average price",
+    "",
+    "Holding - the condition must hold for 'dauer' seconds WITHOUT A BREAK.",
+    "Let go once and the clock goes back to zero:",
+    "  hold_ore       this many pieces of an ore in your bag",
+    "  bag_purity     bag average at least this high",
+    "  no_sell        sell nothing at all",
+    "  furnaces_busy  no furnace standing idle",
+    "  no_idle_block  never a block standing there with nobody working on it",
+    "",
+    "Once - true at a single moment:",
+    "  distinct_ores    this many different ores in the bag at once",
+    "  distinct_states  this many different states at once",
+    "  single_sale      one single sale at least this big",
+    "  frugal           this much money with fewer than 'grenze' executed",
+    "                   lines. The only contract you cannot solve by waiting."
+  ],
+
+  "angebote": 3,
+
+  "auftraege": [
+
+    // ---- Menge. Laufen nebenbei mit. Der Einstieg. --------------------
+    {
+      "id": "mine_any",
+      "text": "Mine %n% blocks",
+      "art": "mined",
+      "menge": 140, "menge_wachstum": 1.12,
+      "lohn": 0.40, "strafe": 0.80
+    },
+    {
+      "id": "mine_ore",
+      "text": "Mine %n% blocks of %erz%",
+      "art": "mined_ore", "erz": "*",
+      "menge": 35, "menge_wachstum": 1.10,
+      "lohn": 0.55, "strafe": 0.80
+    },
+    {
+      "id": "earn",
+      "text": "Earn %n% by selling during the round",
+      "art": "earned",
+      "menge_vom_ziel": 0.55,
+      "lohn": 0.45, "strafe": 0.80,
+      "braucht": "sell"
+    },
+    {
+      "id": "craft_any",
+      "text": "Process %n% pieces",
+      "art": "crafted",
+      "menge": 40, "menge_wachstum": 1.12,
+      "lohn": 0.55, "strafe": 0.80,
+      "braucht": "wash"
+    },
+    {
+      "id": "alloy_any",
+      "text": "Alloy %n% pieces",
+      "art": "alloyed",
+      "menge": 8, "menge_wachstum": 1.10,
+      "lohn": 0.75, "strafe": 0.80,
+      "braucht": "alloy"
+    },
+    {
+      "id": "assay",
+      "text": "Examine %n% unknown ores",
+      "art": "assayed",
+      "menge": 2, "menge_wachstum": 1.05,
+      "lohn": 0.70, "strafe": 0.80,
+      "braucht": "assay"
+    },
+
+    // ---- Güte. Zwingen zu info() und zur Reinheit. --------------------
+    {
+      "id": "clean_streak",
+      "text": "Mine %n% blocks in a row without one wrong treatment",
+      "art": "clean_streak",
+      "menge": 60, "menge_wachstum": 1.10,
+      "lohn": 0.70, "strafe": 0.80,
+      "braucht": "care"
+    },
+    {
+      "id": "bag_purity",
+      "text": "Hold your bag above %n% %% purity for %t% seconds",
+      "art": "bag_purity",
+      "menge": 80, "menge_wachstum": 1.0,
+      "dauer": 45,
+      "lohn": 0.70, "strafe": 0.80,
+      "braucht": "clean"
+    },
+
+    // ---- Halten. Gegen den Reflex, sofort zu verkaufen. ---------------
+    {
+      "id": "hold_ore",
+      "text": "Keep %n% pieces of %erz% for %t% seconds",
+      "art": "hold_ore", "erz": "*",
+      "menge": 25, "menge_wachstum": 1.10,
+      "dauer": 60,
+      "lohn": 0.60, "strafe": 0.80
+    },
+    {
+      "id": "hold_ore_long",
+      "text": "Keep %n% pieces of %erz% for %t% seconds",
+      "art": "hold_ore", "erz": "*",
+      "menge": 40, "menge_wachstum": 1.12,
+      "dauer": 150,
+      "lohn": 0.80, "strafe": 0.80,
+      "ab_runde": 4
+    },
+    {
+      "id": "no_sell",
+      "text": "Sell nothing at all for %t% seconds",
+      "art": "no_sell",
+      "menge": 1,
+      "dauer": 90,
+      "lohn": 0.65, "strafe": 0.80,
+      "braucht": "sell"
+    },
+
+    // ---- Auslastung. Nicht "mach mehr", sondern "lass nichts stehen". -
+    {
+      "id": "furnaces",
+      "text": "Keep every furnace busy for %t% seconds without a break",
+      "art": "furnaces_busy",
+      "menge": 1,
+      "dauer": 60,
+      "lohn": 0.75, "strafe": 0.80,
+      "braucht": "furnace+"
+    },
+    {
+      "id": "no_idle",
+      "text": "Never let a block stand around for %t% seconds",
+      "art": "no_idle_block",
+      "menge": 1,
+      "dauer": 75,
+      "lohn": 0.75, "strafe": 0.80
+    },
+
+    // ---- Markt. Ohne market.price() nicht zu schaffen. ----------------
+    {
+      "id": "sold_above",
+      "text": "Sell %n% pieces above their average price",
+      "art": "sold_above",
+      "menge": 30, "menge_wachstum": 1.12,
+      "lohn": 0.80, "strafe": 0.80,
+      "braucht": "market"
+    },
+    {
+      "id": "single_sale",
+      "text": "Make %n% in one single sale",
+      "art": "single_sale",
+      "menge_vom_ziel": 0.30,
+      "lohn": 0.70, "strafe": 0.80,
+      "braucht": "sell"
+    },
+
+    // ---- Sammeln. Zwingen in die Breite statt in die Tiefe. -----------
+    {
+      "id": "distinct_ores",
+      "text": "Have %n% different ores in your bag at the same time",
+      "art": "distinct_ores",
+      "menge": 5, "menge_wachstum": 1.06,
+      "lohn": 0.55, "strafe": 0.80,
+      "braucht": "bag"
+    },
+    {
+      "id": "distinct_states",
+      "text": "Have %n% different states in your bag at the same time",
+      "art": "distinct_states",
+      "menge": 4, "menge_wachstum": 1.05,
+      "lohn": 0.75, "strafe": 0.80,
+      "braucht": "smelt"
+    },
+
+    // ---- Programmform. Den gibt es so nur in diesem Spiel. ------------
+    {
+      "id": "frugal",
+      "text": "Earn %n% while running fewer than %grenze% lines",
+      "art": "frugal",
+      "menge_vom_ziel": 0.45,
+      "grenze": 900,
+      "lohn": 0.85, "strafe": 0.80,
+      "ab_runde": 3,
+      "braucht": "sell"
+    }
+  ]
+}

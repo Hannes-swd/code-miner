@@ -32,6 +32,7 @@ set(GAME_SOURCES
     src/console.cpp
     src/world.cpp
     src/round.cpp
+    src/quest.cpp
     src/skills.cpp
     src/wiki.cpp
     src/skilltree.cpp

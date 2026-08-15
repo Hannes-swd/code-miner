@@ -3,6 +3,7 @@
 
 #include "json.h"
 #include "theme.h"
+#include "quest.h"
 #include "world.h"
 
 #include "imgui.h"
@@ -184,6 +185,9 @@ bool RoundWon(const World& world, const RoundPlan& plan)
 
 void StartRound(World& world, const RoundPlan& plan)
 {
+    // Die Auftragszaehler gelten fuer EINE Runde.
+    world.stats = World::RoundStats();
+
     world.phase     = RoundPhase::Run;
     world.roundLeft = plan.seconds;
 
@@ -197,13 +201,24 @@ void StartRound(World& world, const RoundPlan& plan)
     world.roundSoldMoney = 0;
 }
 
-void FinishRound(World& world, const RoundPlan& plan, const OrePlan& ores, const CraftPlan& craft)
+void FinishRound(World& world, const RoundPlan& plan, const OrePlan& ores,
+                 const CraftPlan& craft, const QuestPlan& quests)
 {
     // Erst aufraeumen: was noch im Ofen liegt, gehoert in die Tasche und damit
     // in den Verkauf. Sonst waere ein Auftrag, der eine Sekunde zu spaet fertig
     // wird, ersatzlos weg.
     world.cancelMining();
     world.cancelCraft();
+
+    // Der Auftrag wird HIER abgerechnet - vor dem Verkauf und vor der Miete.
+    //
+    // Vor dem Verkauf, weil sonst der Automatikverkauf jeden Halteauftrag
+    // abraeumen wuerde: "behalt 20 Steine" waere nie zu schaffen.
+    //
+    // Vor der Miete, weil eine Belohnung sonst eine Runde retten koennte, die
+    // eigentlich verloren war. Ein Auftrag ist eine Zugabe, nicht die
+    // Hauptsache.
+    QuestSettle(world, quests, ores);
 
     if (plan.sellAtEnd)
     {
@@ -245,6 +260,9 @@ void NextRound(World& world, const RoundPlan& plan)
 
     world.phase     = RoundPhase::Prepare;
     world.roundLeft = 0.0f;
+
+    // Neue Runde, neue Tafel: das Ablehnen von vorhin gilt nicht mehr.
+    world.questDeclined = false;
 }
 
 std::string RoundClock(float seconds)

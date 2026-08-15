@@ -6,6 +6,7 @@
 struct World;
 struct OrePlan;
 struct CraftPlan;
+struct QuestPlan;
 
 // Runden geben dem Spiel einen Rhythmus: erst nachdenken, dann laufen lassen.
 //
@@ -75,8 +76,11 @@ void StartRound(World& world, const RoundPlan& plan);
 // Zeit um. Laufender Auftrag zurueck in die Tasche, Tasche verkaufen, Zahlen
 // einsammeln. Das Programm stoppt der Aufrufer - die Runde kennt den Motor
 // nicht.
+// Der Auftragsplan ist dabei, weil hier abgerechnet wird - und zwar VOR dem
+// Verkauf der Tasche und VOR dem Abzug der Miete. Beides mit Absicht, siehe
+// quest.h.
 void FinishRound(World& world, const RoundPlan& plan, const OrePlan& ores,
-                 const CraftPlan& craft);
+                 const CraftPlan& craft, const QuestPlan& quests);
 
 // Abrechnung weggeklickt: zurueck in die Vorbereitung. Die Rundennummer steigt
 // nur, wenn das Ziel geschafft war.

@@ -66,6 +66,10 @@ struct Limits
     bool allowEtch = false;
     bool allowFuse = false;
 
+    // Auftraege: ohne diesen Punkt gibt es keine Angebote, und die Tafel
+    // zeichnet gar nichts.
+    bool allowQuests = false;
+
     // Legieren: item.alloy(...) und item.canAlloy(...).
     bool allowAlloy = false;
 

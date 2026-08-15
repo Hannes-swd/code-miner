@@ -143,6 +143,7 @@ const char* SkillName(Skill skill)
     case Skill::Status: return "money()";
     case Skill::Market: return "market.price()";
     case Skill::ExtraFurnace: return "+1 furnace";
+    case Skill::Quests: return "Contracts";
     case Skill::Etch: return "item.etch()";
     case Skill::Fuse: return "item.fuse()";
 
@@ -204,6 +205,7 @@ const char* SkillInfo(Skill skill)
     case Skill::Status: return "money(), timeLeft() and roundTarget() - how much you have, how many seconds are left, how much the round wants. Now your program can decide for itself when to play it safe.";
     case Skill::Market: return "market.price(Gold) - prices move during the round, market.average(Gold) is the long-run mean. Selling at the right moment is worth real money. Needs item.sell().";
     case Skill::ExtraFurnace: return "One more job at the same time. Processing and alloying share the slots - until now there was exactly one, and that was the hardest ceiling in the game.";
+    case Skill::Quests: return "Contracts. Before every round three offers are on the board - take one or none. Each says beforehand what it pays and what it costs if you fail, and it runs for that one round only. It is the first thing in this game you WANT instead of something you fend off. Needs selling.";
     case Skill::Etch: return "item.etch(Gold) - etching. It takes a long time and eats purity, but it is worth far more than refined. The first step past the end of the old chain. Needs refining.";
     case Skill::Fuse: return "item.fuse(Gold) - fusing. The last state there is, and the most valuable by a wide margin. Only works on something etched or hardened. Needs etching.";
 
@@ -265,6 +267,7 @@ const char* SkillTag(Skill skill)
     case Skill::Status: return "$?";
     case Skill::Market: return "MKT";
     case Skill::ExtraFurnace: return "+F";
+    case Skill::Quests: return "!";
     case Skill::Etch: return "ET";
     case Skill::Fuse: return "FU";
 
@@ -461,6 +464,32 @@ void SkillTree::rebuildCells()
         if (n.cost > kMaxCost)
             n.cost = kMaxCost;
 
+    // Welche "einmal"-Zeilen schon liegen, wird aus dem BAUM zurueckgerechnet
+    // und nicht aus dem Spielstand geglaubt.
+    //
+    // Im Spielstand steht ein Bit je Zeile aus data/skills.txt - und die Datei
+    // aendert sich. Kommen Zeilen dazu, ist die geladene Liste zu kurz, und
+    // grow() greift daneben: genau das war der Absturz beim Kaufen, nachdem
+    // die Datei gewachsen war. Werden Zeilen mittendrin eingefuegt, verrutschen
+    // alle Bits dahinter, und ein einmaliger Punkt taucht ein zweites Mal auf.
+    //
+    // Beides faellt weg, wenn man einfach nachsieht: eine "einmal"-Zeile ist
+    // verbraucht, sobald ihr Punkt schon irgendwo im Baum haengt. Damit
+    // ueberlebt ein Spielstand jede Aenderung an der Datei.
+    usedOnce.assign(plan.rules.size(), false);
+    for (std::size_t i = 0; i < plan.rules.size(); ++i)
+    {
+        if (!plan.rules[i].once)
+            continue;
+
+        for (const SkillNode& n : nodes)
+            if (n.skill == plan.rules[i].skill)
+            {
+                usedOnce[i] = true;
+                break;
+            }
+    }
+
     taken.clear();
     branches.assign(nodes.size(), 0);
 
@@ -636,6 +665,8 @@ Limits SkillTree::limits() const
         case Skill::Market: limits.allowMarket = true; break;
 
         case Skill::ExtraFurnace: ++jobs; break;
+
+        case Skill::Quests: limits.allowQuests = true; break;
 
         case Skill::Etch: limits.allowEtch = true; break;
         case Skill::Fuse: limits.allowFuse = true; break;

@@ -2179,6 +2179,11 @@ void Native::update(float dt, World& world, const OrePlan& ores, const CraftPlan
                 proc.budget -= proc.lineCost;
                 proc.awaitingGo = false;
                 sendTo(proc, "g\n");
+
+                // Mitzaehlen, wie viele Zeilen diese Runde gelaufen sind. Nur
+                // dafuer - aber es ist die Zahl, um die es in diesem Spiel
+                // eigentlich geht, und ein Auftrag misst genau sie.
+                ++world.stats.linesRun;
             }
         }
 

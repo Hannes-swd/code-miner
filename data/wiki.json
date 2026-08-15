@@ -1804,6 +1804,7 @@
       "kurz": "Lines inside your own functions cost half.",
       "schritte": [
         {
+          "code": "void verkaufe()\n{\n    item.wash(Stone);\n    item.sell(Stone);\n}",
           "punkt": "A function used to be a loss",
           "text": "Every line costs time. A function costs the call AND every line in its body - so the same code written twice was faster than a function. That was the wrong way round.",
           "dauer": 7.0
@@ -1833,6 +1834,7 @@
       "kurz": "Speed times a factor, not plus a number.",
       "schritte": [
         {
+          "code": "speed   ->   +0.25 lines per second\n-O2     ->   x 1.2 lines per second",
           "punkt": "Everything else adds",
           "text": "A speed point gives you a quarter of a line per second more. Always the same quarter, whether you are at three lines or at thirty.",
           "dauer": 6.0
@@ -1865,6 +1867,7 @@
       "kurz": "What an ore is - value, rarity, treatment.",
       "schritte": [
         {
+          "code": "if (block.is(Gold))         block.mine(Cool);\nelse if (block.is(Diamond)) block.mine(Heat);\nelse if (block.is(Iron))    block.mine();\n// ... and one more line for every ore, for ever",
           "punkt": "The problem it solves",
           "text": "Which treatment an ore wants used to be in the wiki only. So you had to copy it into your code, ore by ore - and the game keeps inventing new ones. That list was never finished.",
           "dauer": 7.5
@@ -1997,6 +2000,7 @@
       "kurz": "Is a furnace free?",
       "schritte": [
         {
+          "code": "item.wash(Stone);   // 0 = everything was busy",
           "punkt": "You used to find out by trying",
           "text": "item.wash() gives back 0 when everything is busy. So the only way to know was to attempt it - and the attempt costs a line.",
           "dauer": 6.0
@@ -2149,6 +2153,7 @@
       "kurz": "How many jobs run at once.",
       "schritte": [
         {
+          "code": "item.smelt(Copper);   // waits for a free furnace",
           "punkt": "One job at a time",
           "text": "Processing and alloying share the same place. At the start there is exactly one, so only one thing is ever cooking - and that is the hardest ceiling in the game.",
           "dauer": 7.0
@@ -2308,6 +2313,65 @@
         "shared[...]",
         "Skill tree",
         "wait(...)"
+      ]
+    },
+    {
+      "kategorie": "spiel",
+      "titel": "Contracts",
+      "braucht": "quests",
+      "kurz": "Three offers, take one - or none.",
+      "schritte": [
+        {
+          "punkt": "Three on the board",
+          "code": "Preparation   ->   three offers   ->   take one, or none",
+          "markiere": "take one, or none",
+          "text": "Before every round three contracts are offered. You may take one of them, and you may take none at all - a round without a contract is perfectly fine.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "It runs for one round",
+          "text": "A contract belongs to the round you took it in. It is settled when the time runs out, and then the board is refilled with three new ones.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "Both numbers stand there beforehand",
+          "text": "Every card shows what it pays and what it costs if you fail. You never accept something without knowing the price - that is the whole point of the choice.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "Failing hurts",
+          "text": "The penalty is 80 % of what the contract would have paid. So you need to finish roughly four out of nine of them for taking them to be worth it at all - a contract you are not fairly sure about is a bad deal, not a free bet.",
+          "dauer": 8.0
+        },
+        {
+          "punkt": "And it can cost you the round",
+          "text": "The penalty comes off the money you HAVE, and the rent is taken right afterwards. When you sit comfortably above the target, take one. When you are scraping by, one failure is the round.",
+          "dauer": 8.0
+        },
+        {
+          "punkt": "Some run by themselves",
+          "code": "Mine 140 blocks",
+          "markiere": "Mine 140 blocks",
+          "text": "A few just count along while your program works. Take one, play on, done.",
+          "dauer": 5.5
+        },
+        {
+          "punkt": "Others fight what you normally do",
+          "code": "Keep 25 pieces of Copper for 60 seconds",
+          "markiere": "for 60 seconds",
+          "text": "Holding means not selling - and the clock goes back to zero the moment you drop below. Those are the interesting ones: they work against your own reflexes.",
+          "dauer": 7.5
+        },
+        {
+          "punkt": "Settled before the sale",
+          "text": "Your bag is checked BEFORE it is sold off at the end of the round, otherwise a holding contract could never work. And the reward comes before the rent, so it can never rescue a round you had already lost.",
+          "dauer": 7.5
+        }
+      ],
+      "siehe_auch": [
+        "Rounds",
+        "info(...)",
+        "market.price(...)"
       ]
     }
   ]

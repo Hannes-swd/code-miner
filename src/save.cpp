@@ -115,6 +115,32 @@ bool SaveGame(const World& world, const SkillTree& tree,
     for (const int e : world.assayed)
         out << e << "\n";
 
+    // Der angenommene Auftrag. Er gilt fuer eine Runde - wer mitten in der
+    // Runde beendet, soll ihn beim naechsten Start noch haben, samt allem, was
+    // schon geschafft ist. Der fertig ausformulierte Text steht mit drin: er
+    // haengt an Zahlen, die sich sonst nicht mehr rekonstruieren liessen.
+    if (world.quest.valid())
+    {
+        const Quest& q = world.quest;
+        out << "auftrag " << q.def << " " << q.ore << " " << q.amount << " " << q.seconds << " "
+            << q.limit << " " << q.reward << " " << q.penalty << " " << q.progress << " " << q.held
+            << " " << (q.done ? 1 : 0) << "\n";
+        out << q.text << "\n";
+    }
+
+    // Die Rundenzaehler. Ohne sie stuende ein halb geschaffter Auftrag nach
+    // dem Laden wieder bei null.
+    // Bewusst ohne Auftrag in diese Runde gegangen. Ohne die Zeile laege nach
+    // einem Neustart wieder eine Tafel da - und das waere ein Weg, sich die
+    // Angebote noch einmal auswuerfeln zu lassen.
+    out << "auftrag_abgelehnt " << (world.questDeclined ? 1 : 0) << "\n";
+
+    out << "auftrag_zaehler " << world.stats.mined << " " << world.stats.earned << " "
+        << world.stats.crafted << " " << world.stats.alloyed << " " << world.stats.assayed << " "
+        << world.stats.cleanStreak << " " << world.stats.soldPieces << " "
+        << world.stats.soldAbove << " " << world.stats.biggestSale << " "
+        << world.stats.linesRun << "\n";
+
     // Die gewuerfelten Erze. Sie stehen in keiner Datei - sie sind beim Spielen
     // entstanden, und ohne sie waere nach dem Laden jede Nummer in der Tasche
     // um so viele Plaetze verschoben.
@@ -353,6 +379,33 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
                     neueWelt.assayed.insert(erz);
             }
         }
+        else if (wort == "auftrag")
+        {
+            Quest q;
+            int   fertig = 0;
+            in >> q.def >> q.ore >> q.amount >> q.seconds >> q.limit >> q.reward >> q.penalty >>
+                q.progress >> q.held >> fertig;
+            q.done = (fertig != 0);
+
+            std::string rest;
+            std::getline(in, rest);  // Rest der Zahlenzeile wegwerfen
+            ReadLine(in, q.text);
+
+            if (q.def >= 0)
+                neueWelt.quest = q;
+        }
+        else if (wort == "auftrag_abgelehnt")
+        {
+            int wert = 0;
+            in >> wert;
+            neueWelt.questDeclined = (wert != 0);
+        }
+        else if (wort == "auftrag_zaehler")
+        {
+            World::RoundStats& s = neueWelt.stats;
+            in >> s.mined >> s.earned >> s.crafted >> s.alloyed >> s.assayed >> s.cleanStreak >>
+                s.soldPieces >> s.soldAbove >> s.biggestSale >> s.linesRun;
+        }
         else if (wort == "erz_gewuerfelt")
         {
             int anzahl = 0;
@@ -473,6 +526,10 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
         }
         else if (wort == "einmal")
         {
+            // Wird eingelesen, aber nicht mehr geglaubt: rebuildCells() rechnet
+            // die Liste unten aus dem Baum neu aus. Der Grund steht dort - die
+            // Datei data/skills.txt aendert sich, die Bits passen dann nicht
+            // mehr, und zu wenige davon waren ein Absturz beim Kaufen.
             std::size_t n = 0;
             in >> n;
             neuerBaum.usedOnce.assign(n, false);

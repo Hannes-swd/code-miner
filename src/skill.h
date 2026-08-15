@@ -97,6 +97,13 @@ enum class Skill
     // weil sie denselben Weg gingen. Diese beiden gehen tiefer statt breiter.
     Etch,
     Fuse,
+
+    // Auftraege. Kommt mit Absicht sehr spaet: bis dahin ist das Rundenziel
+    // die einzige Struktur, und das ist etwas, das man ABWEHRT. Ein Auftrag
+    // ist das erste, das man WILL - und der hat erst dann seinen Platz, wenn
+    // Abbauen und Verarbeiten laengst sitzen und die Wiederholung anfaengt,
+    // duenn zu werden.
+    Quests,
 };
 
 const char* SkillName(Skill skill);

@@ -4,6 +4,7 @@
 // damit in die Welt.
 #include "ore.h"
 
+#include "quest.h"
 #include "round.h"
 
 // Wegen ImVec2 in DrawOreTile - die Tasche und das Wiki zeichnen dasselbe
@@ -82,6 +83,46 @@ struct World
     RoundPhase phase       = RoundPhase::Prepare;
     int        roundNumber = 1;
     float      roundLeft   = 0.0f;  // Restzeit in Sekunden
+
+    // ---- Auftraege --------------------------------------------------------
+    //
+    // Ein Auftrag gilt fuer genau eine Runde: angenommen wird er in der
+    // Vorbereitung, abgerechnet beim Rundenende. Siehe quest.h.
+    std::vector<Quest> questOffers;  // was gerade auf der Tafel liegt
+    Quest              quest;        // der angenommene, ungueltig = keiner
+
+    // Diese Runde bewusst ohne Auftrag. Ohne dieses Merkzeichen wuerden sofort
+    // drei neue Angebote nachwachsen, sobald die Tafel leer ist - und "keinen
+    // nehmen" waere gar nicht moeglich.
+    bool questDeclined = false;
+
+    // Was der letzte Auftrag gebracht hat - nur fuer die Abrechnung.
+    std::string questLastText;
+    bool        questLastWon    = false;
+    int         questLastChange = 0;
+
+    // Zaehler fuer die Auftraege. Alle gelten fuer EINE Runde und werden beim
+    // Rundenstart auf null gesetzt.
+    //
+    // Sie stehen hier und nicht im Auftrag, weil mehrere Auftraege dieselbe
+    // Zahl lesen koennen - und weil man sie sonst erst ab dem Moment zaehlen
+    // wuerde, in dem einer angenommen wird.
+    struct RoundStats
+    {
+        int mined       = 0;  // Bloecke abgebaut
+        int earned      = 0;  // Geld durch Verkaeufe waehrend der Runde
+        int crafted     = 0;  // Stuecke verarbeitet
+        int alloyed     = 0;  // Stuecke legiert
+        int assayed     = 0;  // Erze untersucht
+        int cleanStreak = 0;  // Bloecke am Stueck ohne Fehlbehandlung
+        int soldPieces  = 0;  // Stuecke verkauft
+        int soldAbove   = 0;  // davon ueber dem Durchschnittspreis
+        int biggestSale = 0;  // groesster Einzelverkauf
+        int linesRun    = 0;  // ausgefuehrte Zeilen, vom Motor gesetzt
+
+        std::map<int, int> minedOre;  // Bloecke je Erz
+    };
+    RoundStats stats;
 
     // Was diese Runde verlangt. Rechnet main jedes Bild aus data/runden.json
     // aus - die Welt kennt den Rundenplan nicht. Steht hier, damit

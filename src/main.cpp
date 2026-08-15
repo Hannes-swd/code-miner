@@ -7,6 +7,7 @@
 #include "alloy.h"
 #include "codecheck.h"
 #include "console.h"
+#include "quest.h"
 #include "craft.h"
 #include "native.h"
 #include "ore.h"
@@ -247,6 +248,18 @@ int main(int, char**)
     const bool kUnendlichGeld = false;
     const int  kVielGeld      = 2000000000;
 
+    // Auftraege sofort, ohne sie im Baum zu kaufen. Nur zum Anschauen: im
+    // fertigen Spiel haengen sie an "quests" ab Schritt 30, und das ist mit
+    // Absicht so weit hinten (siehe data/skills.txt).
+    //
+    // kAlleAuftraege zeigt dazu den GANZEN Katalog - auch die Auftraege, deren
+    // Punkt noch fehlt oder deren Runde noch nicht erreicht ist. Sonst saehe
+    // man in Runde 1 nur die drei, die ohne alles auskommen.
+    //
+    // Beide vor dem Ausliefern wieder auf false.
+    const bool kAuftraegeSofort = false;
+    const bool kAlleAuftraege   = false;
+
     // Startgeld. Beim Zuruecksetzen kommt genau das wieder.
     const int kStartGeld = kUnendlichGeld ? kVielGeld : 0;
 
@@ -290,6 +303,10 @@ int main(int, char**)
     // hier. Der Baum waechst dann beim Spielen: erst beim Kauf wird gewuerfelt,
     // was dahinter kommt.
     const SkillPlan plan = LoadSkillPlan();
+
+    // Die Auftraege. Fehlt die Datei, gibt es eben keine - das Spiel laeuft
+    // trotzdem, eine Zusatzaufgabe darf nichts kaputtmachen.
+    const QuestPlan quests = LoadQuestPlan();
 
     SkillTree tree;
     tree.start(plan, 20260808u);
@@ -416,7 +433,7 @@ int main(int, char**)
                 // koennte das Kind noch eine Zeile mitten in den Verkauf
                 // hineinfunken.
                 engine.stop();
-                FinishRound(world, rounds, ores, crafts);
+                FinishRound(world, rounds, ores, crafts, quests);
 
                 // Die Abrechnung soll einen Absturz ueberleben - sie ist der
                 // einzige Ort, an dem man das Ergebnis je zu sehen bekommt.
@@ -462,6 +479,11 @@ int main(int, char**)
             }
         }
 
+        // Der Auftrag sieht sich an, was dieses Bild passiert ist. Muss NACH
+        // dem Abbauen und Verarbeiten kommen - sonst hinkt der Fortschritt
+        // immer ein Bild hinterher.
+        QuestTick(world, quests, ores, dt);
+
         // Testschalter: Geld laeuft nie aus.
         if (kUnendlichGeld)
             world.money = kVielGeld;
@@ -480,7 +502,12 @@ int main(int, char**)
 
         // Die Werte kommen aus dem Baum - jedes Bild neu ausgerechnet. Dadurch
         // stimmen sie immer, egal in welcher Reihenfolge gekauft wurde.
-        const Limits limits   = tree.limits();
+        Limits limits = tree.limits();
+
+        // Testschalter: die Tafel gibt es sofort.
+        if (kAuftraegeSofort)
+            limits.allowQuests = true;
+
         world.moneyPerBlock   = limits.moneyPerBlock;
         world.respawnSeconds  = limits.respawnSeconds;
         engine.setSpeed(limits.linesPerSecond);
@@ -712,6 +739,17 @@ int main(int, char**)
         // Runde, egal auf welcher Seite man gerade ist.
         // Die Runde schwebt ueber jeder Seite - sie gehoert zu allen.
         bool togglePause = false;
+        // Die Tafel. In der Vorbereitung liegen die Angebote da, im Lauf steht
+        // der angenommene Auftrag oben mit seinem Balken.
+        //
+        // Gewuerfelt wird, sobald nichts dasteht: nach dem Rundenwechsel, nach
+        // dem Zurueckgeben und beim allerersten Freischalten.
+        if (limits.allowQuests && world.phase == RoundPhase::Prepare &&
+            world.questOffers.empty() && !world.quest.valid() && !world.questDeclined)
+            QuestRollOffers(world, quests, ores, rounds, limits, kAlleAuftraege);
+
+        DrawQuestBoard(world, quests, ores, limits);
+
         if (world.phase != RoundPhase::Report && DrawRoundHud(world, rounds, paused, togglePause))
             StartRound(world, rounds);
 
