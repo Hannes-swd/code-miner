@@ -358,6 +358,7 @@ gleich selbst.
 | `legierungen.json` | welche Erze sich zu was verbinden |
 | `runden.json` | Rundendauer, Geldziel, Wachstum |
 | `skills.txt` | was der Skilltree anbietet und was es kostet |
+| `quests.json` | die Aufträge: was sie verlangen, was sie zahlen |
 | `wiki.json` | die Texte im Wiki |
 
 Der Spielstand liegt als `spielstand.txt` **neben der Programmdatei** und entsteht beim
