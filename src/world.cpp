@@ -728,10 +728,10 @@ void World::update(float dt, const OrePlan& ores)
                 ore = RollOre(ores, level, rng);
             oreSeed = (unsigned)rng();
 
-            // Und was er diesmal verlangt. Dasselbe Erz kann einmal so und
-            // einmal anders dastehen - deshalb muss man den Block fragen und
-            // kann es nicht am Erz ablesen.
-            care     = RollCare(ores, ore, rng);
+            // Und was er verlangt. Das haengt am Erz und nicht am Wuerfel:
+            // ein Diamant will immer dasselbe. Deshalb kann man es sich
+            // merken - und im Programm je Erz abfragen.
+            care     = OreCare(ores, ore);
             mineCare = BlockCare::Plain;
         }
     }
@@ -932,11 +932,13 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
         ImGui::TextDisabled("Purity %d%%  -  processing makes it worth more", rein);
 
         // Was der Block verlangt, gehoert ganz oben hin - danach richtet sich
-        // ja, ob das Programm ihn ueberhaupt vernuenftig aufbekommt.
+        // ja, ob das Programm ihn ueberhaupt vernuenftig aufbekommt. Der Name
+        // steht dabei: es haengt am Erz, und genau das ist das Merkenswerte.
         if (world.care != BlockCare::Plain)
         {
-            ImGui::TextColored(ui::V(ui::kBad), "Wants %s  -  block.mine(%s)",
-                               BlockCareName(world.care), BlockCareName(world.care));
+            ImGui::TextColored(ui::V(ui::kBad), "%s always wants %s  -  block.mine(%s)",
+                               erz.name.c_str(), BlockCareName(world.care),
+                               BlockCareName(world.care));
             ImGui::TextDisabled("Untreated it loses %d%% purity, wrongly treated %d%%",
                                 ores.care.purityNone, ores.care.purityWrong);
         }

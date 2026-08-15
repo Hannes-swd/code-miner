@@ -107,8 +107,8 @@ block.mine();          // abbauen (dauert, je nach Erz)
 block.isThere();       // liegt gerade einer da?
 block.isLoading();     // wächst er gerade nach?
 
-block.needs(Cool);     // will der Block gekühlt werden?
-block.needs();         // -> Plain, Cool oder Heat
+block.is(Gold);        // ist es gerade Gold, das da liegt?
+block.ore();           // -> das Erz selbst, z. B. für print(block.ore())
 block.mine(Cool);      // abbauen und dabei kühlen
 
 // ---- Die Tasche ---------------------------------------------------------
@@ -147,17 +147,21 @@ int main() {
 }
 ```
 
-### Behandlung: teure Blöcke wollen mehr als `mine()`
+### Behandlung: teure Erze wollen mehr als `mine()`
 
 `while (true) { block.mine(); }` trägt dich durch die ersten Runden — danach nicht mehr. Je
-wertvoller ein Erz, desto häufiger verlangt sein Block eine **Behandlung**: er muss beim
-Abbau gekühlt oder erhitzt werden. Was er will, wird bei jedem Nachwachsen neu gewürfelt —
-man kann es also nicht am Erz ablesen, sondern muss den Block fragen:
+wertvoller ein Erz, desto **wahrscheinlicher** verlangt es eine **Behandlung**: gekühlt oder
+erhitzt werden beim Abbau. Gewürfelt wird das aber nur **einmal**, wenn es das Erz zum ersten
+Mal gibt — danach steht es fest. Gold will immer dasselbe, jeder einzelne Goldblock.
+
+Deshalb sagt dir im Programm niemand, was zu tun ist. Du musst wissen, welches Erz was will —
+die Wikiseite jedes Erzes sagt es, und über dem Block steht es auch — und danach fragen,
+welches gerade dasteht. Also ein `if` je Erz:
 
 ```cpp
 while (true) {
-    if (block.needs(Cool))      block.mine(Cool);
-    else if (block.needs(Heat)) block.mine(Heat);
+    if (block.is(Gold))         block.mine(Cool);
+    else if (block.is(Diamond)) block.mine(Heat);
     else                        block.mine();
 
     item.sell();
@@ -167,16 +171,17 @@ while (true) {
 Der Block kommt **immer gleich schnell** heraus — die Strafe ist die **Reinheit**. Gar nicht
 behandelt kostet 25 Punkte, falsch behandelt 50. Reinheit wirkt linear von 0,5× bis 1,5× auf
 den Preis, ein falsch abgebauter Block bringt also fast die Hälfte weniger. Deshalb lohnt
-sich blindes `block.mine(Cool)` nie. Über dem Block steht, was er will, und die Wikiseite
-jedes Erzes sagt, wie oft es etwas verlangt und was dich ein Fehler dort konkret kostet.
+sich blindes `block.mine(Cool)` nie: Erze, die nichts wollen, verlieren daran genauso.
 
 Verloren ist es nicht ganz: **Reinigen** holt einen Teil zurück — kostet aber einen Auftrag,
 und es läuft immer nur einer.
 
 Freigeschaltet wird das über den Punkt **care** im Skilltree, und er braucht `check`.
-Die Wahrscheinlichkeiten stehen in `data/erze.json` unter `"behandlung"`: unter Grundwert 8
-verlangt nie ein Erz etwas, nach oben läuft die Kurve gegen 80 %. Dort stehen auch die
-beiden Verluste (`verlust_ohne`, `verlust_falsch`).
+Die Kurve steht in `data/erze.json` unter `"behandlung"`: unter Grundwert 8 verlangt nie ein
+Erz etwas, nach oben läuft die Wahrscheinlichkeit gegen 80 %. Dort stehen auch die beiden
+Verluste (`verlust_ohne`, `verlust_falsch`) — und bei jedem Erz darf `"behandlung": "cool"`
+stehen, wenn du es selbst festlegen willst statt es würfeln zu lassen. Gewürfelte Erze aus
+`data/erzgenerator.json` bekommen ihre Behandlung bei der Entstehung und behalten sie.
 
 ### Erznamen: ein `enum`, keine Zeichenkette
 

@@ -43,7 +43,7 @@ struct Limits
     bool allowShared   = false;
     bool allowMine     = false;
 
-    // block.needs(...) und block.mine(Cool): teure Bloecke wollen behandelt
+    // block.ore()/block.is(...) und block.mine(Cool): teure Erze wollen behandelt
     // werden, und ohne diesen Punkt kann man sie nur langsam abbauen.
     bool allowCare     = false;
     bool allowSell     = false;

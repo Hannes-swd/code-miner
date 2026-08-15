@@ -53,9 +53,10 @@
 #   check         block.isThere(), isLoading(), exists(), isGone()
 #   shared        shared["name"] - survives a restart
 #   mine          block.mine() - let a program mine instead of clicking
-#   care          block.needs(Cool) and block.mine(Cool) - valuable blocks
-#                 want to be cooled or heated. The wrong treatment is worse
-#                 than none, so this one only pays off together with "if".
+#   care          block.ore(), block.is(Gold) and block.mine(Cool) - valuable
+#                 ores want to be cooled or heated, and every ore always the
+#                 same way. So you have to ask WHICH ore is standing there:
+#                 one if per ore. The wrong treatment is worse than none.
 #   sell          item.sell() - turn your bag into money
 #   bag           item.has(Stone) - look at what is in your bag
 #   variables     your own variables (int, float, ...), plus the first one

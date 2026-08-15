@@ -21,6 +21,11 @@ struct AlloyPlan;
 // Level haengen daran. Deshalb kann kein Erz gleichzeitig haeufig und teuer
 // sein - die haesslichste Falle beim Wuerfeln von Werten.
 //
+// Dazu kommt eine einzige Muenze: ob und wie das Erz beim Abbau behandelt
+// werden will. Wie wahrscheinlich das ist, haengt wieder am Wert - und weil es
+// zum Erz gehoert und nicht zum Block, will danach jeder seiner Bloecke
+// dasselbe. Im Programm heisst das: ein if je Erz.
+//
 // Ein fertig gewuerfeltes Erz wandert in den Spielstand, mit allem was es
 // ausmacht. Es ist damit ab dem Moment seiner Entstehung fest - selbst wenn
 // jemand spaeter die Wortlisten oder die Kurven aendert, bleibt es, wie es war.

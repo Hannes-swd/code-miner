@@ -113,10 +113,9 @@ struct World
     int      ore     = 0;
     unsigned oreSeed = 1;
 
-    // Was DIESER Block beim Abbau verlangt. Wird beim Nachwachsen gewuerfelt,
-    // je wertvoller das Erz desto oefter - siehe RollCare in ore.h. Steht im
-    // Spielstand: sonst haette derselbe Block nach dem Laden auf einmal eine
-    // andere Laune.
+    // Was DIESER Block beim Abbau verlangt. Kommt vom Erz und steht damit
+    // fest - siehe OreCare in ore.h. Steht trotzdem im Spielstand: der Block,
+    // der beim Speichern dastand, soll nach dem Laden derselbe sein.
     BlockCare care = BlockCare::Plain;
 
     // Womit gerade abgebaut wird. Das setzt block.mine(Cool) bei jedem Aufruf

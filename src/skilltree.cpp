@@ -96,7 +96,7 @@ const char* SkillName(Skill skill)
     {
     case Skill::Root: return "Console";
     case Skill::Mine: return "block.mine()";
-    case Skill::Care: return "block.needs()";
+    case Skill::Care: return "block.ore()";
     case Skill::Sell: return "item.sell()";
     case Skill::While: return "while";
     case Skill::If: return "if";
@@ -138,7 +138,7 @@ const char* SkillInfo(Skill skill)
     {
     case Skill::Root: return "Your first console. At the start you can only mine by hand - click the block.";
     case Skill::Mine: return "block.mine() - let a program mine instead of clicking. The first step towards a machine.";
-    case Skill::Care: return "block.needs(Cool) and block.mine(Cool) - valuable blocks want to be cooled or heated. The wrong treatment is worse than none. Needs if.";
+    case Skill::Care: return "block.is(Gold) and block.mine(Cool) - valuable ores want to be cooled or heated, every one of them the same way for ever. The wrong treatment is worse than none. Needs if.";
     case Skill::Sell: return "item.sell() sells everything in your bag at once. Without it you sell by hand.";
     case Skill::While: return "while and do. Comes with your first loop.";
     case Skill::If: return "if. Comes with your first condition.";

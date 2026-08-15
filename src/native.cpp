@@ -32,7 +32,7 @@ const char* kHeaderTop = R"KLICKER(#pragma once
 namespace ck {
 void line(int console, int n);
 void mine(int care);
-int  needs();
+int  oreHere();
 int  sell();
 int  sellSome(const char* erz, int anzahl);
 int  inBag(const char* erz);
@@ -119,15 +119,25 @@ struct CkShared
 
 static CkShared shared;
 
+)KLICKER";
+
+// Hierher kommt die Erzliste als enum (siehe OreEnumSource). Danach geht es
+// mit diesem Stueck weiter.
+const char* kHeaderBottom = R"KLICKER(
 // Was ein Block beim Abbau verlangt.
 //
-// Je wertvoller das Erz, desto oefter will sein Block behandelt werden. Er
-// kommt immer gleich schnell heraus - aber falsch behandelt verliert er
-// Reinheit und ist damit weniger wert. Die falsche Behandlung kostet mehr als
-// gar keine. Deshalb steht das nicht einfach so da, sondern in einem if:
+// Je wertvoller ein Erz, desto oefter will es behandelt werden: gekuehlt oder
+// erhitzt. Das haengt am ERZ und steht fest - Gold will immer dasselbe, jeder
+// einzelne Goldblock. Der Block kommt immer gleich schnell heraus, aber falsch
+// behandelt verliert er Reinheit und ist damit weniger wert. Die falsche
+// Behandlung kostet mehr als gar keine.
 //
-//     if (block.needs(Cool))      block.mine(Cool);
-//     else if (block.needs(Heat)) block.mine(Heat);
+// Es gibt also keinen Befehl, der dir sagt, was zu tun ist. Du musst wissen,
+// welches Erz was will - im Wiki steht es bei jedem Erz - und danach fragen,
+// welches gerade dasteht:
+//
+//     if (block.is(Gold))         block.mine(Cool);
+//     else if (block.is(Diamond)) block.mine(Heat);
 //     else                        block.mine();
 enum Care
 {
@@ -144,11 +154,17 @@ struct CkBlock
     void mine() const { ck::mine((int)Plain); }
     void mine(Care womit) const { ck::mine((int)womit); }
 
-    // Was will dieser Block? block.needs() gibt Plain, Cool oder Heat zurueck.
-    Care needs() const { return (Care)ck::needs(); }
+    // Welches Erz steht gerade da? block.ore() gibt es als Ore zurueck -
+    // print(block.ore()) schreibt den Namen hin.
+    Ore ore() const { return (Ore)ck::oreHere(); }
 
     // Und dieselbe Frage als Ja/Nein - so passt sie direkt in ein if.
-    bool needs(Care was) const { return (Care)ck::needs() == was; }
+    // block.is(Any) ist immer wahr, solange ueberhaupt ein Block dasteht.
+    bool is(Ore erz) const
+    {
+        const int hier = ck::oreHere();
+        return (erz == Any) ? (hier >= 0) : ((Ore)hier == erz);
+    }
 
     // Ist der Block gerade da?
     //   true  = da, man kann ihn abbauen
@@ -162,11 +178,7 @@ struct CkBlock
 };
 
 static const CkBlock block;
-)KLICKER";
 
-// Hierher kommt die Erzliste als enum (siehe OreEnumSource). Danach geht es
-// mit diesem Stueck weiter.
-const char* kHeaderBottom = R"KLICKER(
 // Deine Tasche. Was einmal abgebaut ist, gehoert nicht mehr dem Block, sondern
 // dir - deshalb steht das alles hier und nicht bei "block".
 struct CkItem
@@ -388,11 +400,11 @@ void mine(int care)
     std::fflush(stdout);
 }
 
-// Was der Block gerade verlangt. Das Spiel antwortet mit einer Zahl, deshalb
-// wird hier gewartet - wie bei exists().
-int needs()
+// Welches Erz gerade dasteht. Das Spiel antwortet mit einer Zahl, deshalb wird
+// hier gewartet - wie bei exists().
+int oreHere()
 {
-    std::printf("N\n");
+    std::printf("B\n");
     std::fflush(stdout);
     char buf[32];
     if (!std::fgets(buf, sizeof(buf), stdin))
@@ -1243,9 +1255,14 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
         {
             // Falsch behandelt sieht man dem Block nicht an - er kommt genauso
             // schnell heraus, nur schmutziger. Deshalb steht es in der Zeile
-            // unter der Konsole.
-            mMsg = std::string("Mining with ") + BlockCareName((BlockCare)womit) +
-                   ", but the block wants " + BlockCareName(world.care) + " - purity -" +
+            // unter der Konsole. Der Name des Erzes gehoert dazu: was es will,
+            // haengt am Erz, und genau das soll man sich merken.
+            const std::string erz = (world.ore >= 0 && world.ore < (int)ores.ores.size())
+                                        ? ores.ores[(std::size_t)world.ore].name
+                                        : std::string("This block");
+
+            mMsg = std::string("Mining with ") + BlockCareName((BlockCare)womit) + ", but " + erz +
+                   " wants " + BlockCareName(world.care) + " - purity -" +
                    std::to_string(CareLoss(ores.care, world.care, (BlockCare)womit)) + "%.";
         }
         else
@@ -1259,8 +1276,8 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
         sendChild(world.blockAlive ? "1\n" : "0\n");
         break;
 
-    case 'N':  // block.needs() - was verlangt der Block gerade?
-        sendChild((std::to_string((int)world.care) + "\n").c_str());
+    case 'B':  // block.ore() - welches Erz steht gerade da? -1 = keins
+        sendChild((std::to_string(world.blockAlive ? world.ore : -1) + "\n").c_str());
         break;
 
     case 'K':  // verkaufen. Ohne Zusatz alles, sonst "K <anzahl> <erz>"

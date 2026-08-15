@@ -125,7 +125,8 @@ bool SaveGame(const World& world, const SkillTree& tree,
             out << o.rarity << " " << o.value << " " << o.mineSeconds << " " << o.minLevel << " "
                 << o.purity << " " << o.pattern << " " << o.states << " " << (o.minable ? 1 : 0)
                 << " " << (int)o.color1.r << " " << (int)o.color1.g << " " << (int)o.color1.b << " "
-                << (int)o.color2.r << " " << (int)o.color2.g << " " << (int)o.color2.b << "\n";
+                << (int)o.color2.r << " " << (int)o.color2.g << " " << (int)o.color2.b << " "
+                << (int)o.care << "\n";
         }
     }
 
@@ -350,12 +351,32 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
                 Ore o;
                 o.name = name;
 
+                // Die Zahlenzeile wird erst geholt und dann zerlegt. Sonst
+                // wuerde ein Spielstand aus einer aelteren Fassung, in dem
+                // hinten ein Wert fehlt, die naechste Zeile mitlesen - und ab
+                // da waere alles verschoben.
+                std::string zeile;
+                if (!ReadLine(in, zeile))
+                    break;
+
+                std::istringstream werte(zeile);
+
                 int r1 = 0, g1 = 0, b1 = 0, r2 = 0, g2 = 0, b2 = 0, abbaubar = 1;
-                in >> o.rarity >> o.value >> o.mineSeconds >> o.minLevel >> o.purity >>
+                werte >> o.rarity >> o.value >> o.mineSeconds >> o.minLevel >> o.purity >>
                     o.pattern >> o.states >> abbaubar >> r1 >> g1 >> b1 >> r2 >> g2 >> b2;
 
-                if (!in)
+                if (!werte)
                     break;
+
+                // Die Behandlung kam spaeter dazu. Steht sie nicht da, wird sie
+                // aus dem Namen abgeleitet - dieselbe Rechnung wie bei den
+                // Erzen aus der Datei, und damit immer dieselbe.
+                int behandlung = -1;
+                if (!(werte >> behandlung) || behandlung < 0 ||
+                    behandlung >= (int)BlockCare::Count)
+                    o.care = DeriveOreCare(ores.care, o.name, o.value);
+                else
+                    o.care = (BlockCare)behandlung;
 
                 o.minable = (abbaubar != 0);
                 o.color1  = Color{(unsigned char)r1, (unsigned char)g1, (unsigned char)b1};
@@ -371,7 +392,6 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
                     o.pattern = 0.5f;
 
                 neueOre.push_back(o);
-                std::getline(in, rest);
             }
         }
         else if (wort == "erz_rezept")
@@ -538,6 +558,12 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
 
         alloys.recipes.push_back(r);
     }
+
+    // Was der Block verlangt, gehoert zum Erz und nicht mehr zum einzelnen
+    // Block. In einem Spielstand von frueher steht dort noch ein gewuerfelter
+    // Wert - der wird hier geradegerueckt, sonst wollte der Block etwas
+    // anderes, als seine Wikiseite sagt.
+    neueWelt.care = OreCare(ores, neueWelt.ore);
 
     world         = neueWelt;
     tree          = neuerBaum;

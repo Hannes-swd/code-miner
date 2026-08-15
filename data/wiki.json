@@ -285,48 +285,49 @@
     },
     {
       "kategorie": "functions",
-      "titel": "block.needs(...)",
+      "titel": "block.ore()",
       "unter": "block",
       "braucht": "care",
-      "kurz": "Valuable blocks want to be cooled or heated first.",
+      "kurz": "Which ore is standing there - and what it wants while you mine it.",
       "schritte": [
         {
           "punkt": "Why at all",
-          "code": "block.needs(Cool)",
-          "markiere": "block.needs(Cool)",
-          "text": "The more a block is worth, the more often it wants something: cooling or heating. It always comes out equally fast - but untreated it comes out dirty, and purity is what it is worth.",
+          "code": "block.mine(Cool);",
+          "markiere": "Cool",
+          "text": "The more an ore is worth, the more often it wants something while you mine it: cooling or heating. The block comes out equally fast either way - but untreated it comes out dirty, and purity is what it is worth.",
           "dauer": 4.5
         },
         {
-          "punkt": "Ask the block",
-          "markiere": "needs",
-          "text": "Asks: does this block want to be cooled? The answer is true or false. Heat is the other one, and Plain means it wants nothing at all.",
-          "dauer": 4.0
+          "punkt": "It belongs to the ore",
+          "markiere": "block.mine(Cool);",
+          "text": "What an ore wants never changes. Every gold block wants exactly the same thing, for ever. So there is no command that tells you - you have to know it. The wiki page of every ore says it, and it says it over the block while it stands there.",
+          "dauer": 5.0
         },
         {
-          "punkt": "Treat it while mining",
-          "code": "if (block.needs(Cool))\n{\n    block.mine(Cool);\n}",
-          "markiere": "block.mine(Cool)",
-          "text": "Into the brackets of mine goes what you do to it. Done right, the block keeps its full purity.",
-          "dauer": 4.5
+          "punkt": "So ask which ore it is",
+          "code": "if (block.is(Gold))\n{\n    block.mine(Cool);\n}\nelse\n{\n    block.mine();\n}",
+          "markiere": "block.is(Gold)",
+          "text": "block.is(Gold) asks whether the block in front of you is gold. Into the brackets of mine goes what you do to it. Done right, the block keeps its full purity - everything else gets a plain block.mine().",
+          "dauer": 5.0
         },
         {
           "punkt": "The wrong treatment hurts",
-          "markiere": "Cool",
-          "text": "No treatment costs 25 points of purity, the wrong one 50 - heating what wants cooling is worse than doing nothing. So never treat blindly: ask first, every time.",
+          "markiere": "block.mine();",
+          "text": "No treatment costs 25 points of purity, the wrong one 50 - heating what wants cooling is worse than doing nothing. So never treat blindly: only the ore that really wants it.",
           "dauer": 4.5
         },
         {
-          "punkt": "All three cases",
-          "code": "while (true)\n{\n    if (block.needs(Cool))\n    {\n        block.mine(Cool);\n    }\n    else if (block.needs(Heat))\n    {\n        block.mine(Heat);\n    }\n    else\n    {\n        block.mine();\n    }\n}",
+          "punkt": "One if per ore",
+          "code": "while (true)\n{\n    if (block.is(Gold))\n    {\n        block.mine(Cool);\n    }\n    else if (block.is(Diamond))\n    {\n        block.mine(Heat);\n    }\n    else\n    {\n        block.mine();\n    }\n}",
           "markiere": "else if",
-          "text": "Which one it is changes with every block that regrows. That is why the question belongs inside the loop and not in front of it.",
+          "text": "Every ore that wants something gets its own line. Which block regrows changes all the time - that is why the question belongs inside the loop and not in front of it.",
           "dauer": 6.0
         },
         {
-          "punkt": "Where you see it",
-          "markiere": "block.needs(Cool)",
-          "text": "It says over the block what it wants, and every ore page in the wiki says how often that ore asks for it and what it costs you. Cheap ores like stone never ask.",
+          "punkt": "The name of the ore",
+          "code": "print(block.ore());",
+          "markiere": "block.ore()",
+          "text": "block.ore() gives you the ore itself instead of a yes or no - print writes its name into the console. Handy while you are still collecting who wants what.",
           "dauer": 4.0
         }
       ],

@@ -434,6 +434,12 @@ bool RollOneOre(OrePlan& ores, AlloyPlan& alloys, OreGenPlan& gen, int level, st
         o.states  = StatesOf(art->states, name, gen.problems);
         o.minable = true;
 
+        // Wie es abgebaut werden will. Der Wert entscheidet, WIE WAHRSCHEINLICH
+        // es ueberhaupt etwas verlangt - was es dann wird, ist eine Muenze.
+        // Gewuerfelt wird genau hier, ein einziges Mal: ab jetzt will jeder
+        // Block dieses Erzes dasselbe, und es wandert so in den Spielstand.
+        o.care = RollOreCare(ores.care, o.value, rng);
+
         ores.ores.push_back(o);
         ++ores.rolled;
     }

@@ -2,15 +2,27 @@
 {
   "level": { "art": "bloecke", "pro_level": 20 },
 
-  // Behandlung beim Abbau. Je wertvoller ein Erz, desto oefter will sein Block
-  // gekuehlt oder erhitzt werden - dann reicht ein blosses block.mine() nicht
-  // mehr, und man muss fragen: if (block.needs(Cool)) block.mine(Cool);
+  // Behandlung beim Abbau. Je wertvoller ein Erz, desto WAHRSCHEINLICHER will
+  // es gekuehlt oder erhitzt werden. Gewuerfelt wird das aber nur einmal, wenn
+  // es das Erz zum ersten Mal gibt - danach steht es fest: Gold will immer
+  // dasselbe, jeder einzelne Goldblock.
+  //
+  // Deshalb sagt einem im Programm niemand, was zu tun ist. Man muss wissen,
+  // welches Erz was will (es steht im Wiki), und danach fragen, welches gerade
+  // dasteht: if (block.is(Gold)) block.mine(Cool);
+  //
+  // Die Zahlen hier gelten fuer alle Erze, auch fuer die gewuerfelten aus
+  // data/erzgenerator.json:
   //
   //   ab_wert         bis zu diesem Grundwert verlangt ein Erz nie etwas
   //   chance_max      hoechste Wahrscheinlichkeit, die dabei herauskommt
   //   wert_halb       bei "ab_wert + wert_halb" ist die Haelfte davon erreicht
   //   verlust_ohne    wie viele Punkte Reinheit es kostet, wenn man nichts tut
   //   verlust_falsch  ... und wenn man das Falsche tut
+  //
+  // Bei jedem Erz unten darf "behandlung" stehen: "keine", "cool" oder "heat".
+  // Fehlt der Eintrag, wird aus Name und Wert gewuerfelt - fuer denselben Namen
+  // kommt dabei immer dasselbe heraus.
   //
   // Die Zeit bleibt gleich: ein falsch abgebauter Block kommt genauso schnell
   // heraus, er ist nur weniger wert. Reinheit wirkt linear von 0.5x (0 %) bis
@@ -109,6 +121,7 @@
       "abbaudauer": 2.2,
       "ab_level": 7,
       "wert": 70,
+      "behandlung": "cool",
       "farbe1": "#F5C542",
       "farbe2": "#6B5320",
       "muster": 4,
@@ -122,6 +135,7 @@
       "abbaudauer": 2.8,
       "ab_level": 10,
       "wert": 160,
+      "behandlung": "heat",
       "farbe1": "#4BE38C",
       "farbe2": "#1B4A33",
       "muster": 3,
@@ -135,6 +149,7 @@
       "abbaudauer": 3.5,
       "ab_level": 13,
       "wert": 400,
+      "behandlung": "cool",
       "farbe1": "#8EE8FF",
  
       "farbe2": "#26505E",

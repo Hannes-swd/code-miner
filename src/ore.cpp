@@ -279,6 +279,24 @@ OrePlan LoadOrePlan()
             erz.states |= (1u << (unsigned)OreState::Raw);
         }
 
+        // Wie das Erz abgebaut werden will. Steht es nicht in der Datei, wird
+        // es aus Name und Wert abgeleitet: teure Erze verlangen oefter etwas.
+        // So muss niemand bei jedem Erz daran denken - und wer es genau haben
+        // will, schreibt "behandlung": "cool" dazu.
+        if (const JsonValue* b = e.find("behandlung"))
+        {
+            if (!ParseBlockCare(b->str, erz.care))
+            {
+                plan.problems.push_back(erz.name + ": \"behandlung\" must be \"keine\", " +
+                                        "\"cool\" or \"heat\".");
+                erz.care = DeriveOreCare(plan.care, erz.name, erz.value);
+            }
+        }
+        else
+        {
+            erz.care = DeriveOreCare(plan.care, erz.name, erz.value);
+        }
+
         // Womit sich das Erz legieren laesst. Geprueft wird das erst in
         // data/legierungen.json - dort steht, welche Rezepte es gibt.
         if (const JsonValue* l = e.find("legierbar_mit"))
@@ -442,28 +460,49 @@ const char* BlockCareName(BlockCare care)
     }
 }
 
-float CareChance(const OrePlan& plan, int ore)
+bool ParseBlockCare(const std::string& key, BlockCare& out)
 {
-    if (ore < 0 || ore >= (int)plan.ores.size())
-        return 0.0f;
+    const std::string k = Lower(key);
 
-    const int wert = plan.ores[(std::size_t)ore].value;
-    if (wert <= plan.care.fromValue)
+    // "keine" und "none" heissen dasselbe - wer die Datei auf Englisch liest,
+    // soll nicht raten muessen.
+    if (k == "keine" || k == "none" || k == "plain")
+    {
+        out = BlockCare::Plain;
+        return true;
+    }
+    if (k == "cool" || k == "kuehlen")
+    {
+        out = BlockCare::Cool;
+        return true;
+    }
+    if (k == "heat" || k == "erhitzen")
+    {
+        out = BlockCare::Heat;
+        return true;
+    }
+
+    return false;
+}
+
+float CareChance(const CarePlan& plan, int value)
+{
+    if (value <= plan.fromValue)
         return 0.0f;
 
     // Eine Saettigungskurve: ueber fromValue steigt sie schnell, kommt aber nie
-    // ganz bei chanceMax an. Auch das teuerste Erz steht deshalb ab und zu
-    // einfach so da - sonst waere die Behandlung keine Frage mehr, sondern nur
-    // noch eine zweite Pflichtzeile.
-    const float ueber = (float)(wert - plan.care.fromValue);
-    const float halb  = (plan.care.halfValue > 0) ? (float)plan.care.halfValue : 1.0f;
+    // ganz bei chanceMax an. Auch das teuerste Erz kann deshalb eines sein, das
+    // gar nichts verlangt - sonst waere ab einem gewissen Wert jedes Erz eines
+    // mit Behandlung, und die Frage danach waere keine mehr.
+    const float ueber = (float)(value - plan.fromValue);
+    const float halb  = (plan.halfValue > 0) ? (float)plan.halfValue : 1.0f;
 
-    return plan.care.chanceMax * (ueber / (ueber + halb));
+    return plan.chanceMax * (ueber / (ueber + halb));
 }
 
-BlockCare RollCare(const OrePlan& plan, int ore, std::mt19937& rng)
+BlockCare RollOreCare(const CarePlan& plan, int value, std::mt19937& rng)
 {
-    const float chance = CareChance(plan, ore);
+    const float chance = CareChance(plan, value);
     if (chance <= 0.0f)
         return BlockCare::Plain;
 
@@ -471,9 +510,34 @@ BlockCare RollCare(const OrePlan& plan, int ore, std::mt19937& rng)
     if (wurf >= chance)
         return BlockCare::Plain;
 
-    // Welche der beiden Behandlungen es wird, ist reiner Zufall - man kann es
-    // also nicht am Erz ablesen, sondern muss den Block fragen.
+    // Welche der beiden es wird, ist eine Muenze. Beide sind gleich schwer -
+    // schwer ist nur, sich zu merken, welches Erz welche will.
     return ((rng() & 1u) != 0u) ? BlockCare::Cool : BlockCare::Heat;
+}
+
+BlockCare DeriveOreCare(const CarePlan& plan, const std::string& name, int value)
+{
+    // Der Name ist der Startwert. Dadurch kommt fuer dasselbe Erz immer
+    // dasselbe heraus - auch in einem anderen Spielstand und auf einem anderen
+    // Rechner. Das MUSS so sein: was ein Erz verlangt, steht im Wiki, und dort
+    // darf nicht morgen etwas anderes stehen als heute.
+    unsigned h = 2166136261u;
+    for (const char c : Lower(name))
+    {
+        h ^= (unsigned char)c;
+        h *= 16777619u;
+    }
+
+    std::mt19937 rng(h);
+    return RollOreCare(plan, value, rng);
+}
+
+BlockCare OreCare(const OrePlan& plan, int ore)
+{
+    if (ore < 0 || ore >= (int)plan.ores.size())
+        return BlockCare::Plain;
+
+    return plan.ores[(std::size_t)ore].care;
 }
 
 int CareLoss(const CarePlan& plan, BlockCare verlangt, BlockCare getan)

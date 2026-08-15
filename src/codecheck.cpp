@@ -222,11 +222,13 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
             // Behandeln. "Cool" und "Heat" haengen mit dran: ohne den Punkt
             // gibt es die beiden Woerter gar nicht, und ein block.mine(Cool)
             // waere sonst erst beim Compiler aufgefallen - mit einer Meldung,
-            // die niemandem sagt, dass ein Skill fehlt.
-            else if (t.word == "needs" || t.word == "Cool" || t.word == "Heat")
+            // die niemandem sagt, dass ein Skill fehlt. block.ore() und
+            // block.is(...) gehoeren dazu: ohne sie weiss man nicht, welches
+            // Erz gerade dasteht, und damit auch nicht, was es will.
+            else if (t.word == "ore" || t.word == "is" || t.word == "Cool" || t.word == "Heat")
             {
                 if (!limits.allowCare)
-                    return locked("block.needs(...)");
+                    return locked("block.ore(...)");
             }
             else if (t.word == "has")
             {

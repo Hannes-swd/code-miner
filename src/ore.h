@@ -47,6 +47,33 @@ const char* OreStateKey(OreState state);
 // Text zum Schluessel, -1 = kenne ich nicht.
 int FindOreState(const std::string& key);
 
+// Wie ein Block behandelt werden will, waehrend man ihn abbaut.
+//
+// Das haengt am ERZ und nicht am einzelnen Block: ein Diamant will immer
+// dasselbe, egal welcher Block gerade dasteht. Entschieden wird es einmal, in
+// dem Moment, in dem es das Erz zum ersten Mal gibt - danach steht es fest.
+//
+// Deshalb kann man es nicht am Block ablesen, sondern muss wissen, WELCHES Erz
+// da steht. Im Programm heisst das: ein if je Erz.
+//
+//     if (block.is(Diamond)) block.mine(Heat);
+//     else if (block.is(Gold)) block.mine(Cool);
+//     else                     block.mine();
+enum class BlockCare
+{
+    Plain,  // will gar nichts - einfach abbauen
+    Cool,   // muss gekuehlt werden
+    Heat,   // muss erhitzt werden
+    Count
+};
+
+// Was in der Anzeige steht ("Cool", "Heat").
+const char* BlockCareName(BlockCare care);
+
+// Der Schluessel aus data/erze.json ("keine", "cool", "heat") als Behandlung.
+// false = kenne ich nicht.
+bool ParseBlockCare(const std::string& key, BlockCare& out);
+
 struct Ore
 {
     std::string name = "Stein";
@@ -77,6 +104,12 @@ struct Ore
     // Steht in der Datei nichts, sind alle erlaubt.
     unsigned states = 0xFFFFFFFFu;
 
+    // Wie DIESES Erz abgebaut werden will. Fest, fuer jeden seiner Bloecke
+    // gleich: gekuehlt, erhitzt oder gar nicht. Je wertvoller ein Erz, desto
+    // wahrscheinlicher verlangt es etwas - gewuerfelt wird das aber nur EINMAL,
+    // bei seiner Entstehung (siehe RollOreCare).
+    BlockCare care = BlockCare::Plain;
+
     // Womit sich das Erz legieren laesst. data/legierungen.json prueft jedes
     // Rezept dagegen: was hier nicht zueinander steht, laesst sich nicht
     // zusammenschmelzen.
@@ -90,25 +123,6 @@ struct Ore
         return (states & (1u << (unsigned)s)) != 0;
     }
 };
-
-// Wie ein Block behandelt werden will, waehrend man ihn abbaut.
-//
-// Je wertvoller ein Erz, desto oefter verlangt es etwas: der Anfang bleibt
-// schlicht, spaeter reicht  while (true) { block.mine(); }  nicht mehr. Was der
-// Block gerade braucht, sieht man ihm an - und im Programm fragt man nach:
-//
-//     if (block.needs(Cool)) block.mine(Cool);
-//     else                   block.mine();
-enum class BlockCare
-{
-    Plain,  // will gar nichts - einfach abbauen
-    Cool,   // muss gekuehlt werden
-    Heat,   // muss erhitzt werden
-    Count
-};
-
-// Was in der Anzeige steht ("Cool", "Heat").
-const char* BlockCareName(BlockCare care);
 
 // Alles zur Behandlung, aus data/erze.json. Hier stehen die Werte, die
 // einspringen, wenn die Datei nichts dazu sagt.
@@ -174,12 +188,23 @@ bool ParseOreColor(const std::string& text, Color& out);
 // vorkommt, und je seltener, desto unwahrscheinlicher.
 int RollOre(const OrePlan& plan, int level, std::mt19937& rng);
 
-// Wie wahrscheinlich verlangt dieses Erz eine Behandlung? 0..1.
-float CareChance(const OrePlan& plan, int ore);
+// Wie wahrscheinlich verlangt ein Erz mit diesem Grundwert ueberhaupt eine
+// Behandlung? 0..1. Daraus wird beim Entstehen EINMAL gewuerfelt.
+float CareChance(const CarePlan& plan, int value);
 
-// Was der naechste Block verlangt. Gewuerfelt wird beim Nachwachsen: dasselbe
-// Erz kann einmal so und einmal anders dastehen.
-BlockCare RollCare(const OrePlan& plan, int ore, std::mt19937& rng);
+// Wuerfelt die Behandlung fuer ein frisch entstandenes Erz. Nur der Wert
+// entscheidet, wie wahrscheinlich es etwas verlangt - welche der beiden es dann
+// wird, ist eine Muenze. Danach steht es fuer immer fest.
+BlockCare RollOreCare(const CarePlan& plan, int value, std::mt19937& rng);
+
+// Dasselbe ohne Wuerfel: aus dem Namen wird der Startwert. Fuer Erze, die aus
+// einer Datei kommen und dort nichts zur Behandlung sagen, und fuer alte
+// Spielstaende, in denen die Behandlung noch nicht drinsteht. Derselbe Name
+// ergibt immer dieselbe Behandlung.
+BlockCare DeriveOreCare(const CarePlan& plan, const std::string& name, int value);
+
+// Was jeder Block dieses Erzes verlangt. Ausserhalb der Liste: Plain.
+BlockCare OreCare(const OrePlan& plan, int ore);
 
 // Wie viele Punkte Reinheit es kostet, wenn ein Block "verlangt" bekommt und
 // man "getan" tut. 0 = richtig gemacht.
