@@ -2146,20 +2146,21 @@
     {
       "kategorie": "spiel",
       "titel": "Furnaces",
-      "braucht": "furnace+",
       "kurz": "How many jobs run at once.",
       "schritte": [
         {
-          "punkt": "There used to be exactly one",
-          "text": "Processing and alloying share one place. Whatever your program managed, only one thing was ever cooking - it was the hardest ceiling in the game.",
+          "punkt": "One job at a time",
+          "text": "Processing and alloying share the same place. At the start there is exactly one, so only one thing is ever cooking - and that is the hardest ceiling in the game.",
           "dauer": 7.0
         },
         {
+          "braucht": "furnace+",
           "punkt": "Every furnace is a place",
           "text": "Each furnace point in the skill tree adds one. Two furnaces really are twice the throughput, not a quarter more.",
           "dauer": 6.0
         },
         {
+          "braucht": "furnace+",
           "punkt": "Which one takes the job",
           "text": "You do not choose. A job goes to the first free place; if there is none, item.wash() gives back 0 and nothing happens.",
           "dauer": 6.0
@@ -2256,17 +2257,17 @@
     {
       "kategorie": "spiel",
       "titel": "Consoles",
-      "braucht": "console+",
       "kurz": "Several programs at the same time.",
       "schritte": [
         {
-          "punkt": "One console, one program",
+          "punkt": "One console is one program",
           "code": "int main()\n{\n    while (true)\n    {\n        block.mine();\n    }\n}",
           "markiere": "int main()",
           "text": "Every console with its own main() is its own program and runs as its own process. The play button starts all of them at once.",
           "dauer": 6.0
         },
         {
+          "braucht": "console+",
           "punkt": "Really at the same time",
           "code": "// Console 1          // Console 2\nint main()            int main()\n{                     {\n    block.mine();         item.sell();\n}                     }",
           "text": "Each one has its own line budget. Two consoles really are twice the work - one mines while the other sells. Nothing else in the game multiplies like that.",
@@ -2280,6 +2281,7 @@
           "dauer": 6.5
         },
         {
+          "braucht": "console+",
           "punkt": "But its variables are not shared",
           "text": "Each process gets its OWN copy. Count one up in console 1 and console 2 sees nothing of it - they are separate processes with separate memory.",
           "dauer": 6.5
@@ -2296,6 +2298,7 @@
           "dauer": 7.0
         },
         {
+          "braucht": "console+",
           "punkt": "One crash stops everything",
           "text": "If one program falls over, none of the others keep going. Watching three consoles work on while a fourth is broken helps nobody find the fault.",
           "dauer": 6.5
