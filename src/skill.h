@@ -57,6 +57,46 @@ enum class Skill
     Speed,
     MoneyPerBlock,
     FasterRespawn,
+
+    // ---- Ab hier: alles Neue haengt HINTEN an ---------------------------
+    //
+    // Im Spielstand steht die Zahl hinter dem Namen (save.cpp schreibt
+    // (int)n.skill). Wer hier in der Mitte etwas einfuegt, verschiebt jeden
+    // alten Spielstand um einen Punkt. Also immer nur anhaengen.
+
+    // Sprache, die es vorher umsonst gab. Ohne diese Punkte kam man an "if"
+    // und "while" vorbei - ein switch ist eine Verzweigung, ein goto eine
+    // Schleife. Jetzt kosten sie, und dafuer koennen sie mehr.
+    Switch,     // switch/case/default - EINE Zeile statt einer je else-if
+    Ternary,    // a ? b : c - eine Bedingung ohne eigene Zeile
+    Goto,       // goto und Marken - die billige Schleife
+    Recursion,  // eine Funktion, die sich selbst aufruft
+    Container,  // vector, array, map, set - viele Werte in einer Variablen
+
+    // Der Compiler als Ausbaustufe. Das Spiel uebersetzt wirklich mit
+    // cl.exe/g++ - also kann man auch an der Uebersetzung drehen.
+    Inline,    // Zeilen INNERHALB eigener Funktionen kosten nur die Haelfte
+    Optimize,  // Tempo mal einem Faktor, nicht plus einer Zahl
+
+    // Fragen an die Welt. Vorher gab es die Antworten im Spiel schon, sie
+    // kamen nur nicht bis zum Spielercode durch.
+    Info,     // info(erz) - Wert, Seltenheit und Behandlung als Zeiger
+    Assay,    // assay(erz) - ein unbekanntes Erz untersuchen
+    Count,    // item.count(erz) und item.purity(erz)
+    JobQuery, // job.busy(), job.progress(), job.free()
+    Wait,     // wait(sekunden) und block.loading()
+    Status,   // money(), round.left(), round.target()
+    Market,   // market.price(erz) - der Preis schwankt
+
+    // Mehr Werkstatt: der eine Auftragsplatz war die haerteste Grenze im
+    // ganzen Spiel.
+    ExtraFurnace,
+
+    // Das Ende der Verarbeitungskette. Frueher war bei "veredelt" Schluss,
+    // und danach gab es nur noch neue Erze - die sich alle gleich anfuehlten,
+    // weil sie denselben Weg gingen. Diese beiden gehen tiefer statt breiter.
+    Etch,
+    Fuse,
 };
 
 const char* SkillName(Skill skill);

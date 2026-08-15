@@ -74,12 +74,30 @@ std::string Instrument(const std::string& src, int consoleId)
     std::vector<std::size_t> positions;
     std::vector<int>         lines;
 
+    // Steht diese Anweisung im Rumpf einer EIGENEN Funktion? Dann bekommt sie
+    // ein ck::linef() statt eines ck::line(). Der Unterschied ist nur der
+    // Buchstabe in der Meldung - das Spiel rechnet sie mit dem Punkt "inline"
+    // dann nur halb an. Ohne diese Unterscheidung waere eine Funktion
+    // wirtschaftlich immer schlechter als derselbe Code zweimal hingeschrieben,
+    // und der Punkt "functions" ein Verlustgeschaeft.
+    std::vector<bool> inFunction;
+
     std::vector<bool> blockIsCode;  // Stapel: ist der Block ein Anweisungsblock?
     int               line    = 1;
     int               paren   = 0;
     int               bracket = 0;
     bool              pending = false;  // stehen wir direkt hinter ; { } ?
     std::size_t       lastSig = std::string::npos;
+
+    // Der letzte Bezeichner, an dem wir vorbeigekommen sind, und der, der
+    // direkt vor der letzten oeffnenden Klammer ganz aussen stand. Aus dem
+    // zweiten wird der Name der Funktion, deren Rumpf gleich anfaengt.
+    std::string lastIdent;
+    std::string headName;
+
+    // Bei welcher Stapeltiefe der Rumpf einer eigenen Funktion angefangen hat.
+    // -1 = wir stehen gerade in keiner.
+    int funcDepth = -1;
 
     for (std::size_t i = 0; i < src.size(); ++i)
     {
@@ -142,7 +160,21 @@ std::string Instrument(const std::string& src, int consoleId)
             {
                 positions.push_back(i);
                 lines.push_back(line);
+                inFunction.push_back(funcDepth >= 0);
             }
+        }
+
+        // Einen Bezeichner am Stueck lesen. Frueher lief die Schleife auch hier
+        // Zeichen fuer Zeichen - jetzt brauchen wir den ganzen Namen, um
+        // "void schritt(" von "int main(" zu unterscheiden.
+        if (std::isalpha((unsigned char)c) != 0 || c == '_')
+        {
+            const std::size_t start = i;
+            while (i + 1 < src.size() && IsIdentChar(src[i + 1]))
+                ++i;
+            lastIdent = src.substr(start, i + 1 - start);
+            lastSig   = i;
+            continue;
         }
 
         // Zeichenkette oder Zeichen ueberspringen
@@ -185,6 +217,15 @@ std::string Instrument(const std::string& src, int consoleId)
             // Alles andere ist KEIN Anweisungsblock: struct/class/enum/namespace
             // und vor allem Initialisierungslisten wie  = {1, 2, 3}.
             blockIsCode.push_back(isCode);
+
+            // Faengt hier der Rumpf einer eigenen Funktion an? Das ist der
+            // aeusserste Anweisungsblock, und davor stand ein Name mit
+            // Klammern. main() zaehlt nicht dazu: es ist das Grundgeruest und
+            // kein selbstgeschriebenes Unterprogramm.
+            if (isCode && funcDepth < 0 && blockIsCode.size() == 1 && !headName.empty() &&
+                headName != "main")
+                funcDepth = 1;
+
             if (paren == 0 && bracket == 0)
                 pending = true;
             break;
@@ -193,6 +234,11 @@ std::string Instrument(const std::string& src, int consoleId)
         case '}':
             if (!blockIsCode.empty())
                 blockIsCode.pop_back();
+
+            // Der Rumpf ist zu - ab hier zaehlen die Zeilen wieder voll.
+            if (funcDepth >= 0 && (int)blockIsCode.size() < funcDepth)
+                funcDepth = -1;
+
             if (paren == 0 && bracket == 0)
                 pending = true;
             break;
@@ -202,7 +248,14 @@ std::string Instrument(const std::string& src, int consoleId)
                 pending = true;
             break;
 
-        case '(': ++paren; break;
+        case '(':
+            // Der Name direkt davor ist der Kopf einer Funktion - aber nur
+            // ganz aussen. Innerhalb eines Rumpfes ist jede Klammer ein
+            // Aufruf und kein neuer Kopf.
+            if (paren == 0 && blockIsCode.empty())
+                headName = lastIdent;
+            ++paren;
+            break;
         case ')': if (paren > 0) --paren; break;
         case '[': ++bracket; break;
         case ']': if (bracket > 0) --bracket; break;
@@ -213,11 +266,15 @@ std::string Instrument(const std::string& src, int consoleId)
     }
 
     // Von hinten nach vorne einfuegen, damit die Positionen gueltig bleiben.
-    const std::string prefix = "ck::line(" + std::to_string(consoleId) + ",";
+    const std::string aussen = "ck::line(" + std::to_string(consoleId) + ",";
+    const std::string innen  = "ck::linef(" + std::to_string(consoleId) + ",";
 
     std::string out = src;
     for (std::size_t k = positions.size(); k-- > 0;)
+    {
+        const std::string& prefix = inFunction[k] ? innen : aussen;
         out.insert(positions[k], prefix + std::to_string(lines[k]) + "); ");
+    }
 
     return out;
 }

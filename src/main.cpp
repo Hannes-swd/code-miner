@@ -447,17 +447,18 @@ int main(int, char**)
 
         // Verarbeiten haengt genauso am Programm - ausser der Auftrag wurde in
         // der Tasche angeklickt. Bricht er ab, kommt das Material zurueck.
-        if (world.craftByHand)
-        {
-            world.tickCraft(dt);
-        }
-        else
+        //
+        // Entschieden wird das je Auftrag, nicht fuer alle zusammen: mit
+        // mehreren Oefen laeuft der eine von Hand und der andere vom Programm.
         {
             switch (engine.state())
             {
-            case RunState::Paused: break;
-            case RunState::Idle: world.cancelCraft(); break;
-            default: world.tickCraft(dt); break;
+            case RunState::Paused: world.tickCraft(dt, false); break;
+            case RunState::Idle:
+                world.cancelCraft(true);
+                world.tickCraft(dt, false);
+                break;
+            default: world.tickCraft(dt, true); break;
             }
         }
 
@@ -483,6 +484,20 @@ int main(int, char**)
         world.moneyPerBlock   = limits.moneyPerBlock;
         world.respawnSeconds  = limits.respawnSeconds;
         engine.setSpeed(limits.linesPerSecond);
+
+        // Was die Runde verlangt. Die Welt rechnet es nicht selbst aus, sie
+        // kennt data/runden.json nicht - sie bekommt nur das Ergebnis, damit
+        // round.target() im Spielercode danach fragen kann.
+        world.roundTargetNow = RoundTarget(rounds, world.roundNumber);
+
+        // Wie viele Oefen es gibt, sagt der Baum - genau wie beim Tempo. Die
+        // Welt merkt sich das nicht selbst, sonst muesste es in den Spielstand.
+        world.setJobSlots(limits.maxJobs);
+
+        // Wie stark der Markt schwankt, ist Balance und steht deshalb in
+        // data/skills.txt und nicht im Programm.
+        world.marketSwing = plan.marketSwing;
+        world.marketSpeed = plan.marketSpeed;
 
         if (ImGui::BeginMainMenuBar())
         {

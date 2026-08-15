@@ -35,6 +35,16 @@ enum class OreState
     Cleaned,   // gereinigt
     Oxidized,  // oxidiert
     Alloy,     // legiert
+
+    // Angehaengt, nicht eingefuegt: im Spielstand steht die NUMMER eines
+    // Zustands. Wer hier in der Mitte etwas einschiebt, macht aus jedem
+    // gewaschenen Stein einen geschmolzenen.
+    //
+    // Die beiden hier sind das Ende der Kette. Sie sind mit Absicht teuer und
+    // langsam: spaet im Spiel soll ein Stapel nicht breiter, sondern tiefer
+    // werden - dasselbe Erz, aber viel mehr Arbeit und viel mehr Geld.
+    Etched,  // geaetzt
+    Fused,   // verschmolzen
     Count
 };
 

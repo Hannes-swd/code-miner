@@ -106,6 +106,7 @@ Steht alles ohne `#include` bereit:
 block.mine();          // abbauen (dauert, je nach Erz)
 block.isThere();       // liegt gerade einer da?
 block.isLoading();     // wächst er gerade nach?
+block.loading();       // ... und wie lange noch, in Sekunden
 
 block.is(Gold);        // ist es gerade Gold, das da liegt?
 block.ore();           // -> das Erz selbst, z. B. für print(block.ore())
@@ -120,11 +121,33 @@ item.has(Stone);                // liegt etwas davon in der Tasche?
 item.has(Stone, 10);            // mindestens zehn?
 item.has(Any);                  // überhaupt irgendetwas?
 
+item.count(Stone);              // wie VIELE liegen da?
+item.purity(Stone);             // wie sauber sind sie? (Prozent)
+
 item.wash(Stone);               // verarbeiten - ebenso smelt, clean, press,
-item.wash(Stone, 5);            // cast, polish, harden, refine
+item.wash(Stone, 5);            // cast, polish, harden, refine, etch, fuse
 
 item.alloy(Electrum);           // legieren
 item.canAlloy(Electrum);        // wie viele gingen gerade?
+
+// ---- Das Erz kennt sich selbst ------------------------------------------
+info(Gold);                     // -> Zeiger auf Wert, Seltenheit, Behandlung
+                                //    nullptr = noch nicht untersucht
+assay(block.ore());             // ein unbekanntes Erz untersuchen
+nameOf(Gold);                   // "Gold" als Text
+
+// ---- Die Werkstatt ------------------------------------------------------
+job.busy();                     // läuft gerade ein Auftrag?
+job.idle();                     // wie viele Öfen sind frei?
+job.progress();                 // wie weit ist der nächste? (0 bis 1)
+
+// ---- Warten, Geld, Uhr, Markt -------------------------------------------
+wait(0.5f);                     // warten, ohne Zeilen zu verbrennen
+money();                        // wie viel habe ich
+timeLeft();                     // Restzeit der Runde in Sekunden
+roundTarget();                  // was die Runde verlangt
+market.price(Gold);             // was ein rohes Stück gerade bringt
+market.average(Gold);           // ... und im Mittel
 
 // ---- Ausgabe und geteilte Werte -----------------------------------------
 print("Text");                  // eine Zeile unter der Konsole
@@ -173,8 +196,33 @@ behandelt kostet 25 Punkte, falsch behandelt 50. Reinheit wirkt linear von 0,5×
 den Preis, ein falsch abgebauter Block bringt also fast die Hälfte weniger. Deshalb lohnt
 sich blindes `block.mine(Cool)` nie: Erze, die nichts wollen, verlieren daran genauso.
 
-Verloren ist es nicht ganz: **Reinigen** holt einen Teil zurück — kostet aber einen Auftrag,
-und es läuft immer nur einer.
+Verloren ist es nicht ganz: **Reinigen** holt einen Teil zurück — kostet aber einen Auftrag.
+
+Wie viele Aufträge gleichzeitig laufen, hängt am Skilltree: am Anfang genau **einer**,
+und jeder Punkt **+1 Ofen** legt einen dazu. `job.idle()` sagt, ob gerade Platz ist.
+
+### `info()`: ein Programm für jedes Erz
+
+Die `if`-Kette oben hat einen Haken — sie ist nie fertig. Das Spiel denkt sich endlos neue
+Erze aus, und für jedes müsste eine Zeile dazu. Deshalb gibt es `info()`:
+
+```cpp
+while (true) {
+    const OreInfo* i = info(block.ore());
+
+    if (i == nullptr) assay(block.ore());   // kenne ich noch nicht
+    else              block.mine(i->care);  // kenne ich - und weiß, was es will
+
+    item.sell();
+}
+```
+
+Das läuft für Gold, für Diamant und für jedes Erz, das es noch gar nicht gibt. `info()`
+gibt `nullptr` zurück, solange ein Erz nicht untersucht ist; `assay()` untersucht es
+(kostet Geld und einen Moment), danach steht es fest — auch über den Neustart hinweg.
+
+Die Erze aus `data/erze.json` sind von Anfang an bekannt. Untersuchen muss man nur, was
+sich das Spiel selbst ausgewürfelt hat.
 
 Freigeschaltet wird das über den Punkt **care** im Skilltree, und er braucht `check`.
 Die Kurve steht in `data/erze.json` unter `"behandlung"`: unter Grundwert 8 verlangt nie ein
@@ -209,8 +257,34 @@ Die Schreibweise mit Anführungszeichen (`item.has("Glacier Sheen")`) funktionie
 damit alter Code nicht auf einmal stehenbleibt — dort gilt weiter: vollständig schreiben,
 Groß- und Kleinschreibung egal, kein Teiltreffer, und ein unbekannter Name gibt `0`.
 
-Mehrere Konsolen sind zusammen **ein** Programm: genau eine davon hat `main()`, die anderen
-steuern Funktionen und Variablen bei. Details in **[KONZEPT.md](KONZEPT.md)**.
+### Mehrere Konsolen = mehrere Programme, gleichzeitig
+
+Jede Konsole mit einem eigenen `int main()` wird ein **eigenes Programm** und läuft als
+eigener Prozess mit eigenem Zeilenbudget. Eine baut ab, die nächste verarbeitet, die dritte
+verkauft — und zwar wirklich zur selben Zeit, nicht abwechselnd.
+
+```cpp
+// Konsole 1                      // Konsole 2
+int main() {                      int main() {
+    while (true) {                    while (true) {
+        block.mine();                     if (item.count(Stone) > 20)
+    }                                         item.sell(Stone);
+}                                         wait(1.0f);
+                                      }
+                                  }
+```
+
+Konsolen **ohne** `main()` sind gemeinsamer Vorrat: ihre Funktionen und Variablen werden in
+jedes dieser Programme mit hineinübersetzt.
+
+> **Achtung:** jeder Prozess bekommt davon seine **eigene Kopie**. Zählt Konsole 1 eine
+> globale Variable hoch, sieht Konsole 2 davon nichts. Was wirklich geteilt sein soll, gehört
+> in `shared[...]` — das liegt im Spiel und nicht im Prozess.
+
+Wie viele Konsolen erlaubt sind, steht im Skilltree. **+1 Konsole** ist der einzige Punkt,
+der den Durchsatz *vervielfacht* statt ihn zu erhöhen — deshalb ist er teuer und selten.
+
+Mehr dazu in **[KONZEPT.md](KONZEPT.md)**.
 
 ---
 

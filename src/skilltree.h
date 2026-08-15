@@ -62,8 +62,34 @@ struct Limits
     bool allowRefine = false;
     bool allowPress  = false;
 
+    // Das Ende der Kette - siehe data/verarbeitung.json.
+    bool allowEtch = false;
+    bool allowFuse = false;
+
     // Legieren: item.alloy(...) und item.canAlloy(...).
     bool allowAlloy = false;
+
+    // Sprache, die es frueher umsonst gab. Ohne diese Schalter kommt man
+    // durch codecheck.cpp nicht mehr durch - vorher war ein switch eine
+    // Gratis-Verzweigung und ein goto eine Gratis-Schleife.
+    bool allowSwitch    = false;
+    bool allowTernary   = false;
+    bool allowGoto      = false;
+    bool allowRecursion = false;
+    bool allowContainer = false;
+
+    // Der Compiler. inline macht Zeilen in eigenen Funktionen billiger,
+    // optimize dreht am Tempo - und zwar MAL statt PLUS.
+    bool allowInline = false;
+
+    // Fragen an die Welt.
+    bool allowInfo   = false;
+    bool allowAssay  = false;
+    bool allowCount  = false;
+    bool allowJob    = false;
+    bool allowWait   = false;
+    bool allowStatus = false;
+    bool allowMarket = false;
 
     int maxLoops     = 0;
     int maxIfs       = 0;
@@ -75,6 +101,20 @@ struct Limits
     float linesPerSecond = 10.0f;
     int   moneyPerBlock  = 1;
     float respawnSeconds = 0.6f;
+
+    // Was assay() kostet und wie lange es dauert. Kommt aus data/skills.txt
+    // und reist hier mit, weil der Motor den Skillplan nicht kennt - er
+    // bekommt nur die Limits.
+    int   assayCost    = 40;
+    float assaySeconds = 3.0f;
+
+    // Wie viele Auftraege gleichzeitig laufen duerfen. Einer gehoert einem
+    // von Anfang an - jeder "furnace+" legt einen dazu.
+    int maxJobs = 1;
+
+    // Was eine Zeile innerhalb einer eigenen Funktion kostet. Mit "inline"
+    // die Haelfte - dadurch rechnet sich eine Funktion ueberhaupt erst.
+    float insideFunctionCost() const { return allowInline ? 0.5f : 1.0f; }
 };
 
 // Der Baum waechst mit.

@@ -1607,6 +1607,705 @@
         "Rounds",
         "Ores"
       ]
+    },
+    {
+      "kategorie": "kontrolle",
+      "titel": "switch",
+      "braucht": "switch",
+      "kurz": "One decision for many cases - and only one line.",
+      "schritte": [
+        {
+          "punkt": "The long way",
+          "code": "if (block.is(Gold))         block.mine(Cool);\nelse if (block.is(Diamond)) block.mine(Heat);\nelse if (block.is(Iron))    block.mine();",
+          "markiere": "else if (block.is(Diamond)) block.mine(Heat);",
+          "text": "With one else if per ore, twenty ores cost you twenty lines - every single time round the loop. At three lines a second that is almost seven seconds per block.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "The short way",
+          "code": "switch (block.ore())\n{\ncase Gold:    block.mine(Cool); break;\ncase Diamond: block.mine(Heat); break;\ndefault:      block.mine();     break;\n}",
+          "markiere": "switch (block.ore())",
+          "text": "A switch is ONE line, no matter how many cases hang under it. The game jumps straight to the right one instead of asking its way down.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "break belongs in it",
+          "markiere": "break;",
+          "text": "Without break the next case runs on as well. That is not a bug in the game, that is how C++ works - and now and then it is exactly what you want.",
+          "dauer": 5.0
+        },
+        {
+          "punkt": "default catches the rest",
+          "markiere": "default:      block.mine();     break;",
+          "text": "Everything you have not listed lands in default. For an ore you have never seen, that is the safe answer: just mine it.",
+          "dauer": 5.5
+        },
+        {
+          "punkt": "It costs no condition",
+          "text": "A switch does not eat any of your conditions - you paid for the point instead. That is what makes it worth its price late on.",
+          "dauer": 5.0
+        }
+      ],
+      "siehe_auch": [
+        "if",
+        "block.ore()",
+        "info(...)"
+      ]
+    },
+    {
+      "kategorie": "kontrolle",
+      "titel": "a ? b : c",
+      "braucht": "ternary",
+      "kurz": "A condition that fits inside a line.",
+      "schritte": [
+        {
+          "punkt": "Three parts",
+          "code": "int wieviel = item.has(Gold, 10) ? 10 : 1;",
+          "markiere": "item.has(Gold, 10) ? 10 : 1",
+          "text": "Question mark, then what is true, then a colon and what is false. The whole thing is one value, not one statement.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "It costs no line of its own",
+          "text": "An if would need its own line here. This one rides along inside a line you were writing anyway - and lines are what time is made of.",
+          "dauer": 5.5
+        },
+        {
+          "punkt": "And no condition either",
+          "text": "It does not count against your conditions from the skill tree. Once you own it, you may use it as often as you like.",
+          "dauer": 5.0
+        },
+        {
+          "punkt": "Do not overdo it",
+          "code": "item.sell(block.is(Gold) ? Gold : Stone);",
+          "markiere": "block.is(Gold) ? Gold : Stone",
+          "text": "Three of them nested inside each other and nobody can read the line any more. Then take the if - it is one line, and it is clear.",
+          "dauer": 6.0
+        }
+      ],
+      "siehe_auch": [
+        "if",
+        "else"
+      ]
+    },
+    {
+      "kategorie": "kontrolle",
+      "titel": "goto",
+      "braucht": "goto",
+      "kurz": "The cheapest loop there is.",
+      "schritte": [
+        {
+          "punkt": "A label",
+          "code": "int main()\n{\nstart:\n    block.mine();\n    goto start;\n}",
+          "markiere": "start:",
+          "text": "A name and a colon mark a spot in your code. It does nothing on its own - it is just somewhere to come back to.",
+          "dauer": 5.5
+        },
+        {
+          "punkt": "And a jump",
+          "markiere": "goto start;",
+          "text": "goto jumps there. Everything between the two runs again. That is a loop - and it does not use up any of your loops.",
+          "dauer": 5.5
+        },
+        {
+          "punkt": "Why it is still cheap",
+          "text": "Because there is no way out. A while can ask a question every pass, a goto only ever jumps. What you save in the skill tree, you pay for the first time you want to stop.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "Two of them and you are lost",
+          "text": "This is the one command in C++ that has a bad reputation, and it earned it. One is fine. Two jumping across each other and you will not find your way back in.",
+          "dauer": 6.0
+        }
+      ],
+      "siehe_auch": [
+        "while",
+        "for"
+      ]
+    },
+    {
+      "kategorie": "kontrolle",
+      "titel": "Recursion",
+      "braucht": "recursion",
+      "kurz": "A function that calls itself.",
+      "schritte": [
+        {
+          "punkt": "It calls itself",
+          "code": "void dig()\n{\n    block.mine();\n    item.sell();\n    dig();\n}",
+          "markiere": "dig();",
+          "text": "dig runs, and at the end it calls dig. That runs again, and calls dig. A loop, built out of a function.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "No loop needed",
+          "text": "This costs you no loop from the skill tree. If while is still expensive for you, this is the way round it - you just need a function.",
+          "dauer": 5.5
+        },
+        {
+          "punkt": "Every call remembers something",
+          "text": "Each round keeps its own set of variables. That is what makes recursion strong, and it is why it is not free: at some point the memory runs out.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "Somewhere it has to stop",
+          "code": "void dig()\n{\n    if (money() > 5000) return;\n    block.mine();\n    dig();\n}",
+          "markiere": "if (money() > 5000) return;",
+          "text": "Without a way out this runs until the program falls over. With an if inside, it stops on its own.",
+          "dauer": 6.5
+        }
+      ],
+      "siehe_auch": [
+        "Your own functions",
+        "while"
+      ]
+    },
+    {
+      "kategorie": "kontrolle",
+      "titel": "Containers",
+      "braucht": "container",
+      "kurz": "Many values inside one variable.",
+      "schritte": [
+        {
+          "punkt": "One variable, many values",
+          "code": "std::vector<int> gefunden;",
+          "markiere": "std::vector<int> gefunden;",
+          "text": "A vector holds as many numbers as you like. In the skill tree it still counts as exactly one variable - what is inside it is free.",
+          "dauer": 5.5
+        },
+        {
+          "punkt": "Putting things in",
+          "code": "std::vector<int> gefunden;\ngefunden.push_back((int)block.ore());",
+          "markiere": "gefunden.push_back((int)block.ore());",
+          "text": "push_back appends at the end. The vector grows by itself, you never have to say how big it gets.",
+          "dauer": 5.5
+        },
+        {
+          "punkt": "A map remembers pairs",
+          "code": "std::map<int, Care> gemerkt;\ngemerkt[(int)Gold] = Cool;",
+          "markiere": "std::map<int, Care> gemerkt;",
+          "text": "A map puts a value next to a key. Which treatment which ore wants, for instance - that is exactly a pair like that.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "It does not survive the run",
+          "text": "When the program starts again, the container is empty. What is to outlast that belongs in shared[...].",
+          "dauer": 5.5
+        }
+      ],
+      "siehe_auch": [
+        "Variables",
+        "shared[...]"
+      ]
+    },
+    {
+      "kategorie": "kontrolle",
+      "titel": "inline",
+      "braucht": "inline",
+      "kurz": "Lines inside your own functions cost half.",
+      "schritte": [
+        {
+          "punkt": "A function used to be a loss",
+          "text": "Every line costs time. A function costs the call AND every line in its body - so the same code written twice was faster than a function. That was the wrong way round.",
+          "dauer": 7.0
+        },
+        {
+          "punkt": "Now it is worth it",
+          "code": "void verkaufe()\n{\n    item.wash(Stone);\n    item.sell(Stone);\n}",
+          "markiere": "    item.wash(Stone);\n    item.sell(Stone);",
+          "text": "With this point every line INSIDE your own functions only costs half. From about three lines on, the function is ahead.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "main is not a function",
+          "text": "The discount is for what you wrote yourself. Lines directly in main count in full - it is the frame, not a subprogram.",
+          "dauer": 5.5
+        }
+      ],
+      "siehe_auch": [
+        "Your own functions",
+        "-O2"
+      ]
+    },
+    {
+      "kategorie": "kontrolle",
+      "titel": "-O2",
+      "braucht": "optimize",
+      "kurz": "Speed times a factor, not plus a number.",
+      "schritte": [
+        {
+          "punkt": "Everything else adds",
+          "text": "A speed point gives you a quarter of a line per second more. Always the same quarter, whether you are at three lines or at thirty.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "This one multiplies",
+          "text": "-O2 makes it 1.2 TIMES as fast. The more you already have, the more it brings - and it stacks with itself.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "So it belongs late",
+          "text": "Bought early it is worth almost nothing. Bought at thirty lines a second it is worth six lines. Same point, same price.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "It is a real switch",
+          "text": "The game really does compile your code, with cl.exe or g++. This point is the optimisation level those compilers have anyway.",
+          "dauer": 6.0
+        }
+      ],
+      "siehe_auch": [
+        "inline",
+        "Skill tree"
+      ]
+    },
+    {
+      "kategorie": "functions",
+      "titel": "info(...)",
+      "braucht": "info",
+      "kurz": "What an ore is - value, rarity, treatment.",
+      "schritte": [
+        {
+          "punkt": "The problem it solves",
+          "text": "Which treatment an ore wants used to be in the wiki only. So you had to copy it into your code, ore by ore - and the game keeps inventing new ones. That list was never finished.",
+          "dauer": 7.5
+        },
+        {
+          "punkt": "A pointer to the knowledge",
+          "code": "const OreInfo* i = info(Gold);\nprint(i->value);",
+          "markiere": "const OreInfo* i = info(Gold);",
+          "text": "info gives you a pointer to what is known about an ore. The arrow -> reads a single piece out of it.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "nullptr means: no idea",
+          "code": "const OreInfo* i = info(block.ore());\nif (i == nullptr) assay(block.ore());",
+          "markiere": "if (i == nullptr) assay(block.ore());",
+          "text": "For an ore you have never examined you get nullptr - nothing. That is not an error, it is an honest answer. assay() turns it into a real one.",
+          "braucht": [
+            "info",
+            "assay"
+          ],
+          "dauer": 7.0
+        },
+        {
+          "punkt": "One program for every ore",
+          "code": "const OreInfo* i = info(block.ore());\nif (i != nullptr) block.mine(i->care);\nelse              block.mine();",
+          "markiere": "block.mine(i->care);",
+          "text": "This is the whole point: the code below works for gold, for diamond, and for every ore the game will ever invent. You never have to touch it again.",
+          "dauer": 7.5
+        },
+        {
+          "punkt": "What is in it",
+          "code": "i->value;\ni->rarity;\ni->level;\ni->care;",
+          "markiere": "i->care;",
+          "text": "value is the base worth, rarity how rare it is, level from when it turns up - and care is what it wants while you mine it.",
+          "dauer": 6.0
+        }
+      ],
+      "siehe_auch": [
+        "assay(...)",
+        "block.ore()",
+        "switch"
+      ]
+    },
+    {
+      "kategorie": "functions",
+      "titel": "assay(...)",
+      "braucht": "assay",
+      "kurz": "Examine an unknown ore.",
+      "schritte": [
+        {
+          "punkt": "Costs money and a moment",
+          "code": "assay(block.ore());",
+          "markiere": "assay(block.ore());",
+          "text": "Examining is not free. It takes a few seconds and it costs, and only one runs at a time.",
+          "dauer": 5.5
+        },
+        {
+          "punkt": "Afterwards info knows",
+          "text": "Once it is done, info() gives you a real answer for that ore instead of nullptr. Once, for good - it stays known.",
+          "dauer": 5.5
+        },
+        {
+          "punkt": "It does not block a furnace",
+          "text": "Examining is head work, not workshop. Your furnaces keep going while it runs.",
+          "dauer": 5.5
+        },
+        {
+          "punkt": "What it gives back",
+          "code": "if (assay(block.ore()) == 0) print(\"later\");",
+          "markiere": "assay(block.ore()) == 0",
+          "text": "The money it cost. 0 means it did not work: not enough money, already known, or another examination is still running.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "Ores from the file are free",
+          "text": "Stone, coal, gold and the others have had a wiki page since the game began. Only what the game rolled for itself has to be examined.",
+          "dauer": 6.0
+        }
+      ],
+      "siehe_auch": [
+        "info(...)",
+        "Ores"
+      ]
+    },
+    {
+      "kategorie": "functions",
+      "titel": "item.count(...)",
+      "unter": "item",
+      "braucht": "count",
+      "kurz": "How many, and how clean.",
+      "schritte": [
+        {
+          "punkt": "has only ever said yes or no",
+          "code": "int wieviel = item.count(Gold);",
+          "markiere": "item.count(Gold)",
+          "text": "item.has(Gold, 10) answers a question you already had to know how to ask. count gives you the number, and with a number you can calculate.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "Enough for a whole batch?",
+          "code": "int wieviel = item.count(Copper);\nif (wieviel >= 10) item.smelt(Copper, 10);",
+          "markiere": "if (wieviel >= 10) item.smelt(Copper, 10);",
+          "text": "Now your program can decide how big a job it starts, instead of guessing.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "And how clean is it?",
+          "code": "if (item.purity(Gold) < 60) item.clean(Gold);",
+          "markiere": "item.purity(Gold) < 60",
+          "text": "purity gives the purity of the stack in percent, averaged over all its states. Purity moves the price between half and one and a half times - so it is worth asking.",
+          "dauer": 7.0
+        },
+        {
+          "punkt": "Any counts everything",
+          "code": "print(item.count(Any));",
+          "markiere": "item.count(Any)",
+          "text": "item.count(Any) is everything in your bag together, whatever it is.",
+          "dauer": 5.0
+        }
+      ],
+      "siehe_auch": [
+        "item.has(...)",
+        "States and purity"
+      ]
+    },
+    {
+      "kategorie": "functions",
+      "titel": "job.busy()",
+      "braucht": "job",
+      "kurz": "Is a furnace free?",
+      "schritte": [
+        {
+          "punkt": "You used to find out by trying",
+          "text": "item.wash() gives back 0 when everything is busy. So the only way to know was to attempt it - and the attempt costs a line.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "Now you can ask",
+          "code": "if (job.idle() > 0) item.wash(Stone);",
+          "markiere": "job.idle() > 0",
+          "text": "busy says whether anything is running at all. idle says how many places are free.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "How far along?",
+          "code": "wait(1.0);\nif (!job.busy()) item.sell();",
+          "markiere": "if (!job.busy()) item.sell();",
+          "text": "progress goes from 0 to 1 and belongs to the job that finishes next. Together with wait() that is a clean way to hand over.",
+          "braucht": [
+            "job",
+            "wait"
+          ],
+          "dauer": 6.5
+        },
+        {
+          "punkt": "More furnaces, more places",
+          "text": "At the start there is exactly one place. Every furnace from the skill tree adds one, and processing and alloying share them.",
+          "dauer": 6.0
+        }
+      ],
+      "siehe_auch": [
+        "Processing - overview",
+        "wait(...)"
+      ]
+    },
+    {
+      "kategorie": "functions",
+      "titel": "wait(...)",
+      "braucht": "wait",
+      "kurz": "Wait without burning lines.",
+      "schritte": [
+        {
+          "punkt": "Waiting used to be expensive",
+          "code": "while (!block.isThere()) { }",
+          "markiere": "while (!block.isThere()) { }",
+          "text": "A loop that waits costs you a line every single pass. While the block regrows you can easily burn twenty of them on nothing.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "One line instead",
+          "code": "wait(0.5);\nblock.mine();",
+          "markiere": "wait(0.5);",
+          "text": "wait waits the given number of seconds and costs exactly one line - no matter how long it waits.",
+          "dauer": 5.5
+        },
+        {
+          "punkt": "Exactly as long as needed",
+          "code": "wait(block.loading());\nblock.mine();",
+          "markiere": "wait(block.loading());",
+          "text": "block.loading() says how many seconds are left until the block is back. 0 means it is already there.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "The world keeps going",
+          "text": "While you wait the block grows and the furnaces work. Only when the game itself is paused does the waiting stop too - it does not eat your round.",
+          "dauer": 6.5
+        }
+      ],
+      "siehe_auch": [
+        "block.isThere()",
+        "job.busy()"
+      ]
+    },
+    {
+      "kategorie": "functions",
+      "titel": "money()",
+      "braucht": "status",
+      "kurz": "Money, time and target.",
+      "schritte": [
+        {
+          "punkt": "How much do I have?",
+          "code": "print(money());",
+          "markiere": "money()",
+          "text": "money() is what is in the bank right now. Not what is in your bag - that only becomes money when you sell it.",
+          "dauer": 5.0
+        },
+        {
+          "punkt": "How long is left?",
+          "code": "if (timeLeft() < 20.0f) item.sell();",
+          "markiere": "timeLeft() < 20.0f",
+          "text": "timeLeft() gives the seconds left in the round. Below that, everything changes: hoarding stops paying.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "And what does it want?",
+          "code": "if (money() < roundTarget()) item.sell();",
+          "markiere": "money() < roundTarget()",
+          "text": "roundTarget() is what has to be there at the end. With those two your program can decide for itself when to play it safe.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "The end of the round sells anyway",
+          "text": "Your bag is sold automatically when time runs out. What this is for is the decision BEFORE that: process further, or bank it now?",
+          "dauer": 6.5
+        }
+      ],
+      "siehe_auch": [
+        "Rounds",
+        "market.price(...)"
+      ]
+    },
+    {
+      "kategorie": "functions",
+      "titel": "market.price(...)",
+      "braucht": "market",
+      "kurz": "Prices move.",
+      "schritte": [
+        {
+          "punkt": "Not every moment is the same",
+          "code": "print(market.price(Gold));",
+          "markiere": "market.price(Gold)",
+          "text": "The price of an ore drifts around its base value over the round. Sell at the wrong moment and you leave money on the table.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "Compared with what?",
+          "code": "if (market.price(Gold) > market.average(Gold))\n{\n    item.sell(Gold);\n}",
+          "markiere": "market.price(Gold) > market.average(Gold)",
+          "text": "average is the long-run mean of that ore. Above it is a good moment, below it is not.",
+          "dauer": 7.0
+        },
+        {
+          "punkt": "Both are for one raw piece",
+          "text": "The two numbers are what one raw piece at full purity brings. Processed it is more, but the swing is the same - so you can compare ores directly.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "Waiting has a price too",
+          "text": "The round is running. An ore you hold back for a better price is an ore you have not sold - and at the end the target is taken off regardless.",
+          "dauer": 6.5
+        }
+      ],
+      "siehe_auch": [
+        "item.sell()",
+        "money()",
+        "Rounds"
+      ]
+    },
+    {
+      "kategorie": "spiel",
+      "titel": "Furnaces",
+      "braucht": "furnace+",
+      "kurz": "How many jobs run at once.",
+      "schritte": [
+        {
+          "punkt": "There used to be exactly one",
+          "text": "Processing and alloying share one place. Whatever your program managed, only one thing was ever cooking - it was the hardest ceiling in the game.",
+          "dauer": 7.0
+        },
+        {
+          "punkt": "Every furnace is a place",
+          "text": "Each furnace point in the skill tree adds one. Two furnaces really are twice the throughput, not a quarter more.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "Which one takes the job",
+          "text": "You do not choose. A job goes to the first free place; if there is none, item.wash() gives back 0 and nothing happens.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "So ask first",
+          "code": "if (job.idle() > 0) item.smelt(Copper);",
+          "markiere": "job.idle() > 0",
+          "text": "job.idle() tells you how many are free. That way you do not waste a line on a job that cannot start.",
+          "braucht": "job",
+          "dauer": 6.5
+        }
+      ],
+      "siehe_auch": [
+        "job.busy()",
+        "Processing - overview"
+      ]
+    },
+    {
+      "kategorie": "functions",
+      "titel": "item.etch(...)",
+      "unter": "Processing - overview",
+      "braucht": "etch",
+      "kurz": "Past the end of the old chain.",
+      "schritte": [
+        {
+          "punkt": "The first step past refined",
+          "code": "item.etch(Gold);",
+          "markiere": "item.etch(Gold);",
+          "text": "Refined used to be the last stop. Etched is worth half again as much - and it is the only way on towards fused.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "It costs purity",
+          "text": "Etching eats twelve points of purity. So it only pays off on something you have already cleaned or refined properly - on a dirty stack it eats more than it brings.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "Where it starts from",
+          "text": "From refined, from polished, or straight from an alloy. Five seconds a piece, so it blocks a furnace for a good while.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "Not every ore can",
+          "text": "Stone and coal stay where they are. What cannot be refined cannot be etched - it says so on the ore's own page.",
+          "dauer": 6.0
+        }
+      ],
+      "siehe_auch": [
+        "item.fuse(...)",
+        "item.refine(...)",
+        "States and purity"
+      ]
+    },
+    {
+      "kategorie": "functions",
+      "titel": "item.fuse(...)",
+      "unter": "Processing - overview",
+      "braucht": "fuse",
+      "kurz": "The last state, and the most valuable.",
+      "schritte": [
+        {
+          "punkt": "The end of the road",
+          "code": "item.fuse(Gold);",
+          "markiere": "item.fuse(Gold);",
+          "text": "Fused is worth fourteen times the raw ore - more than twice what refined brings. There is nothing after it.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "It gives purity back",
+          "text": "Fusing adds twenty points. Together with etching, which takes twelve, you come out ahead - but only if you take both steps.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "Eight seconds a piece",
+          "text": "That is the longest job in the game. One furnace is busy for a long time - this is where a second one starts paying for itself.",
+          "braucht": [
+            "fuse",
+            "furnace+"
+          ],
+          "dauer": 6.5
+        },
+        {
+          "punkt": "Worth the detour?",
+          "text": "Two long jobs for one stack. Do the sum: fourteen times the value against the time two furnaces are tied up. Late in the game the answer is yes.",
+          "dauer": 6.5
+        }
+      ],
+      "siehe_auch": [
+        "item.etch(...)",
+        "Furnaces"
+      ]
+    },
+    {
+      "kategorie": "spiel",
+      "titel": "Consoles",
+      "braucht": "console+",
+      "kurz": "Several programs at the same time.",
+      "schritte": [
+        {
+          "punkt": "One console, one program",
+          "code": "int main()\n{\n    while (true)\n    {\n        block.mine();\n    }\n}",
+          "markiere": "int main()",
+          "text": "Every console with its own main() is its own program and runs as its own process. The play button starts all of them at once.",
+          "dauer": 6.0
+        },
+        {
+          "punkt": "Really at the same time",
+          "code": "// Console 1          // Console 2\nint main()            int main()\n{                     {\n    block.mine();         item.sell();\n}                     }",
+          "text": "Each one has its own line budget. Two consoles really are twice the work - one mines while the other sells. Nothing else in the game multiplies like that.",
+          "dauer": 7.0
+        },
+        {
+          "punkt": "A console without main is a supply",
+          "code": "// Console 3 - no main()\nint wieViel(Ore erz)\n{\n    return item.count(erz);\n}",
+          "markiere": "int wieViel(Ore erz)",
+          "text": "Its functions and variables are compiled into every one of your programs. That is where shared helpers belong.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "But its variables are not shared",
+          "text": "Each process gets its OWN copy. Count one up in console 1 and console 2 sees nothing of it - they are separate processes with separate memory.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "shared[...] is the one that is",
+          "code": "shared[\"gefunden\"] += 1;",
+          "markiere": "shared[\"gefunden\"]",
+          "text": "shared lies in the game, not in the process. It is the only thing all your programs really see - and now it finally has a job.",
+          "braucht": [
+            "console+",
+            "shared"
+          ],
+          "dauer": 7.0
+        },
+        {
+          "punkt": "One crash stops everything",
+          "text": "If one program falls over, none of the others keep going. Watching three consoles work on while a fourth is broken helps nobody find the fault.",
+          "dauer": 6.5
+        }
+      ],
+      "siehe_auch": [
+        "shared[...]",
+        "Skill tree",
+        "wait(...)"
+      ]
     }
   ]
 }

@@ -35,7 +35,12 @@
     "\"zustaende\" - you do not melt a diamond.",
     "",
     "\"oxidized\" and \"alloy\" have no step on purpose: alloying comes later,",
-    "oxidizing is decay."
+    "oxidizing is decay.",
+    "",
+    "\"etched\" and \"fused\" are the end of the chain. They are deliberately",
+    "slow and expensive: late in the game a stack should get DEEPER, not just",
+    "wider. Etching even costs purity - so it only pays off on something you",
+    "have already cleaned up properly."
   ],
 
   "reinheit": { "start": 70, "wert_min": 0.5, "wert_max": 1.5 },
@@ -51,6 +56,14 @@
     "polished": 4.5,
     "alloy": 5.0,
     "refined": 6.0,
+
+    // The end of the chain. Refined used to be the last stop, and after it the
+    // only thing left was new ores - which all felt the same, because they all
+    // took the same road. These two go deeper instead of wider: a lot more
+    // work, a lot more money, and the same ore.
+    "etched": 9.0,
+    "fused": 14.0,
+
     "oxidized": 0.6
   },
 
@@ -94,6 +107,16 @@
       "befehl": "refine", "name": "Refine",
       "von": ["cleaned", "hardened", "polished"], "zu": "refined",
       "dauer": 3.0, "reinheit": 25
+    },
+    {
+      "befehl": "etch", "name": "Etch",
+      "von": ["refined", "polished", "alloy"], "zu": "etched",
+      "dauer": 5.0, "reinheit": -12
+    },
+    {
+      "befehl": "fuse", "name": "Fuse",
+      "von": ["etched", "hardened"], "zu": "fused",
+      "dauer": 8.0, "reinheit": 20
     }
   ]
 }

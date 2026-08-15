@@ -127,6 +127,25 @@ const char* SkillName(Skill skill)
     case Skill::Speed: return "Speed";
     case Skill::MoneyPerBlock: return "Money per block";
     case Skill::FasterRespawn: return "Regrow";
+
+    case Skill::Switch: return "switch";
+    case Skill::Ternary: return "a ? b : c";
+    case Skill::Goto: return "goto";
+    case Skill::Recursion: return "Recursion";
+    case Skill::Container: return "Containers";
+    case Skill::Inline: return "inline";
+    case Skill::Optimize: return "-O2";
+    case Skill::Info: return "info()";
+    case Skill::Assay: return "assay()";
+    case Skill::Count: return "item.count()";
+    case Skill::JobQuery: return "job.busy()";
+    case Skill::Wait: return "wait()";
+    case Skill::Status: return "money()";
+    case Skill::Market: return "market.price()";
+    case Skill::ExtraFurnace: return "+1 furnace";
+    case Skill::Etch: return "item.etch()";
+    case Skill::Fuse: return "item.fuse()";
+
     case Skill::None: return "-";
     }
     return "?";
@@ -162,13 +181,32 @@ const char* SkillInfo(Skill skill)
     case Skill::Alloy: return "item.alloy(Electrum) - melt two ores into a new material worth more than both together. item.canAlloy(Electrum) tells you beforehand how many would work. Needs smelting.";
     case Skill::ExtraLoop: return "One more loop allowed in your code.";
     case Skill::ExtraIf: return "One more condition allowed in your code.";
-    case Skill::ExtraConsole: return "One more console.";
+    case Skill::ExtraConsole: return "One more console - and that means one more PROGRAM. Every console with its own main() runs as its own process with its own line budget, so one can mine while the next one sells. It multiplies your throughput instead of adding to it, which is why it is the most expensive point in the tree.";
     case Skill::ExtraVariable: return "One more variable allowed in your code.";
     case Skill::ExtraClass: return "One more class allowed in your code.";
     case Skill::ExtraFunction: return "One more function allowed in your code.";
     case Skill::Speed: return "+0.5 lines per second.";
     case Skill::MoneyPerBlock: return "+1 money per mined block.";
     case Skill::FasterRespawn: return "The block regrows 8% faster.";
+
+    case Skill::Switch: return "switch, case and default. A whole switch is ONE line, no matter how many cases - an else-if chain costs a line per rung. With twenty ores that is the biggest speed-up in the game. Needs if.";
+    case Skill::Ternary: return "a ? b : c - a condition that fits inside another line, so it costs no line of its own. It does not count against your conditions either. Needs if.";
+    case Skill::Goto: return "goto and labels. The cheapest loop there is: it uses up no loop. What it cannot do is ask a question - a goto only ever jumps. Needs while.";
+    case Skill::Recursion: return "A function may call itself. A loop without spending a loop. Needs functions.";
+    case Skill::Container: return "vector, array, map and set - many values inside one variable. The container counts as one variable, what is inside it is free. Needs variables.";
+    case Skill::Inline: return "Every line INSIDE your own functions costs only half. Without it a function is slower than writing the code twice - with it, it finally pays off. Needs functions.";
+    case Skill::Optimize: return "A higher optimisation level: lines per second TIMES 1.2 instead of plus a fixed amount. It multiplies, so it stacks with everything you already own.";
+    case Skill::Info: return "info(ore) hands you a pointer to what an ore is: value, rarity and above all the treatment it wants. nullptr means you have not examined it yet. With it, one program works for EVERY ore - even the ones the game invents later. Needs care.";
+    case Skill::Assay: return "assay(ore) examines an unknown ore. It takes a moment and costs money, and afterwards info() knows what it wants. That is how you meet a new ore without looking anything up. Needs info().";
+    case Skill::Count: return "item.count(Gold) gives you the number, item.purity(Gold) the purity of the stack. has() only ever said yes or no. Needs item.has().";
+    case Skill::JobQuery: return "job.busy(), job.free() and job.progress() - is the furnace working, how many are idle, how far along is it. Without it you only find out by trying, and the attempt costs a line. Needs washing.";
+    case Skill::Wait: return "wait(0.5) waits without burning lines, block.loading() says how long until the block is back. A waiting loop costs a line every pass - this costs exactly one. Needs block.isThere().";
+    case Skill::Status: return "money(), timeLeft() and roundTarget() - how much you have, how many seconds are left, how much the round wants. Now your program can decide for itself when to play it safe.";
+    case Skill::Market: return "market.price(Gold) - prices move during the round, market.average(Gold) is the long-run mean. Selling at the right moment is worth real money. Needs item.sell().";
+    case Skill::ExtraFurnace: return "One more job at the same time. Processing and alloying share the slots - until now there was exactly one, and that was the hardest ceiling in the game.";
+    case Skill::Etch: return "item.etch(Gold) - etching. It takes a long time and eats purity, but it is worth far more than refined. The first step past the end of the old chain. Needs refining.";
+    case Skill::Fuse: return "item.fuse(Gold) - fusing. The last state there is, and the most valuable by a wide margin. Only works on something etched or hardened. Needs etching.";
+
     case Skill::None: return "";
     }
     return "";
@@ -211,6 +249,25 @@ const char* SkillTag(Skill skill)
     case Skill::Speed: return ">>";
     case Skill::MoneyPerBlock: return "$";
     case Skill::FasterRespawn: return "R";
+
+    case Skill::Switch: return "SW";
+    case Skill::Ternary: return "?:";
+    case Skill::Goto: return "->";
+    case Skill::Recursion: return "f^f";
+    case Skill::Container: return "[..]";
+    case Skill::Inline: return "IN";
+    case Skill::Optimize: return "O2";
+    case Skill::Info: return "i()";
+    case Skill::Assay: return "AS";
+    case Skill::Count: return "#";
+    case Skill::JobQuery: return "JOB";
+    case Skill::Wait: return "ZZ";
+    case Skill::Status: return "$?";
+    case Skill::Market: return "MKT";
+    case Skill::ExtraFurnace: return "+F";
+    case Skill::Etch: return "ET";
+    case Skill::Fuse: return "FU";
+
     case Skill::None: return "-";
     }
     return "?";
@@ -481,6 +538,8 @@ Limits SkillTree::limits() const
     // Die Startwerte stehen in data/skills.txt, nicht hier.
     limits.linesPerSecond = plan.speedStart;
     limits.respawnSeconds = plan.respawnStart;
+    limits.assayCost      = plan.assayCost;
+    limits.assaySeconds   = plan.assaySeconds;
 
     int loops     = 0;
     int ifs       = 0;
@@ -488,6 +547,8 @@ Limits SkillTree::limits() const
     int variables = 0;
     int classes   = 0;
     int functions = 0;
+    int jobs      = 1;  // einen Auftragsplatz hat man von Anfang an
+    int optimize  = 0;
 
     for (const SkillNode& n : nodes)
     {
@@ -552,9 +613,40 @@ Limits SkillTree::limits() const
         case Skill::MoneyPerBlock: limits.moneyPerBlock += plan.moneyPlus; break;
         case Skill::FasterRespawn: limits.respawnSeconds *= plan.respawnMul; break;
 
+        // Sprache, die es frueher umsonst gab.
+        case Skill::Switch: limits.allowSwitch = true; break;
+        case Skill::Ternary: limits.allowTernary = true; break;
+        case Skill::Goto: limits.allowGoto = true; break;
+        case Skill::Recursion: limits.allowRecursion = true; break;
+        case Skill::Container: limits.allowContainer = true; break;
+
+        case Skill::Inline: limits.allowInline = true; break;
+
+        // Der einzige Punkt im Baum, der MAL rechnet statt PLUS. Deshalb wird
+        // er hier nur gezaehlt und erst ganz zum Schluss angewandt - sonst
+        // haenge das Ergebnis daran, in welcher Reihenfolge die Knoten stehen.
+        case Skill::Optimize: ++optimize; break;
+
+        case Skill::Info: limits.allowInfo = true; break;
+        case Skill::Assay: limits.allowAssay = true; break;
+        case Skill::Count: limits.allowCount = true; break;
+        case Skill::JobQuery: limits.allowJob = true; break;
+        case Skill::Wait: limits.allowWait = true; break;
+        case Skill::Status: limits.allowStatus = true; break;
+        case Skill::Market: limits.allowMarket = true; break;
+
+        case Skill::ExtraFurnace: ++jobs; break;
+
+        case Skill::Etch: limits.allowEtch = true; break;
+        case Skill::Fuse: limits.allowFuse = true; break;
+
         default: break;
         }
     }
+
+    // Erst hier, damit die Reihenfolge der Knoten nichts am Ergebnis aendert.
+    for (int i = 0; i < optimize; ++i)
+        limits.linesPerSecond *= plan.optimizeMul;
 
     limits.maxLoops     = loops;
     limits.maxIfs       = ifs;
@@ -562,5 +654,6 @@ Limits SkillTree::limits() const
     limits.maxVariables = variables;
     limits.maxClasses   = classes;
     limits.maxFunctions = functions;
+    limits.maxJobs      = jobs;
     return limits;
 }

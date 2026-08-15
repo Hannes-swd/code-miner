@@ -8,6 +8,7 @@
 
 #include "imgui.h"
 
+#include <cmath>
 #include <cstdio>
 
 namespace
@@ -189,13 +190,14 @@ int StartPurity(const OrePlan& ores, const CraftPlan& craft, int ore)
 }
 
 int StackValue(const OrePlan& ores, const CraftPlan& craft, int ore, int state, int purity,
-               int anzahl, int moneyPerBlock)
+               int anzahl, int moneyPerBlock, float market)
 {
     if (anzahl <= 0)
         return 0;
 
     const double stueck = (double)OreOf(ores, ore).value * (double)craft.valueOf(state) *
-                          (double)craft.purityFactor(purity) * (double)moneyPerBlock;
+                          (double)craft.purityFactor(purity) * (double)moneyPerBlock *
+                          (double)market;
 
     // Mindestens 1 pro Stueck: sonst waere ein oxidierter Stein gratis, und
     // "verkaufen" haette gar keine Wirkung mehr.
@@ -245,6 +247,30 @@ int World::inventoryCount() const
     return summe;
 }
 
+int World::inventoryPurity(const OrePlan& ores, const std::string& name) const
+{
+    const bool alles  = IsAnyName(name) && FindOre(ores, name) < 0;
+    const int  nummer = alles ? -1 : FindOre(ores, name);
+    if (!alles && nummer < 0)
+        return 0;
+
+    // Nach Anzahl gewichtet: zehn schmutzige und ein sauberes Stueck sind im
+    // Schnitt schmutzig. Genau so rechnet auch addToBag, wenn zwei Stapel
+    // aufeinandertreffen - sonst behauptete die Anzeige etwas anderes als der
+    // Verkauf.
+    long long summe = 0;
+    long long wie   = 0;
+    for (const auto& e : inventory)
+    {
+        if (!alles && e.first.ore != nummer)
+            continue;
+        summe += (long long)e.second.purity * e.second.count;
+        wie += e.second.count;
+    }
+
+    return (wie > 0) ? (int)(summe / wie) : 0;
+}
+
 int World::bagCount(int ore, unsigned states) const
 {
     int summe = 0;
@@ -266,8 +292,11 @@ int World::sell(const OrePlan& ores, const CraftPlan& craft, Item was, int anzah
     if (wie <= 0)
         return 0;
 
-    const int geld =
-        StackValue(ores, craft, was.ore, was.state, it->second.purity, wie, moneyPerBlock);
+    // Zum Tagespreis: was ein Stapel bringt, haengt davon ab, WANN man ihn
+    // ueber die Theke schiebt. Genau dafuer gibt es market.price() im
+    // Spielercode - sonst waere die Schwankung eine Gemeinheit ohne Gegenmittel.
+    const int geld = StackValue(ores, craft, was.ore, was.state, it->second.purity, wie,
+                                moneyPerBlock, marketFactor(was.ore));
     money += geld;
 
     it->second.count -= wie;
@@ -429,9 +458,12 @@ int World::startCraft(const OrePlan& ores, const Limits& limits, const CraftStep
     if (frozen)
         return 0;
 
-    // Nur ein Auftrag gleichzeitig. Ein zweiter Aufruf macht nichts - so muss
-    // sich der Spielercode selbst darum kuemmern, zu warten.
-    if (crafting)
+    // Ist ein Platz frei? Frueher gab es genau einen, und ein zweiter Aufruf
+    // machte nichts. Jetzt haengt die Zahl am Skilltree - der Spielercode muss
+    // sich aber weiterhin selbst darum kuemmern, denn voll ist voll.
+    setJobSlots(limits.maxJobs);
+    Job* platz = freeJob();
+    if (platz == nullptr)
         return 0;
 
     if (!CraftUnlocked(step, limits))
@@ -453,21 +485,21 @@ int World::startCraft(const OrePlan& ores, const Limits& limits, const CraftStep
     if (wie <= 0)
         return 0;
 
-    craftItem    = was;
-    craftCount   = wie;
-    craftPurity  = it->second.purity;
-    craftTo      = step.to;
-    craftDelta   = step.purity;
-    craftName    = step.name;
-    craftSeconds = step.seconds * (float)wie;
-    craftTimer   = 0.0f;
-    crafting     = true;
-    craftByHand  = byHandStart;
+    platz->item    = was;
+    platz->count   = wie;
+    platz->purity  = it->second.purity;
+    platz->to      = step.to;
+    platz->delta   = step.purity;
+    platz->name    = step.name;
+    platz->seconds = step.seconds * (float)wie;
+    platz->timer   = 0.0f;
+    platz->active  = true;
+    platz->byHand  = byHandStart;
 
     // Aus der Tasche heraus: waehrend der Arbeit gehoert es der Werkstatt.
     // Gemerkt wird es trotzdem - ein Abbruch muss es zurueckgeben koennen.
-    craftTaken.clear();
-    craftTaken.push_back({was, wie, it->second.purity});
+    platz->taken.clear();
+    platz->taken.push_back({was, wie, it->second.purity});
 
     it->second.count -= wie;
     if (it->second.count <= 0)
@@ -590,8 +622,11 @@ int World::startAlloy(const OrePlan& ores, const AlloyRecipe& rezept, const Limi
     if (frozen)
         return 0;
 
-    // Nur ein Auftrag gleichzeitig - genau wie beim Verarbeiten.
-    if (crafting)
+    // Ein freier Platz muss her - Legieren teilt sie sich mit dem Verarbeiten,
+    // es ist ja derselbe Ofen.
+    setJobSlots(limits.maxJobs);
+    Job* platz = freeJob();
+    if (platz == nullptr)
         return 0;
 
     const int moeglich = canAlloy(ores, rezept, limits);
@@ -621,18 +656,18 @@ int World::startAlloy(const OrePlan& ores, const AlloyRecipe& rezept, const Limi
             inventory.erase(it);
     }
 
-    craftItem.ore   = rezept.result;
-    craftItem.state = rezept.to;
-    craftCount      = wie;
-    craftPurity     = rein;
-    craftTo         = rezept.to;
-    craftDelta      = 0;  // der Aufschlag steckt schon in rein
-    craftName       = "Legieren";
-    craftSeconds    = rezept.seconds * (float)wie;
-    craftTimer      = 0.0f;
-    crafting        = true;
-    craftByHand     = byHandStart;
-    craftTaken      = nehmen;
+    platz->item.ore   = rezept.result;
+    platz->item.state = rezept.to;
+    platz->count      = wie;
+    platz->purity     = rein;
+    platz->to         = rezept.to;
+    platz->delta      = 0;  // der Aufschlag steckt schon in rein
+    platz->name       = "Alloy";
+    platz->seconds    = rezept.seconds * (float)wie;
+    platz->timer      = 0.0f;
+    platz->active     = true;
+    platz->byHand     = byHandStart;
+    platz->taken      = nehmen;
 
     return wie;
 }
@@ -646,61 +681,218 @@ int World::startAlloy(const OrePlan& ores, const AlloyPlan& alloys, const Limits
     return startAlloy(ores, *rezept, limits, anzahl, byHandStart);
 }
 
-void World::tickCraft(float dt)
+// ---- Die Auftragsplaetze --------------------------------------------------
+
+void World::setJobSlots(int anzahl)
+{
+    if (anzahl < 1)
+        anzahl = 1;
+
+    // Groesser werden ist einfach. Kleiner werden darf einen laufenden Auftrag
+    // NICHT verschlucken - das waere verlorenes Material. Also bleibt die
+    // Liste so lang, bis die hinteren Plaetze von selbst leer laufen.
+    if ((int)jobs.size() < anzahl)
+        jobs.resize((std::size_t)anzahl);
+
+    while ((int)jobs.size() > anzahl && !jobs.back().active)
+        jobs.pop_back();
+}
+
+int World::jobsRunning() const
+{
+    int n = 0;
+    for (const Job& j : jobs)
+        if (j.active)
+            ++n;
+    return n;
+}
+
+int World::jobsIdle() const
+{
+    int n = 0;
+    for (const Job& j : jobs)
+        if (!j.active)
+            ++n;
+    return n;
+}
+
+bool World::anyCrafting() const
+{
+    return jobsRunning() > 0;
+}
+
+bool World::anyCraftByHand() const
+{
+    for (const Job& j : jobs)
+        if (j.active && j.byHand)
+            return true;
+    return false;
+}
+
+const World::Job* World::nextDone() const
+{
+    const Job* best = nullptr;
+    for (const Job& j : jobs)
+        if (j.active && (best == nullptr || j.left() < best->left()))
+            best = &j;
+    return best;
+}
+
+World::Job* World::freeJob()
+{
+    for (Job& j : jobs)
+        if (!j.active)
+            return &j;
+    return nullptr;
+}
+
+void World::tickCraft(float dt, bool programLaeuft)
 {
     if (frozen)
         return;
 
-    if (!crafting)
-        return;
+    for (Job& job : jobs)
+    {
+        if (!job.active)
+            continue;
 
-    craftTimer += dt;
-    if (craftTimer < craftSeconds)
-        return;
+        // Vom Programm gestartet? Dann kommt er nur voran, solange das
+        // Programm laeuft. Von Hand gestartet laeuft er immer weiter.
+        if (!job.byHand && !programLaeuft)
+            continue;
 
-    // Beim Legieren ist craftItem schon das Ergebnis-Erz - deshalb tut hier
-    // beides dasselbe.
-    Item fertig;
-    fertig.ore   = craftItem.ore;
-    fertig.state = craftTo;
-    addToBag(fertig, craftCount, craftPurity + craftDelta);
+        job.timer += dt;
+        if (job.timer < job.seconds)
+            continue;
 
-    // Fuers Wiki: das hier hat der Spieler gerade selbst herausgefunden.
-    //
-    // Beim Legieren lernt er den neuen Stoff ueberhaupt erst kennen - deshalb
-    // steht noteOre vor der Kante. Eine Kante gibt es dabei nicht: aus zwei
-    // Erzen wird ein drittes, das ist kein Schritt von einem Zustand in den
-    // naechsten.
-    noteOre(fertig.ore, fertig.state, craftPurity + craftDelta);
-    if (craftTaken.size() == 1 && craftTaken[0].was.ore == fertig.ore &&
-        craftTaken[0].was.state != fertig.state)
-        oreSteps.insert(OreStep{fertig.ore, craftTaken[0].was.state, fertig.state});
+        // Beim Legieren ist job.item schon das Ergebnis-Erz - deshalb tut hier
+        // beides dasselbe.
+        Item fertig;
+        fertig.ore   = job.item.ore;
+        fertig.state = job.to;
+        addToBag(fertig, job.count, job.purity + job.delta);
 
-    crafting     = false;
-    craftByHand  = false;
-    craftTimer   = 0.0f;
-    craftCount   = 0;
-    craftTaken.clear();
+        // Fuers Wiki: das hier hat der Spieler gerade selbst herausgefunden.
+        //
+        // Beim Legieren lernt er den neuen Stoff ueberhaupt erst kennen -
+        // deshalb steht noteOre vor der Kante. Eine Kante gibt es dabei nicht:
+        // aus zwei Erzen wird ein drittes, das ist kein Schritt von einem
+        // Zustand in den naechsten.
+        noteOre(fertig.ore, fertig.state, job.purity + job.delta);
+        if (job.taken.size() == 1 && job.taken[0].was.ore == fertig.ore &&
+            job.taken[0].was.state != fertig.state)
+            oreSteps.insert(OreStep{fertig.ore, job.taken[0].was.state, fertig.state});
+
+        job.active = false;
+        job.byHand = false;
+        job.timer  = 0.0f;
+        job.count  = 0;
+        job.taken.clear();
+    }
 }
 
-void World::cancelCraft()
+void World::cancelCraft(bool nurProgramm)
 {
-    if (!crafting)
+    for (Job& job : jobs)
+    {
+        if (!job.active)
+            continue;
+        if (nurProgramm && job.byHand)
+            continue;
+
+        // Unveraendert zurueck: ein abgebrochener Auftrag darf nichts kosten.
+        for (const Taken& t : job.taken)
+            addToBag(t.was, t.count, t.purity);
+
+        job.active = false;
+        job.byHand = false;
+        job.timer  = 0.0f;
+        job.count  = 0;
+        job.taken.clear();
+    }
+}
+
+// ---- Was man ueber ein Erz weiss ------------------------------------------
+
+bool World::knowsOre(const OrePlan& ores, int ore) const
+{
+    if (ore < 0 || ore >= (int)ores.ores.size())
+        return false;
+
+    // Was von Hand in data/erze.json steht (und was daraus legiert wird), war
+    // nie ein Raetsel: es hat eine Wiki-Seite, seit es das Spiel gibt.
+    // Untersuchen muss man nur, was sich das Spiel selbst ausgedacht hat.
+    if (ore < ores.handmade)
+        return true;
+
+    return assayed.count(ore) != 0;
+}
+
+int World::startAssay(const OrePlan& ores, int ore, int kosten, float dauer)
+{
+    if (frozen)
+        return 0;
+    if (assaying)
+        return 0;
+    if (ore < 0 || ore >= (int)ores.ores.size())
+        return 0;
+    if (knowsOre(ores, ore))
+        return 0;
+    if (money < kosten)
+        return 0;
+
+    money -= kosten;
+    assaying     = true;
+    assayOre     = ore;
+    assayTimer   = 0.0f;
+    assaySeconds = (dauer > 0.0f) ? dauer : 0.1f;
+    return kosten;
+}
+
+void World::tickAssay(float dt)
+{
+    if (frozen || !assaying)
         return;
 
-    // Unveraendert zurueck: ein abgebrochener Auftrag darf nichts kosten.
-    for (const Taken& t : craftTaken)
-        addToBag(t.was, t.count, t.purity);
+    assayTimer += dt;
+    if (assayTimer < assaySeconds)
+        return;
 
-    crafting     = false;
-    craftByHand  = false;
-    craftTimer   = 0.0f;
-    craftCount   = 0;
-    craftTaken.clear();
+    assayed.insert(assayOre);
+    assaying   = false;
+    assayTimer = 0.0f;
+}
+
+// ---- Der Markt ------------------------------------------------------------
+
+float World::marketFactor(int ore) const
+{
+    if (marketSwing <= 0.0f)
+        return 1.0f;
+
+    // Zwei Wellen mit unterschiedlicher Laenge, dazu ein Versatz aus der
+    // Erznummer. Dadurch schwingt kein Erz im Gleichtakt mit einem anderen,
+    // und der Verlauf wiederholt sich nicht auf den ersten Blick.
+    const float phase = (float)ore * 2.399963f;
+    const float a     = std::sin(marketTime + phase);
+    const float b     = std::sin(marketTime * 0.37f + phase * 1.7f);
+
+    const float f = 1.0f + marketSwing * (a * 0.65f + b * 0.35f);
+    return (f < 0.1f) ? 0.1f : f;
 }
 
 void World::update(float dt, const OrePlan& ores)
 {
+    // ---- Markt und Untersuchung -----------------------------------------
+    //
+    // Beides laeuft nur, solange die Welt laeuft. Ein Markt, der sich in der
+    // Vorbereitung weiterdreht, waere ein Wartespiel: man wuerde vor dem
+    // Rundenstart sitzen und auf einen guten Preis warten.
+    if (!frozen)
+        marketTime += dt * marketSpeed;
+
+    tickAssay(dt);
+
     // ---- Nachwachsen ----------------------------------------------------
     // Steht die Welt still, waechst nichts nach - ausser man darf trotzdem von
     // Hand abbauen. Sonst waere der erste Block ein Einwegblock: einmal
@@ -966,15 +1158,24 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
 
     // Ein Auftrag laeuft: man soll auch hier sehen, wie weit er ist - sonst
     // wartet man auf der Welt-Seite blind.
-    if (world.crafting)
+    if (const World::Job* job = world.nextDone())
     {
-        const float t = (world.craftSeconds > 0.0f) ? world.craftTimer / world.craftSeconds : 1.0f;
+        const float t = job->progress();
 
-        // Beim Legieren steht in craftItem schon das Ergebnis - so liest sich
-        // beides richtig: "Waschen: Gold x3" und "Legieren: Elektrum x2".
-        char text[128];
-        std::snprintf(text, sizeof(text), "%s: %s x%d", world.craftName.c_str(),
-                      OreOf(ores, world.craftItem.ore).name.c_str(), world.craftCount);
+        // Beim Legieren steht in job->item schon das Ergebnis - so liest sich
+        // beides richtig: "Wash: Gold x3" und "Alloy: Electrum x2".
+        //
+        // Es laufen womoeglich mehrere: dann steht der naechste fertige da und
+        // dahinter, wie viele noch warten. Alle nebeneinander waere hier oben
+        // kein Bild mehr, sondern eine Liste.
+        char text[160];
+        const int weitere = world.jobsRunning() - 1;
+        if (weitere > 0)
+            std::snprintf(text, sizeof(text), "%s: %s x%d  (+%d)", job->name.c_str(),
+                          OreOf(ores, job->item.ore).name.c_str(), job->count, weitere);
+        else
+            std::snprintf(text, sizeof(text), "%s: %s x%d", job->name.c_str(),
+                          OreOf(ores, job->item.ore).name.c_str(), job->count);
         const ImVec2 ts = ImGui::CalcTextSize(text);
 
         const ImVec2 pa(c.x - 90.0f, b.y + 44.0f);
@@ -1066,21 +1267,31 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
         // ---- Laeuft gerade ein Auftrag? ------------------------------------
         // Was in Arbeit ist, liegt nicht in der Tasche. Ohne diese Zeile waere
         // es einfach verschwunden.
-        if (world.crafting)
+        if (world.anyCrafting())
         {
-            const float t =
-                (world.craftSeconds > 0.0f) ? world.craftTimer / world.craftSeconds : 1.0f;
+            // Eine Zeile je laufendem Auftrag. Mit mehreren Oefen ist "was ist
+            // gerade in Arbeit" sonst nicht mehr zu ueberblicken - und was in
+            // Arbeit ist, liegt ja nicht in der Tasche.
+            for (const World::Job& job : world.jobs)
+            {
+                if (!job.active)
+                    continue;
 
-            ImGui::TextColored(ui::V(ui::kText), "%s: %d x %s", world.craftName.c_str(),
-                               world.craftCount,
-                               OreOf(ores, world.craftItem.ore).name.c_str());
+                ImGui::TextColored(ui::V(ui::kText), "%s: %d x %s", job.name.c_str(), job.count,
+                                   OreOf(ores, job.item.ore).name.c_str());
 
-            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ui::V(ui::kAccent));
-            char rest[48];
-            std::snprintf(rest, sizeof(rest), "%.1f s left",
-                          (double)(world.craftSeconds - world.craftTimer));
-            ImGui::ProgressBar(t, ImVec2(320.0f, 0.0f), rest);
-            ImGui::PopStyleColor();
+                ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ui::V(ui::kAccent));
+                char rest[48];
+                std::snprintf(rest, sizeof(rest), "%.1f s left", (double)job.left());
+                ImGui::ProgressBar(job.progress(), ImVec2(320.0f, 0.0f), rest);
+                ImGui::PopStyleColor();
+            }
+
+            // Wie viele Plaetze ueberhaupt da sind. Ohne die Zeile merkt man
+            // gar nicht, dass man gerade einen zweiten Ofen gekauft hat.
+            if ((int)world.jobs.size() > 1)
+                ImGui::TextDisabled("%d of %d furnaces busy", world.jobsRunning(),
+                                    (int)world.jobs.size());
 
             ImGui::Spacing();
             ImGui::Separator();
@@ -1331,8 +1542,8 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
                         std::snprintf(zeile, sizeof(zeile), "%s  ->  %s", s.name.c_str(),
                                       OreStateName((OreState)s.to));
 
-                        if (ImGui::MenuItem(zeile, nullptr, false, !world.crafting &&
-                                                                       !world.frozen))
+                        if (ImGui::MenuItem(zeile, nullptr, false,
+                                            world.jobsIdle() > 0 && !world.frozen))
                         {
                             arbeitAn      = stapel;
                             arbeitSchritt = &s;
@@ -1354,8 +1565,10 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
                         ImGui::TextDisabled(world.phase == RoundPhase::Run
                                                 ? "The game is paused."
                                                 : "Start the round first.");
-                    else if (world.crafting)
-                        ImGui::TextDisabled("A job is already running.");
+                    else if (world.jobsIdle() <= 0)
+                        ImGui::TextDisabled((int)world.jobs.size() > 1
+                                                ? "Every furnace is busy."
+                                                : "A job is already running.");
 
                     ImGui::EndPopup();
                 }

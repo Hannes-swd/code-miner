@@ -333,6 +333,8 @@ const char* OreStateName(OreState state)
     case OreState::Cleaned: return "Cleaned";
     case OreState::Oxidized: return "Oxidized";
     case OreState::Alloy: return "Alloyed";
+    case OreState::Etched: return "Etched";
+    case OreState::Fused: return "Fused";
     default: return "?";
     }
 }
@@ -352,6 +354,8 @@ const char* OreStateKey(OreState state)
     case OreState::Cleaned: return "cleaned";
     case OreState::Oxidized: return "oxidized";
     case OreState::Alloy: return "alloy";
+    case OreState::Etched: return "etched";
+    case OreState::Fused: return "fused";
     default: return "?";
     }
 }

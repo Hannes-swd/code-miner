@@ -50,6 +50,32 @@ const KeyEntry kKeys[] = {
     {"speed", Skill::Speed},
     {"money", Skill::MoneyPerBlock},
     {"regrow", Skill::FasterRespawn},
+
+    // Sprache, die es frueher umsonst gab - siehe codecheck.cpp.
+    {"switch", Skill::Switch},
+    {"ternary", Skill::Ternary},
+    {"goto", Skill::Goto},
+    {"recursion", Skill::Recursion},
+    {"container", Skill::Container},
+
+    // Der Compiler als Ausbaustufe.
+    {"inline", Skill::Inline},
+    {"optimize", Skill::Optimize},
+
+    // Fragen an die Welt.
+    {"info", Skill::Info},
+    {"assay", Skill::Assay},
+    {"count", Skill::Count},
+    {"job", Skill::JobQuery},
+    {"wait", Skill::Wait},
+    {"status", Skill::Status},
+    {"market", Skill::Market},
+
+    {"furnace+", Skill::ExtraFurnace},
+
+    // Das Ende der Verarbeitungskette.
+    {"etch", Skill::Etch},
+    {"fuse", Skill::Fuse},
 };
 
 bool LookUp(const std::string& key, Skill& out)
@@ -198,6 +224,11 @@ SkillPlan LoadSkillPlan()
                 {"money_plus", nullptr, &plan.moneyPlus, 0.0f},
                 {"regrow_start", &plan.respawnStart, nullptr, 0.05f},
                 {"regrow_mul", &plan.respawnMul, nullptr, 0.1f},
+                {"optimize_mul", &plan.optimizeMul, nullptr, 1.0f},
+                {"assay_cost", nullptr, &plan.assayCost, 0.0f},
+                {"assay_seconds", &plan.assaySeconds, nullptr, 0.0f},
+                {"market_swing", &plan.marketSwing, nullptr, 0.0f},
+                {"market_speed", &plan.marketSpeed, nullptr, 0.0f},
             };
 
             bool getroffen = false;

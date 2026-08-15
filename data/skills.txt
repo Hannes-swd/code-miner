@@ -71,6 +71,8 @@
 #   harden        item.harden(Iron)
 #   polish        item.polish(Diamond)
 #   refine        item.refine(Gold)
+#   etch          item.etch(Gold)   - the end of the chain
+#   fuse          item.fuse(Gold)
 #
 #   alloy         item.alloy(Electrum) and item.canAlloy(Electrum)
 #                 - melt two ores into one new material
@@ -84,11 +86,64 @@
 #   variable+     one more variable allowed
 #   class+        one more class allowed
 #   function+     one more function allowed
-#   console+      one more console
+#   console+      one more console - and that now means one more PROGRAM.
+#                 Every console with its own main() runs as its own process
+#                 with its own line budget, so two consoles really are twice
+#                 the work: one mines while the other sells. That makes this
+#                 the strongest point in the whole tree, which is why it is
+#                 late, expensive and rare.
 #
 #   speed         +0.5 lines per second
 #   money         +1 money per block
 #   regrow        the block regrows 8% faster
+#
+#
+# MORE LANGUAGE
+#
+#   switch        switch/case/default. A whole switch is ONE line, however
+#                 many cases hang under it - an else-if chain costs a line per
+#                 rung. It uses up no condition. Until this point existed all
+#                 of that was free, and buying "if" was optional for anyone who
+#                 knew C++.
+#   ternary       a ? b : c - a condition inside a line, costing no line and
+#                 no condition of its own.
+#   goto          goto and labels. A loop that uses up no loop.
+#   recursion     a function may call itself. Also a loop, also without
+#                 spending one.
+#   container     vector, array, map, set. The container counts as one
+#                 variable, what is inside it is free.
+#
+#
+# THE COMPILER
+#
+#   inline        lines INSIDE your own functions cost only half. Without it a
+#                 function is slower than writing the code twice.
+#   optimize      lines per second TIMES optimize_mul instead of plus a fixed
+#                 amount. The only point in the tree that multiplies - so it
+#                 is worth little early and a lot late.
+#
+#
+# QUESTIONS TO THE WORLD
+#
+#   info          info(ore) - value, rarity, level and above all the treatment
+#                 an ore wants, as a pointer. nullptr = not examined yet.
+#                 With it ONE program fits every ore, including the ones the
+#                 game invents later. Without it the treatment has to be
+#                 written out ore by ore, for ever.
+#   assay         assay(ore) - examine an unknown ore. Costs money and time,
+#                 afterwards info() knows.
+#   count         item.count(ore) and item.purity(ore) - the number and the
+#                 purity, instead of only yes or no.
+#   job           job.busy(), job.idle(), job.progress() - is a furnace free.
+#   wait          wait(seconds) and block.loading() - waiting without burning
+#                 a line per pass.
+#   status        money(), timeLeft(), roundTarget().
+#   market        market.price(ore) and market.average(ore) - prices move
+#                 during the round.
+#
+#   furnace+      one more job at the same time. Processing and alloying share
+#                 the places; at the start there is exactly one, and that was
+#                 the hardest ceiling in the game.
 
 
 # This many steps the tree has. 0 = no end, it keeps growing forever.
@@ -105,6 +160,19 @@ children    1 3
 # already open, a purchase only opens exactly one new one.
 open        10
 
+# What "optimize" multiplies the speed by. 1.2 = a fifth more, and it stacks.
+optimize_mul  1.2
+
+# What assay() costs and how long it takes.
+assay_cost     40
+assay_seconds  3.0
+
+# How far the market price swings around the base value (0.25 = +/- 25 %)
+# and how fast it turns.
+market_swing  0.25
+market_speed  0.06
+
+
 # Minimum distance between two "once" points, counted in points.
 # This many other points must lie in between. That way you unlock one thing,
 # play on for a bit, and only then the next one comes - instead of three in
@@ -112,7 +180,10 @@ open        10
 #
 # Points with a fixed step (e.g. "mine 1") do not follow this: those sit
 # exactly where they should.
-spacing     9
+# There are half again as many one-off points as there used to be. With the
+# old distance of 9 the whole tree would take twice as long to walk - so the
+# points move a little closer together.
+spacing     6
 
 
 # ---- the language ------------------------------------------------------
@@ -158,6 +229,14 @@ polish         16-24       28   once 1   needs cast
 harden         18-26       32   once 1   needs cast
 refine         20-32       40   once 1   needs polish
 
+# The end of the chain. Etching costs purity and a lot of time, fusing costs
+# even more - but "fused" is worth more than twice what "refined" is. Late in
+# the game a stack should get deeper, not just wider: same ore, much more work,
+# much more money. Without this, everything after refining was just another
+# ore that went the same way as the last one.
+etch           24-38       60   once 1   needs refine
+fuse           28-44       80   once 1   needs etch
+
 # Processing is a chain: washing is the start, everything else hangs off it
 # through "needs". And washing itself needs "bag" - that is item.has(...).
 # Because only once your program can look into the bag can it decide WHAT to
@@ -178,8 +257,67 @@ variable+      8-          12   often 1    rise 1.20   needs variables
 function+      14-         16   often 1    rise 1.22   needs functions
 class+         16-         18   often 1    rise 1.22   needs classes
 
-# One more console is a big step - so it is rare.
-console+       7-          22   often 1    rise 1.10
+# One more console is one more PROGRAM running at the same time - it does not
+# add to your speed, it multiplies it. Nothing else in the tree does that, so
+# it starts late, costs a lot, and stays rare however far out you go.
+console+       10-         45   often 1    rise 1.05
+
+
+# ---- more language -----------------------------------------------------
+#
+# All of this used to be free: a switch is a branch, a goto is a loop, and an
+# array is as many variables as you like. Anyone who knew C++ could walk past
+# half the tree. Now it costs - and in exchange it can do more than what it
+# replaces.
+#
+# Everything here hangs off the thing it improves on, so it never turns up
+# before you have felt the problem it solves.
+
+ternary        10-18       16   once 1   needs if
+goto           9-17        12   once 1   needs while
+container      12-20       18   once 1   needs variables
+switch         14-24       26   once 2   needs if
+recursion      16-26       24   once 1   needs functions
+
+
+# ---- the compiler ------------------------------------------------------
+#
+# inline sits close behind "functions": without it a function costs more than
+# it saves, and a point you regret buying is the worst kind.
+#
+# optimize is the only point that multiplies. Early it is worth almost
+# nothing, late it is worth more than any speed point - so it may come again
+# and again, but it stays rare and expensive.
+
+inline         15-24       26   once 2   needs functions
+optimize       12-         40   often 1    rise 1.18
+
+
+# ---- questions to the world --------------------------------------------
+#
+# info is the keystone: it turns the treatment from something you look up into
+# something you can ask. It sits right behind "care", because that is the
+# point at which the if-chain starts to hurt.
+#
+# assay is its other half - without it info() stays nullptr for everything the
+# game invents.
+
+count          9-16        14   once 2   needs bag
+wait           10-18       14   once 1   needs check
+job            11-20       16   once 1   needs wash
+status         12-20       18   once 1
+market         13-22       24   once 1   needs sell
+info           14-22       28   once 3   needs care
+assay          16-26       30   once 2   needs info
+
+
+# ---- more workshop ------------------------------------------------------
+#
+# One job at a time was the hardest ceiling in the game: the whole processing
+# net collapsed into "the furnace is busy anyway". This is the point that
+# multiplies throughput instead of adding to it - so it is rare and expensive.
+
+furnace+       12-         30   often 1    rise 1.15   needs wash
 
 
 # ---- values ------------------------------------------------------------

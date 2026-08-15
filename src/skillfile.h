@@ -57,6 +57,21 @@ struct SkillPlan
     float respawnStart = 0.6f;   // Sekunden, bis der Block nachwaechst
     float respawnMul   = 0.94f;  // je "nachwachsen" mal so viel
 
+    // "optimize" ist der einzige Punkt, der MAL rechnet statt PLUS. Deshalb
+    // steht er hier getrennt von speed_plus: das eine addiert Zeilen, das
+    // andere vervielfacht, was man schon hat.
+    float optimizeMul = 1.2f;
+
+    // Was assay() kostet und wie lange es dauert. Untersuchen soll wehtun -
+    // sonst untersucht man einfach alles der Reihe nach.
+    int   assayCost    = 40;
+    float assaySeconds = 3.0f;
+
+    // Wie weit der Marktpreis um den Grundwert schwankt (0.25 = +/- 25 %) und
+    // wie schnell er sich dreht.
+    float marketSwing = 0.25f;
+    float marketSpeed = 0.06f;
+
     // So viele Schritte Abstand halten zwei einmalige Punkte mindestens.
     // Ohne das schaltet man drei Sprachsachen direkt hintereinander frei.
     int spacing = 2;

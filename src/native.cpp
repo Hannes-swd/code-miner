@@ -27,10 +27,18 @@ namespace
 // beim Start zusammengebaut) und das Stueck danach.
 // ---------------------------------------------------------------------------
 const char* kHeaderTop = R"KLICKER(#pragma once
+#include <map>
 #include <string>
 
 namespace ck {
 void line(int console, int n);
+
+// Dasselbe, aber INNERHALB einer eigenen Funktion. Mit dem Punkt "inline"
+// kostet so eine Zeile nur die Haelfte - deshalb muss das Spiel die beiden
+// auseinanderhalten koennen. Die Instrumentierung setzt es ein, siehe
+// instrument.cpp.
+void linef(int console, int n);
+
 void mine(int care);
 int  oreHere();
 int  sell();
@@ -45,6 +53,22 @@ void out(const char* text);
 int  getShared(const char* name);
 void setShared(const char* name, int value);
 void addShared(const char* name, int delta);
+
+// Was ueber ein Erz bekannt ist. Rueckgabe false = noch nicht untersucht,
+// dann steht in den Feldern nichts Brauchbares.
+bool oreInfo(int ore, int& value, int& rarity, int& level, int& care);
+int  assayOre(int ore);  // was die Untersuchung gekostet hat, 0 = ging nicht
+
+int  bagCount(const char* erz);
+int  bagPurity(const char* erz);
+
+void jobState(int& busy, int& idle, int& promille);
+
+void status(int& money, int& leftMs, int& target);
+void marketOf(const char* erz, int& jetzt, int& mittel);
+
+void waitMs(int ms);
+int  blockLoadingMs();
 }
 
 // Eine geteilte Variable. Sie liegt nicht in diesem Programm, sondern im Spiel -
@@ -175,6 +199,15 @@ struct CkBlock
     // Waechst er gerade nach? Genau das Gegenteil von isThere().
     bool isLoading() const { return !ck::exists(); }
     bool isGone()    const { return !ck::exists(); }
+
+    // Wie lange dauert es noch, bis er wieder dasteht? In Sekunden, 0 = er ist
+    // schon da.
+    //
+    // Zusammen mit wait() ist das die Antwort auf die Warteschleife:
+    //
+    //     wait(block.loading());   // eine Zeile statt hundert Leerlaeufe
+    //     block.mine();
+    float loading() const { return (float)ck::blockLoadingMs() / 1000.0f; }
 };
 
 static const CkBlock block;
@@ -201,6 +234,20 @@ struct CkItem
     //     if (item.has(Any)) ...          ueberhaupt irgendetwas
     bool has(Ore erz) const { return ck::inBag(CkOreName(erz)) > 0; }
     bool has(Ore erz, int anzahl) const { return ck::inBag(CkOreName(erz)) >= anzahl; }
+
+    // Wie VIELE liegen da? has() hat immer nur ja oder nein gesagt - damit
+    // liess sich nicht rechnen.
+    //
+    //     if (item.count(Gold) >= 10) item.smelt(Gold, 10);
+    int count(Ore erz) const { return ck::bagCount(CkOreName(erz)); }
+
+    // Und wie sauber sind sie? Ueber alle Zustaende gemittelt, in Prozent.
+    // Die Reinheit macht bis zum Dreifachen im Preis aus - ohne diese Frage
+    // sieht man das nur in der Tasche und nie im Programm.
+    int purity(Ore erz) const { return ck::bagPurity(CkOreName(erz)); }
+
+    int count(const std::string& erz) const { return ck::bagCount(erz.c_str()); }
+    int purity(const std::string& erz) const { return ck::bagPurity(erz.c_str()); }
 
     // Dasselbe mit Text. Das war frueher der einzige Weg - es geht weiter,
     // damit alter Code nicht auf einmal nicht mehr uebersetzt.
@@ -233,6 +280,8 @@ struct CkItem
     int harden(Ore erz) const { return ck::craft("harden", CkOreName(erz), -1); }
     int refine(Ore erz) const { return ck::craft("refine", CkOreName(erz), -1); }
     int press(Ore erz)  const { return ck::craft("press", CkOreName(erz), -1); }
+    int etch(Ore erz)   const { return ck::craft("etch", CkOreName(erz), -1); }
+    int fuse(Ore erz)   const { return ck::craft("fuse", CkOreName(erz), -1); }
 
     int wash(Ore erz, int anzahl)   const { return ck::craft("wash", CkOreName(erz), anzahl); }
     int smelt(Ore erz, int anzahl)  const { return ck::craft("smelt", CkOreName(erz), anzahl); }
@@ -242,6 +291,8 @@ struct CkItem
     int harden(Ore erz, int anzahl) const { return ck::craft("harden", CkOreName(erz), anzahl); }
     int refine(Ore erz, int anzahl) const { return ck::craft("refine", CkOreName(erz), anzahl); }
     int press(Ore erz, int anzahl)  const { return ck::craft("press", CkOreName(erz), anzahl); }
+    int etch(Ore erz, int anzahl)   const { return ck::craft("etch", CkOreName(erz), anzahl); }
+    int fuse(Ore erz, int anzahl)   const { return ck::craft("fuse", CkOreName(erz), anzahl); }
 
     // ... und dasselbe mit Text, wie oben bei has() und sell().
     int wash(const std::string& erz)   const { return ck::craft("wash", erz.c_str(), -1); }
@@ -252,6 +303,8 @@ struct CkItem
     int harden(const std::string& erz) const { return ck::craft("harden", erz.c_str(), -1); }
     int refine(const std::string& erz) const { return ck::craft("refine", erz.c_str(), -1); }
     int press(const std::string& erz)  const { return ck::craft("press", erz.c_str(), -1); }
+    int etch(const std::string& erz)   const { return ck::craft("etch", erz.c_str(), -1); }
+    int fuse(const std::string& erz)   const { return ck::craft("fuse", erz.c_str(), -1); }
 
     int wash(const std::string& erz, int anzahl)   const { return ck::craft("wash", erz.c_str(), anzahl); }
     int smelt(const std::string& erz, int anzahl)  const { return ck::craft("smelt", erz.c_str(), anzahl); }
@@ -261,6 +314,8 @@ struct CkItem
     int harden(const std::string& erz, int anzahl) const { return ck::craft("harden", erz.c_str(), anzahl); }
     int refine(const std::string& erz, int anzahl) const { return ck::craft("refine", erz.c_str(), anzahl); }
     int press(const std::string& erz, int anzahl)  const { return ck::craft("press", erz.c_str(), anzahl); }
+    int etch(const std::string& erz, int anzahl)   const { return ck::craft("etch", erz.c_str(), anzahl); }
+    int fuse(const std::string& erz, int anzahl)   const { return ck::craft("fuse", erz.c_str(), anzahl); }
 
     // Legieren: aus zwei verschiedenen Erzen wird EIN neuer Stoff, der mehr
     // wert ist als seine Teile - und der sich danach normal weiterverarbeiten
@@ -295,6 +350,228 @@ struct CkItem
 };
 
 static const CkItem item;
+)KLICKER";
+
+// Zweites Stueck. Aufgeteilt ist es nur, weil MSVC eine Zeichenfolge nicht
+// laenger als 16380 Bytes annimmt (C2026) - inhaltlich gehoert es direkt an
+// das Stueck darueber.
+const char* kHeaderBottom2 = R"KLICKER(
+// ---------------------------------------------------------------------------
+// Was ein Erz IST
+// ---------------------------------------------------------------------------
+//
+// Frueher gab es diese Frage nicht, und das war das groesste Loch im Spiel:
+// welche Behandlung ein Erz will, stand nur im Wiki. Also musste man sie als
+// feste Kette abschreiben -
+//
+//     if (block.is(Gold))         block.mine(Cool);
+//     else if (block.is(Diamond)) block.mine(Heat);
+//
+// - und weil sich das Spiel endlos neue Erze ausdenkt, war diese Kette nie
+// fertig. Jeder neue Fund hiess: Wiki aufschlagen, Zeile nachtragen.
+//
+// info() dreht das um. Es gibt einen ZEIGER auf das, was man ueber ein Erz
+// weiss - und nullptr, wenn man es noch nicht untersucht hat. Damit passt ein
+// einziges Programm auf jedes Erz, auch auf die, die es beim Schreiben noch
+// gar nicht gab:
+//
+//     const OreInfo* i = info(block.ore());
+//     if (i == nullptr) assay(block.ore());   // erst kennenlernen
+//     else              block.mine(i->care);  // dann richtig abbauen
+struct OreInfo
+{
+    Ore         ore   = Any;
+    const char* name  = "";
+    int         value = 0;   // Grundwert, wie in data/erze.json
+    int         rarity = 0;  // je groesser, desto seltener
+    int         level = 0;   // ab welchem Level es ueberhaupt vorkommt
+    Care        care  = Plain;  // DAS ist der Grund, warum es info() gibt
+};
+
+// Der Name eines Erzes als Text. Praktisch als Schluessel fuer shared[...]:
+//
+//     shared[nameOf(block.ore())] = (int)Cool;
+inline const char* nameOf(Ore erz) { return CkOreName(erz); }
+
+// Was das Spiel schon verraten hat. Ein Erz, das einmal drinsteht, bleibt
+// drin - deshalb kostet ein zweites info() auf dasselbe Erz nichts mehr.
+//
+// Die Zeiger bleiben gueltig: eine std::map verschiebt ihre Eintraege nie.
+inline std::map<int, OreInfo>& CkOreCache()
+{
+    static std::map<int, OreInfo> cache;
+    return cache;
+}
+
+inline const OreInfo* info(Ore erz)
+{
+    const int nummer = (int)erz;
+    if (nummer < 0)
+        return nullptr;  // Any ist kein Erz, sondern eine Frage
+
+    std::map<int, OreInfo>& cache = CkOreCache();
+
+    const std::map<int, OreInfo>::iterator it = cache.find(nummer);
+    if (it != cache.end())
+        return &it->second;
+
+    int value = 0, rarity = 0, level = 0, care = 0;
+    if (!ck::oreInfo(nummer, value, rarity, level, care))
+        return nullptr;  // noch nicht untersucht - assay() hilft
+
+    OreInfo& e = cache[nummer];
+    e.ore      = erz;
+    e.name     = CkOreName(erz);
+    e.value    = value;
+    e.rarity   = rarity;
+    e.level    = level;
+    e.care     = (Care)care;
+    return &e;
+}
+
+// Ein unbekanntes Erz untersuchen. Kostet Geld und einen Moment Zeit; danach
+// weiss info() Bescheid.
+//
+// Rueckgabe: was es gekostet hat. 0 heisst: ging nicht - kein Geld, schon
+// bekannt, oder es laeuft bereits eine Untersuchung.
+inline int assay(Ore erz)
+{
+    const int bezahlt = ck::assayOre((int)erz);
+    if (bezahlt > 0)
+        CkOreCache().erase((int)erz);  // beim naechsten info() frisch fragen
+    return bezahlt;
+}
+
+// ---------------------------------------------------------------------------
+// Die Werkstatt
+// ---------------------------------------------------------------------------
+//
+// Ein Auftrag braucht Zeit, und es laufen nur so viele gleichzeitig, wie du
+// Oefen hast. Ohne diese Fragen erfaehrst du das nur, indem du es VERSUCHST -
+// und der Versuch kostet eine Zeile.
+struct CkJob
+{
+    // Laeuft gerade mindestens einer?
+    bool busy() const
+    {
+        int b = 0, i = 0, p = 0;
+        ck::jobState(b, i, p);
+        return b > 0;
+    }
+
+    // Wie viele Plaetze sind frei? 0 heisst: ein item.wash() ginge jetzt ins
+    // Leere.
+    int idle() const
+    {
+        int b = 0, i = 0, p = 0;
+        ck::jobState(b, i, p);
+        return i;
+    }
+
+    // Wie weit ist der, der als naechstes fertig wird? 0 bis 1.
+    float progress() const
+    {
+        int b = 0, i = 0, p = 0;
+        ck::jobState(b, i, p);
+        return (float)p / 1000.0f;
+    }
+};
+
+static const CkJob job;
+
+// ---------------------------------------------------------------------------
+// Warten, ohne Zeilen zu verbrennen
+// ---------------------------------------------------------------------------
+//
+// Eine Warteschleife kostet dich in JEDEM Durchgang eine Zeile:
+//
+//     while (!block.isThere()) { }        // teuer
+//     wait(block.loading());              // eine Zeile, fertig
+//
+// Waehrend des Wartens laeuft die Welt weiter: der Block waechst nach, die
+// Oefen arbeiten. Steht das Spiel still (F9 oder Vorbereitung), steht auch
+// das Warten still.
+inline void wait(float sekunden)
+{
+    if (sekunden < 0.0f)
+        sekunden = 0.0f;
+    ck::waitMs((int)(sekunden * 1000.0f + 0.5f));
+}
+
+// ---------------------------------------------------------------------------
+// Wie steht es gerade?
+// ---------------------------------------------------------------------------
+inline int money()
+{
+    int g = 0, l = 0, z = 0;
+    ck::status(g, l, z);
+    return g;
+}
+
+// Restzeit der Runde in Sekunden.
+//
+// Beides sind freie Funktionen und keine Felder eines "round"-Objekts: round
+// gibt es in <cmath> schon (std::round), und ein zweites daneben laesst sich
+// nicht uebersetzen. Ein Name, der mit der Standardbibliothek streitet, ist
+// keiner - auch wenn er sich schoener liest.
+inline float timeLeft()
+{
+    int g = 0, l = 0, z = 0;
+    ck::status(g, l, z);
+    return (float)l / 1000.0f;
+}
+
+// Wie viel Geld am Ende der Runde dastehen muss.
+inline int roundTarget()
+{
+    int g = 0, l = 0, z = 0;
+    ck::status(g, l, z);
+    return z;
+}
+
+// ---------------------------------------------------------------------------
+// Der Markt
+// ---------------------------------------------------------------------------
+//
+// Preise schwanken ueber die Runde. Wer zum richtigen Moment verkauft,
+// verdient mehr - und der richtige Moment laesst sich programmieren:
+//
+//     if (market.price(Gold) > market.average(Gold)) item.sell(Gold);
+//
+// Beide Zahlen gelten fuer EIN rohes Stueck bei voller Reinheit. Verarbeitet
+// ist es entsprechend mehr, aber der Ausschlag ist derselbe.
+struct CkMarket
+{
+    int price(Ore erz) const
+    {
+        int jetzt = 0, mittel = 0;
+        ck::marketOf(CkOreName(erz), jetzt, mittel);
+        return jetzt;
+    }
+
+    int average(Ore erz) const
+    {
+        int jetzt = 0, mittel = 0;
+        ck::marketOf(CkOreName(erz), jetzt, mittel);
+        return mittel;
+    }
+
+    int price(const std::string& erz) const
+    {
+        int jetzt = 0, mittel = 0;
+        ck::marketOf(erz.c_str(), jetzt, mittel);
+        return jetzt;
+    }
+
+    int average(const std::string& erz) const
+    {
+        int jetzt = 0, mittel = 0;
+        ck::marketOf(erz.c_str(), jetzt, mittel);
+        return mittel;
+    }
+};
+
+static const CkMarket market;
 
 inline void print(const char* text)        { ck::out(text); }
 inline void print(const std::string& text) { ck::out(text.c_str()); }
@@ -305,6 +582,20 @@ inline void print(const CkSharedValue& v)  { ck::out(std::to_string((int)v).c_st
 
 // print(Stone) soll "Stone" schreiben und nicht die Nummer dahinter.
 inline void print(Ore erz)                 { ck::out(CkOreName(erz)); }
+
+// print(info(Gold)) schreibt hin, was man ueber das Erz weiss. nullptr wird zu
+// "unknown" - so laesst sich auch das Nichtwissen anschauen.
+inline void print(const OreInfo* i)
+{
+    if (i == nullptr)
+    {
+        ck::out("unknown");
+        return;
+    }
+    ck::out((std::string(i->name) + " value " + std::to_string(i->value) + ", wants " +
+             ((i->care == Cool) ? "Cool" : ((i->care == Heat) ? "Heat" : "nothing")))
+                .c_str());
+}
 inline void print(Care c)
 {
     ck::out((c == Cool) ? "Cool" : ((c == Heat) ? "Heat" : "Plain"));
@@ -392,6 +683,44 @@ void line(int console, int n)
     std::printf("L %d %d\n", console, n);
     std::fflush(stdout);
     waitForGo();
+}
+
+// Eine Zeile innerhalb einer eigenen Funktion. Der einzige Unterschied ist der
+// Buchstabe: das Spiel rechnet sie mit dem Punkt "inline" nur halb an.
+void linef(int console, int n)
+{
+    std::printf("F %d %d\n", console, n);
+    std::fflush(stdout);
+    waitForGo();
+}
+
+// Eine Antwort abholen, die aus einer ganzen Zahl besteht.
+static int readInt()
+{
+    char buf[128];
+    if (!std::fgets(buf, sizeof(buf), stdin))
+        std::exit(0);
+    return std::atoi(buf);
+}
+
+// Eine Antwort mit mehreren Zahlen. Fehlende bleiben, wie sie waren.
+static void readInts(int* out, int wie)
+{
+    char buf[256];
+    if (!std::fgets(buf, sizeof(buf), stdin))
+        std::exit(0);
+
+    const char* p = buf;
+    for (int i = 0; i < wie; ++i)
+    {
+        while (*p == ' ')
+            ++p;
+        if (*p == 0 || *p == '\n')
+            return;
+        out[i] = std::atoi(p);
+        while (*p != 0 && *p != ' ' && *p != '\n')
+            ++p;
+    }
 }
 
 void mine(int care)
@@ -517,6 +846,112 @@ void addShared(const char* name, int delta)
     std::fflush(stdout);
 }
 
+// ---- Was ueber ein Erz bekannt ist ---------------------------------------
+
+bool oreInfo(int ore, int& value, int& rarity, int& level, int& care)
+{
+    std::printf("N %d\n", ore);
+    std::fflush(stdout);
+
+    int felder[5] = {0, 0, 0, 0, 0};
+    readInts(felder, 5);
+
+    if (felder[0] == 0)
+        return false;  // noch nicht untersucht
+
+    value  = felder[1];
+    rarity = felder[2];
+    level  = felder[3];
+    care   = felder[4];
+    return true;
+}
+
+int assayOre(int ore)
+{
+    std::printf("S %d\n", ore);
+    std::fflush(stdout);
+    return readInt();
+}
+
+// ---- Die Tasche ----------------------------------------------------------
+
+int bagCount(const char* erz)
+{
+    std::printf("D %s\n", erz ? erz : "");
+    std::fflush(stdout);
+    return readInt();
+}
+
+int bagPurity(const char* erz)
+{
+    std::printf("E %s\n", erz ? erz : "");
+    std::fflush(stdout);
+    return readInt();
+}
+
+// ---- Die Werkstatt -------------------------------------------------------
+
+void jobState(int& busy, int& idle, int& promille)
+{
+    std::printf("J\n");
+    std::fflush(stdout);
+
+    int felder[3] = {0, 0, 0};
+    readInts(felder, 3);
+
+    busy     = felder[0];
+    idle     = felder[1];
+    promille = felder[2];
+}
+
+// ---- Geld, Uhr, Markt ----------------------------------------------------
+
+void status(int& money, int& leftMs, int& target)
+{
+    std::printf("Y\n");
+    std::fflush(stdout);
+
+    int felder[3] = {0, 0, 0};
+    readInts(felder, 3);
+
+    money  = felder[0];
+    leftMs = felder[1];
+    target = felder[2];
+}
+
+void marketOf(const char* erz, int& jetzt, int& mittel)
+{
+    std::printf("R %s\n", erz ? erz : "");
+    std::fflush(stdout);
+
+    int felder[2] = {0, 0};
+    readInts(felder, 2);
+
+    jetzt  = felder[0];
+    mittel = felder[1];
+}
+
+// ---- Warten --------------------------------------------------------------
+//
+// Gewartet wird NICHT hier im Kind, sondern draussen im Spiel: es antwortet
+// erst, wenn die Zeit vorbei ist. Nur so steht das Warten auch still, wenn
+// jemand das Spiel anhaelt - ein sleep() hier drin liefe stur weiter.
+void waitMs(int ms)
+{
+    if (ms < 0)
+        ms = 0;
+    std::printf("Z %d\n", ms);
+    std::fflush(stdout);
+    readInt();
+}
+
+int blockLoadingMs()
+{
+    std::printf("T\n");
+    std::fflush(stdout);
+    return readInt();
+}
+
 }
 
 namespace {
@@ -554,6 +989,24 @@ struct Toolchain
     std::vector<std::string> env;       // "NAME=WERT", leer = eigene erben
     std::string              problem;   // gefuellt, wenn nichts gefunden wurde
 };
+
+// Sucht den Compiler. Steht je System einmal da, siehe unten.
+Toolchain BuildToolchain();
+
+// Einmal suchen, fuer alle. Ein static mit Initialisierer ist threadsicher:
+// der erste, der hier durchkommt, sucht - alle anderen WARTEN so lange und
+// bekommen danach dasselbe Ergebnis.
+//
+// Frueher stand hier ein "static bool done", und das reichte auch: es gab nur
+// einen Uebersetzer. Seit jede Konsole ihr eigenes Programm ist, laufen
+// mehrere gleichzeitig - und dann sah der zweite Thread ein done == true,
+// waehrend der erste noch mitten in vcvars64.bat steckte. Ergebnis: "Der
+// C++-Compiler wurde nicht gefunden", obwohl er da war.
+const Toolchain& GetToolchain()
+{
+    static const Toolchain tc = BuildToolchain();
+    return tc;
+}
 
 #ifdef _WIN32
 
@@ -597,13 +1050,13 @@ std::string FindVcVars()
     return std::string();
 }
 
-const Toolchain& GetToolchain()
+// Einmal suchen, dann steht es. Das Ergebnis wird zurueckgegeben und nicht in
+// einem Feld abgelegt - siehe GetToolchain() weiter unten: seit jede Konsole
+// ihr eigenes Programm ist, laufen mehrere Uebersetzer gleichzeitig, und die
+// duerfen sich hier nicht in die Quere kommen.
+Toolchain BuildToolchain()
 {
-    static Toolchain tc;
-    static bool      done = false;
-    if (done)
-        return tc;
-    done = true;
+    Toolchain tc;
 
     const std::string vcvars = FindVcVars();
     if (vcvars.empty())
@@ -712,13 +1165,9 @@ std::vector<std::string> CompileCommand(const Toolchain& tc, const std::string& 
 
 #else  // Linux
 
-const Toolchain& GetToolchain()
+Toolchain BuildToolchain()
 {
-    static Toolchain tc;
-    static bool      done = false;
-    if (done)
-        return tc;
-    done = true;
+    Toolchain tc;
 
     // g++ zuerst, clang++ als Ersatz. Beide koennen alles, was das Spiel
     // braucht - und eines von beiden ist auf einem Rechner mit Entwicklerkram
@@ -1058,6 +1507,9 @@ void ParseCompilerError(const std::string& out, std::string& message, int& conso
 //
 // Vor jedes Stueck kommt ein  #line 1 "konsoleN"  - dadurch meldet der Compiler
 // Fehler mit der richtigen Konsole und der richtigen Zeilennummer.
+// Setzt die Stuecke EINES Programms zusammen: erst der gemeinsame Vorrat
+// (alle Konsolen ohne main), dann die eine mit main. In C++ muss eine Variable
+// vor ihrer Benutzung stehen - so sieht das main automatisch alles andere.
 std::string CombineSources(const std::vector<SourceFile>& files)
 {
     std::string out;
@@ -1089,46 +1541,89 @@ std::string CombineSources(const std::vector<SourceFile>& files)
 // Uebersetzen (laeuft auf einem eigenen Thread, damit das Fenster fluessig bleibt)
 // ---------------------------------------------------------------------------
 
-static Native::Build CompileToExe(const std::vector<SourceFile>& files, const std::string& header,
-                                  int runId, const std::string& lastCombined,
-                                  const std::string& lastExe, const std::string& lastDir);
+static Native::Build CompileToExe(const std::vector<SourceFile>& teile, int console,
+                                  const std::string& header, int runId,
+                                  const std::string& lastKey, const std::string& lastExe,
+                                  const std::string& lastDir);
 
 Native::~Native()
 {
     stop();
-    if (mBuild.valid())
-        mBuild.wait();
+
+    // Die Uebersetzer laufen auf eigenen Threads und schreiben in Ordner, die
+    // gleich verschwinden - abwarten, bevor hier alles wegfaellt.
+    for (std::future<Build>& f : mBuilds)
+        if (f.valid())
+            f.wait();
 }
 
 void Native::start(const std::vector<SourceFile>& files, const OrePlan& ores)
 {
     stop();
 
-    mConsole    = 0;
-    mLine       = 0;
     mErrConsole = 0;
     mErrLine    = 0;
-    mBudget     = 0.0f;
-    mAwaitingGo = false;
-    mPending.clear();
-    mMsg   = "compiling ...";
+
+    // Aufteilen: was ein main() hat, wird ein eigenes Programm. Der Rest ist
+    // gemeinsamer Vorrat und wandert in jedes davon.
+    std::vector<SourceFile> vorrat;
+    std::vector<SourceFile> starter;
+
+    for (const SourceFile& f : files)
+    {
+        if (ContainsMainFunction(f.code))
+            starter.push_back(f);
+        else
+            vorrat.push_back(f);
+    }
+
+    if (starter.empty())
+    {
+        // Frueher kam das als Uebersetzungsfehler zurueck. Es ist aber keiner -
+        // es fehlt schlicht ein Anfang, und das kann man sofort sagen.
+        mPhase = Phase::Failed;
+        mMsg = "No console has an  int main() { ... }  - that is where a program starts.";
+        return;
+    }
+
+    mMsg   = (starter.size() > 1) ? ("compiling " + std::to_string(starter.size()) + " programs ...")
+                                  : std::string("compiling ...");
     mPhase = Phase::Compiling;
 
     static int counter = 0;
     const int  id      = ++counter;
 
-    const std::string lastCombined = mLastCombined;
-    const std::string lastExe      = mLastExe;
-    const std::string lastDir      = mLastDir;
-
     // Die Erzliste kann sich zwischen zwei Laeufen aendern - das Spiel wuerfelt
     // ja neue Erze aus. Deshalb wird der Header hier gebaut und wandert mit in
     // den Vergleich: sonst startete das Spiel eine .exe mit einer alten Liste
     // noch einmal.
-    const std::string header = std::string(kHeaderTop) + OreEnumSource(ores) + kHeaderBottom;
+    const std::string header =
+        std::string(kHeaderTop) + OreEnumSource(ores) + kHeaderBottom + kHeaderBottom2;
 
-    mBuild = std::async(std::launch::async, [files, header, id, lastCombined, lastExe, lastDir]
-                        { return CompileToExe(files, header, id, lastCombined, lastExe, lastDir); });
+    // Je Programm ein Bauauftrag, und alle nebeneinander: nacheinander wuerde
+    // das Uebersetzen bei drei Konsolen dreimal so lange dauern, und so lange
+    // steht der Spieler vor einem Knopf, der nichts tut.
+    for (const SourceFile& haupt : starter)
+    {
+        std::vector<SourceFile> teile = vorrat;
+        teile.push_back(haupt);
+
+        const int   konsole = haupt.id;
+        const auto  it      = mCache.find(konsole);
+        std::string lastKey, lastExe, lastDir;
+        if (it != mCache.end())
+        {
+            lastKey = it->second.key;
+            lastExe = it->second.exe;
+            lastDir = it->second.dir;
+        }
+
+        mBuilds.push_back(std::async(std::launch::async,
+                                     [teile, konsole, header, id, lastKey, lastExe, lastDir] {
+                                         return CompileToExe(teile, konsole, header, id, lastKey,
+                                                             lastExe, lastDir);
+                                     }));
+    }
 }
 
 void Native::fail(const std::string& message, int console, int line)
@@ -1138,8 +1633,6 @@ void Native::fail(const std::string& message, int console, int line)
     mMsg        = message;
     mErrConsole = console;
     mErrLine    = line;
-    mConsole    = 0;
-    mLine       = 0;
 }
 
 void Native::togglePause()
@@ -1152,13 +1645,9 @@ void Native::togglePause()
 
 void Native::stop()
 {
-    closeChild();
+    closeAll();
     if (mPhase == Phase::Running || mPhase == Phase::Paused || mPhase == Phase::Compiling)
         mPhase = Phase::Idle;
-    mConsole    = 0;
-    mLine       = 0;
-    mAwaitingGo = false;
-    mPending.clear();
 }
 
 RunState Native::state() const
@@ -1174,56 +1663,84 @@ RunState Native::state() const
     }
 }
 
-void Native::closeChild()
+// Irgendeine laufende Stelle - fuer den Absturzbericht. Fuer die Markierung im
+// Editor ist lineIn() das Richtige: dort laufen ja mehrere gleichzeitig.
+int Native::currentConsole() const
 {
-    mChild.close();
+    for (const std::unique_ptr<Proc>& proc : mProcs)
+        if (!proc->done && proc->line > 0)
+            return proc->atConsole;
+    return 0;
+}
+
+int Native::currentLine() const
+{
+    for (const std::unique_ptr<Proc>& proc : mProcs)
+        if (!proc->done && proc->line > 0)
+            return proc->line;
+    return 0;
+}
+
+int Native::lineIn(int console) const
+{
+    for (const std::unique_ptr<Proc>& proc : mProcs)
+        if (!proc->done && proc->atConsole == console)
+            return proc->line;
+    return 0;
+}
+
+bool Native::anyRunning() const
+{
+    for (const std::unique_ptr<Proc>& proc : mProcs)
+        if (!proc->done)
+            return true;
+    return false;
+}
+
+void Native::closeAll()
+{
+    for (std::unique_ptr<Proc>& proc : mProcs)
+        proc->child.close();
+    mProcs.clear();
 }
 
 void Native::finish(const char* reason)
 {
-    mPhase      = Phase::Done;
-    mConsole    = 0;
-    mLine       = 0;
-    mAwaitingGo = false;
-    if (mMsg.empty() || mMsg == "running" || mMsg == "compiling ...")
+    mPhase = Phase::Done;
+    if (mMsg.empty() || mMsg == "running" || mMsg.rfind("compiling", 0) == 0)
         mMsg = reason;
-    closeChild();
+    closeAll();
 }
 
-void Native::sendChild(const char* text)
+void Native::sendTo(Proc& proc, const char* text)
 {
-    mChild.write(text);
+    proc.child.write(text);
 }
 
-bool Native::launch(const Build& build)
-{
-    return mChild.start(build.exe, build.dir);
-}
-
-void Native::pump(World& world, const OrePlan& ores, const CraftPlan& craft,
+void Native::pump(Proc& proc, World& world, const OrePlan& ores, const CraftPlan& craft,
                   const AlloyPlan& alloys, const Limits& limits)
 {
-    if (!mChild.started())
+    if (!proc.child.started())
         return;
 
     // Holen, was da ist - read() bleibt nicht stehen, wenn gerade nichts kommt.
     char        buf[2048];
     std::size_t got = 0;
-    while ((got = mChild.read(buf, sizeof(buf))) > 0)
-        mPending.append(buf, got);
+    while ((got = proc.child.read(buf, sizeof(buf))) > 0)
+        proc.pending.append(buf, got);
 
     std::size_t nl;
-    while ((nl = mPending.find('\n')) != std::string::npos)
+    while ((nl = proc.pending.find('\n')) != std::string::npos)
     {
-        std::string entry = mPending.substr(0, nl);
-        mPending.erase(0, nl + 1);
+        std::string entry = proc.pending.substr(0, nl);
+        proc.pending.erase(0, nl + 1);
         while (!entry.empty() && entry.back() == '\r')
             entry.pop_back();
-        handle(entry, world, ores, craft, alloys, limits);
+        handle(proc, entry, world, ores, craft, alloys, limits);
     }
 }
 
-void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
+void Native::handle(Proc& proc, const std::string& msg, World& world, const OrePlan& ores,
                     const CraftPlan& craft, const AlloyPlan& alloys, const Limits& limits)
 {
     if (msg.empty())
@@ -1232,12 +1749,18 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
     switch (msg[0])
     {
     case 'L':  // "L konsole zeile"
+    case 'F':  // dasselbe, aber in einer eigenen Funktion - siehe proc.lineCost
     {
-        const char* p = msg.c_str() + 1;
-        mConsole      = std::atoi(p);
+        const char* p   = msg.c_str() + 1;
+        proc.atConsole  = std::atoi(p);
         const std::size_t sep = msg.rfind(' ');
-        mLine         = (sep != std::string::npos) ? std::atoi(msg.c_str() + sep + 1) : 0;
-        mAwaitingGo   = true;
+        proc.line       = (sep != std::string::npos) ? std::atoi(msg.c_str() + sep + 1) : 0;
+        proc.awaitingGo = true;
+
+        // Der Punkt "inline" macht Zeilen in eigenen Funktionen billiger.
+        // Ohne ihn kostet drinnen wie draussen dasselbe - und dann ist eine
+        // Funktion langsamer als derselbe Code zweimal hingeschrieben.
+        proc.lineCost = (msg[0] == 'F') ? limits.insideFunctionCost() : 1.0f;
         break;
     }
 
@@ -1273,11 +1796,11 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
     }
 
     case 'Q':
-        sendChild(world.blockAlive ? "1\n" : "0\n");
+        sendTo(proc, world.blockAlive ? "1\n" : "0\n");
         break;
 
     case 'B':  // block.ore() - welches Erz steht gerade da? -1 = keins
-        sendChild((std::to_string(world.blockAlive ? world.ore : -1) + "\n").c_str());
+        sendTo(proc, (std::to_string(world.blockAlive ? world.ore : -1) + "\n").c_str());
         break;
 
     case 'K':  // verkaufen. Ohne Zusatz alles, sonst "K <anzahl> <erz>"
@@ -1297,7 +1820,7 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
             geld = world.sell(ores, craft);
         }
 
-        sendChild((std::to_string(geld) + "\n").c_str());
+        sendTo(proc, (std::to_string(geld) + "\n").c_str());
         mMsg = (geld > 0) ? ("Sold: " + ui::Money(geld) + " money.")
                           : std::string("Nothing to sell.");
         break;
@@ -1317,8 +1840,17 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
             wie = world.startCraft(ores, craft, limits, rest.substr(0, a), rest.substr(b + 1),
                                    std::atoi(rest.c_str() + a + 1));
 
-        sendChild((std::to_string(wie) + "\n").c_str());
-        mMsg = (wie > 0) ? (world.craftName + ": " + std::to_string(wie) + " pieces.")
+        sendTo(proc, (std::to_string(wie) + "\n").c_str());
+
+        // Wie der Schritt heisst, weiss der Plan. Frueher stand es in der Welt -
+        // aber jetzt laufen mehrere Auftraege, und keiner davon ist "der" Auftrag.
+        const CraftStep*  schritt   = (a != std::string::npos)
+                                          ? craft.find(rest.substr(0, a))
+                                          : nullptr;
+        const std::string wieHeisst = (schritt != nullptr) ? schritt->name
+                                                           : std::string("Job");
+
+        mMsg = (wie > 0) ? (wieHeisst + ": " + std::to_string(wie) + " pieces.")
                          : std::string("Processing did not work.");
         break;
     }
@@ -1336,7 +1868,7 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
             wie = world.startAlloy(ores, alloys, limits, rest.substr(cut + 1),
                                    std::atoi(rest.c_str()), false);
 
-        sendChild((std::to_string(wie) + "\n").c_str());
+        sendTo(proc, (std::to_string(wie) + "\n").c_str());
         mMsg = (wie > 0) ? ("Alloying: " + std::to_string(wie) + " pieces.")
                          : std::string("Alloying did not work.");
         break;
@@ -1345,14 +1877,136 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
     case 'P':  // item.canAlloy(...) - wie viele gingen gerade?
     {
         const std::string name = (msg.size() > 2) ? msg.substr(2) : std::string();
-        sendChild((std::to_string(world.canAlloy(ores, alloys, limits, name)) + "\n").c_str());
+        sendTo(proc, (std::to_string(world.canAlloy(ores, alloys, limits, name)) + "\n").c_str());
         break;
     }
 
     case 'I':  // item.has(...) - in die Tasche schauen
     {
         const std::string erz = (msg.size() > 2) ? msg.substr(2) : std::string();
-        sendChild((std::to_string(world.inventoryOf(ores, erz)) + "\n").c_str());
+        sendTo(proc, (std::to_string(world.inventoryOf(ores, erz)) + "\n").c_str());
+        break;
+    }
+
+    case 'N':  // info(erz):  N <nummer>  ->  "bekannt wert seltenheit level behandlung"
+    {
+        const int nummer = (msg.size() > 2) ? std::atoi(msg.c_str() + 2) : -1;
+
+        if (!world.knowsOre(ores, nummer))
+        {
+            sendTo(proc, "0 0 0 0 0\n");
+            break;
+        }
+
+        const Ore& erz = ores.ores[(std::size_t)nummer];
+        char       antwort[96];
+        std::snprintf(antwort, sizeof(antwort), "1 %d %d %d %d\n", erz.value,
+                      (int)(erz.rarity + 0.5f), erz.minLevel, (int)OreCare(ores, nummer));
+        sendTo(proc, antwort);
+        break;
+    }
+
+    case 'S':  // assay(erz):  S <nummer>  ->  was es gekostet hat
+    {
+        const int nummer  = (msg.size() > 2) ? std::atoi(msg.c_str() + 2) : -1;
+        const int bezahlt = world.startAssay(ores, nummer, limits.assayCost, limits.assaySeconds);
+
+        sendTo(proc, (std::to_string(bezahlt) + "\n").c_str());
+
+        if (bezahlt > 0)
+            mMsg = "Examining " + OreOf(ores, nummer).name + " ...";
+        else if (world.knowsOre(ores, nummer))
+            mMsg = OreOf(ores, nummer).name + " is already known.";
+        else if (world.assaying)
+            mMsg = "An examination is already running.";
+        else
+            mMsg = "Not enough money to examine that.";
+        break;
+    }
+
+    case 'D':  // item.count(erz)
+    {
+        const std::string erz = (msg.size() > 2) ? msg.substr(2) : std::string();
+        sendTo(proc, (std::to_string(world.inventoryOf(ores, erz)) + "\n").c_str());
+        break;
+    }
+
+    case 'E':  // item.purity(erz)
+    {
+        const std::string erz = (msg.size() > 2) ? msg.substr(2) : std::string();
+        sendTo(proc, (std::to_string(world.inventoryPurity(ores, erz)) + "\n").c_str());
+        break;
+    }
+
+    case 'J':  // job.busy() / idle() / progress()
+    {
+        const World::Job* naechster = world.nextDone();
+        const int         promille =
+            (naechster != nullptr) ? (int)(naechster->progress() * 1000.0f) : 0;
+
+        char antwort[64];
+        std::snprintf(antwort, sizeof(antwort), "%d %d %d\n", world.jobsRunning(),
+                      world.jobsIdle(), promille);
+        sendTo(proc, antwort);
+        break;
+    }
+
+    case 'Y':  // money() / round.left() / round.target()
+    {
+        char antwort[96];
+        std::snprintf(antwort, sizeof(antwort), "%d %d %d\n", world.money,
+                      (int)(world.roundLeft * 1000.0f), world.roundTargetNow);
+        sendTo(proc, antwort);
+        break;
+    }
+
+    case 'R':  // market.price(erz) und market.average(erz)
+    {
+        const std::string name   = (msg.size() > 2) ? msg.substr(2) : std::string();
+        const int         nummer = FindOre(ores, name);
+
+        if (nummer < 0)
+        {
+            sendTo(proc, "0 0\n");
+            break;
+        }
+
+        // Ein rohes Stueck bei voller Reinheit. Verarbeitet ist es mehr wert,
+        // aber der Ausschlag ist derselbe - und so ist die Zahl zwischen zwei
+        // Erzen vergleichbar.
+        const int jetzt  = StackValue(ores, craft, nummer, (int)OreState::Raw, 100, 1,
+                                      world.moneyPerBlock, world.marketFactor(nummer));
+        const int mittel = StackValue(ores, craft, nummer, (int)OreState::Raw, 100, 1,
+                                      world.moneyPerBlock, 1.0f);
+
+        char antwort[64];
+        std::snprintf(antwort, sizeof(antwort), "%d %d\n", jetzt, mittel);
+        sendTo(proc, antwort);
+        break;
+    }
+
+    case 'Z':  // wait(sekunden):  Z <millisekunden>
+    {
+        const int ms = (msg.size() > 2) ? std::atoi(msg.c_str() + 2) : 0;
+
+        // Nicht hier antworten: das macht update(), wenn die Zeit um ist.
+        // Solange haengt das Kind an seinem fgets - und weil die Zeit im Spiel
+        // gezaehlt wird, steht auch das Warten, wenn das Spiel steht.
+        proc.waiting  = true;
+        proc.waitLeft = (float)ms / 1000.0f;
+
+        if (proc.waitLeft <= 0.0f)
+        {
+            proc.waiting = false;
+            sendTo(proc, "1\n");
+        }
+        break;
+    }
+
+    case 'T':  // block.loading() - wie lange noch, bis er wieder dasteht
+    {
+        const float rest = world.blockAlive ? 0.0f : world.respawnTimer;
+        sendTo(proc, (std::to_string((int)(rest * 1000.0f)) + "\n").c_str());
         break;
     }
 
@@ -1367,7 +2021,7 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
         const std::string name = msg.substr(2);
         const auto        it   = world.shared.find(name);
         const int         value = (it != world.shared.end()) ? it->second : 0;
-        sendChild((std::to_string(value) + "\n").c_str());
+        sendTo(proc, (std::to_string(value) + "\n").c_str());
         break;
     }
 
@@ -1390,7 +2044,13 @@ void Native::handle(const std::string& msg, World& world, const OrePlan& ores,
     }
 
     case 'X':
-        finish("Done.");
+        // Nur DIESES Programm ist durch. Die anderen laufen weiter - erst wenn
+        // das letzte fertig ist, ist der Lauf zu Ende (siehe update).
+        proc.done       = true;
+        proc.line       = 0;
+        proc.awaitingGo = false;
+        proc.waiting    = false;
+        proc.child.close();
         break;
 
     default:
@@ -1403,73 +2063,138 @@ void Native::update(float dt, World& world, const OrePlan& ores, const CraftPlan
 {
     if (mPhase == Phase::Compiling)
     {
-        if (!mBuild.valid())
+        if (mBuilds.empty())
         {
             mPhase = Phase::Idle;
             return;
         }
-        if (mBuild.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
-            return;
 
-        const Build build = mBuild.get();
-        if (!build.ok)
+        // Erst weiter, wenn ALLE fertig sind. Die Programme sollen gemeinsam
+        // losgehen - eines, das schon eine Sekunde vor den anderen abbaut,
+        // waere ein Vorsprung, den niemand gewollt hat.
+        for (std::future<Build>& f : mBuilds)
         {
-            mPhase      = Phase::Failed;
-            mErrConsole = build.errorConsole;
-            mErrLine    = build.errorLine;
-            mMsg        = build.error;
-            mConsole    = 0;
-            mLine       = 0;
-            return;
+            if (!f.valid())
+            {
+                mBuilds.clear();
+                mPhase = Phase::Idle;
+                return;
+            }
+            if (f.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+                return;
         }
-        if (!launch(build))
-        {
-            mPhase = Phase::Failed;
-            mMsg   = "The program could not be started.";
-            return;
-        }
-        mLastCombined = build.cacheKey;
-        mLastExe      = build.exe;
-        mLastDir      = build.dir;
 
-        mPhase  = Phase::Running;
-        mMsg    = "running";
-        mBudget = 1.0f;  // die erste Zeile sofort freigeben
+        std::vector<Build> builds;
+        for (std::future<Build>& f : mBuilds)
+            builds.push_back(f.get());
+        mBuilds.clear();
+
+        // Hakt es an einem, wird gar nichts gestartet. Ein halb laufendes
+        // Programm waere schlimmer als keines: der Spieler sucht dann den
+        // Fehler in der falschen Konsole.
+        for (const Build& build : builds)
+        {
+            if (!build.ok)
+            {
+                mPhase      = Phase::Failed;
+                mErrConsole = build.errorConsole;
+                mErrLine    = build.errorLine;
+                mMsg        = build.error;
+                return;
+            }
+        }
+
+        for (const Build& build : builds)
+        {
+            std::unique_ptr<Proc> proc(new Proc());
+            proc->console = build.console;
+
+            if (!proc->child.start(build.exe, build.dir))
+            {
+                closeAll();
+                mPhase = Phase::Failed;
+                mMsg   = "Console " + std::to_string(build.console) +
+                       ": the program could not be started.";
+                return;
+            }
+
+            // Die erste Zeile sofort freigeben, sonst haengt jedes Programm
+            // erst einmal einen Takt lang in der Luft.
+            proc->budget = 1.0f;
+            mProcs.push_back(std::move(proc));
+
+            Cached& c = mCache[build.console];
+            c.key     = build.cacheKey;
+            c.exe     = build.exe;
+            c.dir     = build.dir;
+        }
+
+        mPhase = Phase::Running;
+        mMsg   = "running";
         return;
     }
 
     if (mPhase != Phase::Running && mPhase != Phase::Paused)
         return;
 
-    pump(world, ores, craft, alloys, limits);
-
-    if (mPhase == Phase::Running)
+    for (std::unique_ptr<Proc>& up : mProcs)
     {
-        mBudget += dt * mLinesPerSecond;
+        Proc& proc = *up;
+        if (proc.done)
+            continue;
 
-        // Hoechstens eine Zeile auf Vorrat. Sonst spart das Spiel waehrend
-        // einer Pause oder beim Kompilieren Zeilen an und feuert sie danach
-        // auf einen Schlag ab - das sieht aus, als holte es etwas nach.
-        if (mBudget > 1.0f)
-            mBudget = 1.0f;
+        pump(proc, world, ores, craft, alloys, limits);
 
-        if (mAwaitingGo && mBudget >= 1.0f)
+        if (mPhase == Phase::Running)
         {
-            mBudget -= 1.0f;
-            mAwaitingGo = false;
-            sendChild("g\n");
+            // wait(...) laeuft ab, bevor irgendeine Zeile drankommt. Steht die
+            // Welt still, laeuft auch das Warten nicht weiter - deshalb wird
+            // hier gezaehlt und nicht im Kind.
+            if (proc.waiting)
+            {
+                if (!world.frozen)
+                    proc.waitLeft -= dt;
+
+                if (proc.waitLeft <= 0.0f)
+                {
+                    proc.waiting  = false;
+                    proc.waitLeft = 0.0f;
+                    sendTo(proc, "1\n");
+                }
+            }
+
+            // Jedes Programm hat sein EIGENES Budget. Zwei Konsolen arbeiten
+            // damit wirklich gleichzeitig und nicht abwechselnd - dafuer ist
+            // "+1 Konsole" im Baum teuer und selten.
+            proc.budget += dt * mLinesPerSecond;
+
+            // Hoechstens eine Zeile auf Vorrat. Sonst spart das Spiel waehrend
+            // einer Pause oder beim Kompilieren Zeilen an und feuert sie danach
+            // auf einen Schlag ab - das sieht aus, als holte es etwas nach.
+            if (proc.budget > 1.0f)
+                proc.budget = 1.0f;
+
+            if (proc.awaitingGo && proc.budget >= proc.lineCost)
+            {
+                proc.budget -= proc.lineCost;
+                proc.awaitingGo = false;
+                sendTo(proc, "g\n");
+            }
         }
-    }
 
-    if (mChild.started() && !mChild.alive())
-    {
-        pump(world, ores, craft, alloys, limits);
-        if (mPhase == Phase::Running || mPhase == Phase::Paused)
+        // Ist das Kind weg? Dann noch einmal nachsehen, ob in der Roehre etwas
+        // liegt - das letzte print() soll nicht verlorengehen.
+        if (proc.child.started() && !proc.child.alive())
         {
-            const unsigned long code = mChild.exitCode();
+            pump(proc, world, ores, craft, alloys, limits);
+
+            const unsigned long code = proc.child.exitCode();
             if (code == 0)
             {
-                finish("Done.");
+                proc.done       = true;
+                proc.line       = 0;
+                proc.awaitingGo = false;
+                proc.child.close();
             }
             else
             {
@@ -1478,60 +2203,55 @@ void Native::update(float dt, World& world, const OrePlan& ores, const CraftPlan
                 // sie hier gerettet, bevor die laufende Anzeige geloescht wird -
                 // sonst stuende der Spieler vor einem Absturz ohne jeden
                 // Anhaltspunkt.
-                mErrConsole = mConsole;
-                mErrLine    = mLine;
+                mErrConsole = proc.atConsole;
+                mErrLine    = proc.line;
 
-                mPhase   = Phase::Failed;
-                mConsole = 0;
-                mLine    = 0;
-                mMsg     = CrashText(code);
-                closeChild();
+                // Ein Absturz beendet den ganzen Lauf, nicht nur dieses eine
+                // Programm. Die anderen arbeiten an derselben Welt weiter, und
+                // dabei zuzusehen, waehrend eines abgestuerzt ist, hilft
+                // niemandem beim Suchen.
+                mMsg   = "Console " + std::to_string(proc.console) + ": " + CrashText(code);
+                mPhase = Phase::Failed;
+                closeAll();
+                return;
             }
         }
     }
+
+    // Erst wenn das letzte main() durch ist, ist der Lauf zu Ende.
+    if ((mPhase == Phase::Running || mPhase == Phase::Paused) && !mProcs.empty() && !anyRunning())
+        finish("Done.");
 }
 
 // ---------------------------------------------------------------------------
 
-static Native::Build CompileToExe(const std::vector<SourceFile>& files, const std::string& header,
-                                  int runId, const std::string& lastCombined,
-                                  const std::string& lastExe, const std::string& lastDir)
+// Uebersetzt EIN Programm: den gemeinsamen Vorrat plus die eine Konsole, die
+// das main() mitbringt. Wie viele Programme es gibt, entscheidet Native::start -
+// hier geht es nur noch um dieses eine.
+static Native::Build CompileToExe(const std::vector<SourceFile>& teile, int console,
+                                  const std::string& header, int runId,
+                                  const std::string& lastKey, const std::string& lastExe,
+                                  const std::string& lastDir)
 {
     Native::Build build;
-
-    // Erst pruefen, ob es ueberhaupt ein Programm gibt. Ohne diese Pruefung
-    // kaeme nur eine kryptische Linker-Meldung.
-    std::vector<int> withMain;
-    for (const SourceFile& f : files)
-        if (ContainsMainFunction(f.code))
-            withMain.push_back(f.id);
-
-    if (withMain.empty())
-    {
-        build.error = "No console has an  int main() { ... }  - that is where the program starts.";
-        return build;
-    }
-    if (withMain.size() > 1)
-    {
-        build.error = "Console " + std::to_string(withMain[0]) + " and console " +
-                      std::to_string(withMain[1]) +
-                      " both have a main(). There may only be one.";
-        build.errorConsole = withMain[1];
-        return build;
-    }
+    build.console = console;
 
     // Hat sich seit dem letzten Mal nichts geaendert? Dann das fertige
     // Programm einfach noch einmal starten. Beim Klicken am Spielanfang ist
     // genau das der Normalfall.
+    //
+    // Gemerkt wird das je Konsole: aendert man nur eine von dreien, wird auch
+    // nur die eine neu uebersetzt.
+    //
     // Der Header steht mit im Vergleich, sonst zaehlte eine neue Erzliste als
     // "hat sich nichts geaendert".
-    build.combined = CombineSources(files);
+    build.combined = CombineSources(teile);
 
     const std::string key = header + build.combined;
 
     build.cacheKey = key;
 
-    if (!lastExe.empty() && key == lastCombined && FileExists(lastExe))
+    if (!lastExe.empty() && key == lastKey && FileExists(lastExe))
     {
         build.ok     = true;
         build.reused = true;
@@ -1547,7 +2267,10 @@ static Native::Build CompileToExe(const std::vector<SourceFile>& files, const st
         return build;
     }
 
-    const std::string dir = base + "r" + std::to_string(runId) + Sep();
+    // Jedes Programm braucht seinen eigenen Ordner - sonst schreiben zwei
+    // Uebersetzer gleichzeitig dieselbe run.cpp, und das Ergebnis ist Zufall.
+    const std::string dir =
+        base + "r" + std::to_string(runId) + "_" + std::to_string(console) + Sep();
     MakeDir(dir);
     build.dir = dir;
 

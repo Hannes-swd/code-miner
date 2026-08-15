@@ -20,8 +20,15 @@ struct Token
 // Dasselbe Verfahren wie bei der Instrumentierung, damit ein "while" in einem
 // Kommentar nicht mitzaehlt.
 //
-// Die offene Klammer kommt als eigenes Zeichen mit durch: nur an ihr sieht man
-// den Unterschied zwischen "int zahl" (Variable) und "int zaehle(" (Funktion).
+// Vier Satzzeichen kommen als eigene Marke mit durch:
+//
+//   (     nur an ihr sieht man den Unterschied zwischen "int zahl" (Variable)
+//         und "int zaehle(" (Funktion). Sie entscheidet ausserdem, ob ein Wort
+//         wie "count" ein Befehl ist oder nur eine Variable, die so heisst.
+//   { }   damit sich verfolgen laesst, in welchem Funktionsrumpf man steckt -
+//         ohne das liesse sich Rekursion nicht erkennen.
+//   ?     der Bedingungsoperator. Er ist eine Verzweigung wie jede andere und
+//         war, solange er nicht mitkam, das groesste Loch in dieser Pruefung.
 std::vector<Token> Tokenize(const std::string& src)
 {
     std::vector<Token> out;
@@ -76,9 +83,17 @@ std::vector<Token> Tokenize(const std::string& src)
             continue;
         }
 
-        if (c == '(')
+        if (c == '(' || c == '{' || c == '}')
         {
-            out.push_back({"(", line});
+            out.push_back({std::string(1, c), line});
+            continue;
+        }
+
+        // Der Bedingungsoperator - aber nicht "?:" aus einem Kommentar heraus
+        // und nicht das "?" eines Trigraphen, den es seit C++17 nicht mehr gibt.
+        if (c == '?')
+        {
+            out.push_back({"?", line});
             continue;
         }
 
@@ -104,9 +119,24 @@ bool IsTypeWord(const std::string& w)
            w == "size_t" || w == "void";
 }
 
+// Behaelter. Sie sind KEIN Typwort im Sinne von oben: was in ihnen steckt,
+// bringt seinen eigenen Typ mit ("vector<int> v" zaehlt ueber das int als eine
+// Variable). Hier stehen sie nur, damit der Punkt "container" sie sperren kann.
+bool IsContainerWord(const std::string& w)
+{
+    return w == "vector" || w == "array" || w == "map" || w == "set" || w == "list" ||
+           w == "deque" || w == "unordered_map" || w == "unordered_set" || w == "pair" ||
+           w == "tuple";
+}
+
+bool IsPunct(const std::string& w)
+{
+    return w == "(" || w == "{" || w == "}" || w == "?";
+}
+
 bool IsName(const std::string& w)
 {
-    return !w.empty() && w != "(" && !IsTypeWord(w);
+    return !w.empty() && !IsPunct(w) && !IsTypeWord(w);
 }
 
 // Sammelt die Namen hinter "class" und "struct". Ohne das waere "Block b;"
@@ -134,6 +164,15 @@ std::string TooMany(const char* was, int erlaubt, int jetzt)
     return std::string("You may only use ") + std::to_string(erlaubt) + " " + was +
            ", this is number " + std::to_string(jetzt) + ".";
 }
+
+// Ein Funktionsrumpf, in dem wir gerade stecken. Braucht man nur fuer die
+// Rekursion: ruft eine Funktion sich selbst auf, ist das eine Schleife, und
+// eine Schleife ist im Baum etwas wert.
+struct Frame
+{
+    std::string name;   // wie die Funktion heisst, leer = irgendein Block
+    int         depth;  // Klammertiefe, bei der ihr Rumpf zugeht
+};
 
 }  // namespace
 
@@ -167,9 +206,26 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
     {
         const std::vector<Token> tokens = Tokenize(file.code);
 
+        // Wo stehen wir gerade? Beides nur fuer die Rekursionspruefung.
+        int                braces = 0;
+        std::vector<Frame> stack;
+
+        // Name der Funktion, deren { als naechstes kommt. Zwischen dem Kopf
+        // "void schritt(" und der oeffnenden Klammer liegen ja noch die
+        // Argumente.
+        std::string pendingFunction;
+
         for (std::size_t ti = 0; ti < tokens.size(); ++ti)
         {
             const Token& t = tokens[ti];
+
+            const std::string next  = (ti + 1 < tokens.size()) ? tokens[ti + 1].word : "";
+            const std::string after = (ti + 2 < tokens.size()) ? tokens[ti + 2].word : "";
+
+            // Ein Wort ist nur dann ein Befehl, wenn eine Klammer folgt. Sonst
+            // ist es eine Variable, die zufaellig so heisst - und ein
+            // "int count = 0;" soll nicht behaupten, item.count() fehle.
+            const bool call = (next == "(");
 
             errorConsole = file.id;
             errorLine    = t.line;
@@ -177,6 +233,27 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
             const auto locked = [&](const char* what) -> std::string
             { return std::string("\"") + what + "\" is not unlocked yet - buy it in the skill tree."; };
 
+            // ---- Klammern mitzaehlen (fuer die Rekursion) ------------------
+            if (t.word == "{")
+            {
+                ++braces;
+                if (!pendingFunction.empty())
+                {
+                    stack.push_back({pendingFunction, braces});
+                    pendingFunction.clear();
+                }
+                continue;
+            }
+            if (t.word == "}")
+            {
+                if (!stack.empty() && stack.back().depth == braces)
+                    stack.pop_back();
+                if (braces > 0)
+                    --braces;
+                continue;
+            }
+
+            // ---- Steuerfluss ----------------------------------------------
             if (t.word == "while" || t.word == "do")
             {
                 if (!limits.allowWhile)
@@ -203,18 +280,40 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
                 if (!limits.allowElse)
                     return locked("else");
             }
-            else if (t.word == "print")
+            // switch ist eine Verzweigung wie jede andere - und war, solange
+            // sie hier fehlte, der bequemste Weg an "if" vorbei. Sie kostet
+            // KEINE Bedingung: dafuer bezahlt man den Punkt, und genau das ist
+            // ihr Vorteil.
+            else if (t.word == "switch" || t.word == "case" || t.word == "default")
+            {
+                if (!limits.allowSwitch)
+                    return locked("switch");
+            }
+            else if (t.word == "?")
+            {
+                if (!limits.allowTernary)
+                    return locked("a ? b : c");
+            }
+            else if (t.word == "goto")
+            {
+                if (!limits.allowGoto)
+                    return locked("goto");
+            }
+
+            // ---- Die Welt --------------------------------------------------
+            else if (t.word == "print" && call)
             {
                 if (!limits.allowPrint)
                     return locked("print()");
             }
-            else if (t.word == "isThere" || t.word == "isLoading" || t.word == "exists" ||
-                     t.word == "isGone")
+            else if ((t.word == "isThere" || t.word == "isLoading" || t.word == "exists" ||
+                      t.word == "isGone") &&
+                     call)
             {
                 if (!limits.allowCheck)
                     return locked("block.isThere()");
             }
-            else if (t.word == "mine")
+            else if (t.word == "mine" && call)
             {
                 if (!limits.allowMine)
                     return locked("block.mine()");
@@ -225,17 +324,18 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
             // die niemandem sagt, dass ein Skill fehlt. block.ore() und
             // block.is(...) gehoeren dazu: ohne sie weiss man nicht, welches
             // Erz gerade dasteht, und damit auch nicht, was es will.
-            else if (t.word == "ore" || t.word == "is" || t.word == "Cool" || t.word == "Heat")
+            else if (((t.word == "ore" || t.word == "is") && call) || t.word == "Cool" ||
+                     t.word == "Heat")
             {
                 if (!limits.allowCare)
                     return locked("block.ore(...)");
             }
-            else if (t.word == "has")
+            else if (t.word == "has" && call)
             {
                 if (!limits.allowBag)
                     return locked("item.has(...)");
             }
-            else if (t.word == "sell")
+            else if (t.word == "sell" && call)
             {
                 if (!limits.allowSell)
                     return locked("item.sell()");
@@ -246,53 +346,113 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
                     return locked("shared[...]");
             }
             // Verarbeiten: je Befehl ein Punkt im Baum.
-            else if (t.word == "wash")
+            else if (t.word == "wash" && call)
             {
                 if (!limits.allowWash)
                     return locked("item.wash(...)");
             }
-            else if (t.word == "smelt")
+            else if (t.word == "smelt" && call)
             {
                 if (!limits.allowSmelt)
                     return locked("item.smelt(...)");
             }
-            else if (t.word == "cast")
+            else if (t.word == "cast" && call)
             {
                 if (!limits.allowCast)
                     return locked("item.cast(...)");
             }
-            else if (t.word == "clean")
+            else if (t.word == "clean" && call)
             {
                 if (!limits.allowClean)
                     return locked("item.clean(...)");
             }
-            else if (t.word == "polish")
+            else if (t.word == "polish" && call)
             {
                 if (!limits.allowPolish)
                     return locked("item.polish(...)");
             }
-            else if (t.word == "harden")
+            else if (t.word == "harden" && call)
             {
                 if (!limits.allowHarden)
                     return locked("item.harden(...)");
             }
-            else if (t.word == "refine")
+            else if (t.word == "refine" && call)
             {
                 if (!limits.allowRefine)
                     return locked("item.refine(...)");
             }
-            else if (t.word == "press")
+            else if (t.word == "press" && call)
             {
                 if (!limits.allowPress)
                     return locked("item.press(...)");
             }
+            else if (t.word == "etch" && call)
+            {
+                if (!limits.allowEtch)
+                    return locked("item.etch(...)");
+            }
+            else if (t.word == "fuse" && call)
+            {
+                if (!limits.allowFuse)
+                    return locked("item.fuse(...)");
+            }
             // Legieren. Nachfragen und Machen haengen am selben Punkt: ohne
             // legieren zu duerfen braucht man auch die Frage nicht.
-            else if (t.word == "alloy" || t.word == "canAlloy")
+            else if ((t.word == "alloy" || t.word == "canAlloy") && call)
             {
                 if (!limits.allowAlloy)
                     return locked("item.alloy(...)");
             }
+
+            // ---- Fragen an die Welt ---------------------------------------
+            //
+            // Alles hier verlangt eine Klammer dahinter. Ohne die Regel waere
+            // ein "int money = 0;" auf einmal ein fehlender Skilltree-Punkt.
+            else if ((t.word == "info" || t.word == "nameOf") && call)
+            {
+                if (!limits.allowInfo)
+                    return locked("info(...)");
+            }
+            else if (t.word == "assay" && call)
+            {
+                if (!limits.allowAssay)
+                    return locked("assay(...)");
+            }
+            else if ((t.word == "count" || t.word == "purity") && call)
+            {
+                if (!limits.allowCount)
+                    return locked("item.count(...)");
+            }
+            else if ((t.word == "busy" || t.word == "idle" || t.word == "progress") && call)
+            {
+                if (!limits.allowJob)
+                    return locked("job.busy()");
+            }
+            else if ((t.word == "wait" || t.word == "loading") && call)
+            {
+                if (!limits.allowWait)
+                    return locked("wait(...)");
+            }
+            else if ((t.word == "money" || t.word == "timeLeft" || t.word == "roundTarget") &&
+                     call)
+            {
+                if (!limits.allowStatus)
+                    return locked("money()");
+            }
+            else if ((t.word == "price" || t.word == "average") && call)
+            {
+                if (!limits.allowMarket)
+                    return locked("market.price(...)");
+            }
+
+            // ---- Behaelter -------------------------------------------------
+            else if (IsContainerWord(t.word))
+            {
+                if (!limits.allowContainer)
+                    return locked("vector, map and the other containers");
+            }
+
+            // ---- Eigene Klassen und Funktionen -----------------------------
             else if (t.word == "class" || t.word == "struct")
             {
                 if (!limits.allowClass)
@@ -302,9 +462,6 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
             }
             else if (IsTypeWord(t.word) || IsIn(classNames, t.word))
             {
-                const std::string next  = (ti + 1 < tokens.size()) ? tokens[ti + 1].word : "";
-                const std::string after = (ti + 2 < tokens.size()) ? tokens[ti + 2].word : "";
-
                 // "unsigned int zahl": erst beim letzten Typwort zaehlen.
                 if (IsTypeWord(next))
                     continue;
@@ -324,6 +481,13 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
                         return locked("your own functions");
                     if (++functions > limits.maxFunctions)
                         return TooMany("function(s)", limits.maxFunctions, functions);
+
+                    // Merken, damit die naechste { als Rumpf DIESER Funktion
+                    // erkannt wird. Bei einer blossen Ankuendigung ohne Rumpf
+                    // ("void f();") raeumt die naechste { eines anderen Blocks
+                    // das wieder weg - schlimmstenfalls entgeht uns dort eine
+                    // Rekursion, und das ist besser als ein falscher Alarm.
+                    pendingFunction = next;
                 }
                 else
                 {
@@ -332,6 +496,17 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
                     if (++variables > limits.maxVariables)
                         return TooMany("variable(s)", limits.maxVariables, variables);
                 }
+            }
+
+            // ---- Rekursion -------------------------------------------------
+            //
+            // Ruft eine Funktion sich selbst auf, ist das eine Schleife - und
+            // zwar eine, die weder "while" noch "for" verbraucht. Deshalb
+            // haengt sie an einem eigenen Punkt.
+            if (call && !stack.empty() && t.word == stack.back().name)
+            {
+                if (!limits.allowRecursion)
+                    return locked("a function calling itself (recursion)");
             }
         }
     }

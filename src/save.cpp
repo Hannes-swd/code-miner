@@ -108,6 +108,13 @@ bool SaveGame(const World& world, const SkillTree& tree,
     for (const World::OreStep& s : world.oreSteps)
         out << s.ore << " " << s.from << " " << s.to << "\n";
 
+    // Welche Erze untersucht sind. Das ist bezahltes Wissen: assay() kostet
+    // Geld, und ohne diese Zeile waere es nach jedem Start wieder weg - und
+    // ein Programm, das sich auf info() verlaesst, stuende ploetzlich blind da.
+    out << "erz_untersucht " << world.assayed.size() << "\n";
+    for (const int e : world.assayed)
+        out << e << "\n";
+
     // Die gewuerfelten Erze. Sie stehen in keiner Datei - sie sind beim Spielen
     // entstanden, und ohne sie waere nach dem Laden jede Nummer in der Tasche
     // um so viele Plaetze verschoben.
@@ -332,6 +339,18 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
                 in >> s.ore >> s.from >> s.to;
                 if (s.ore >= 0)
                     neueWelt.oreSteps.insert(s);
+            }
+        }
+        else if (wort == "erz_untersucht")
+        {
+            std::size_t n = 0;
+            in >> n;
+            for (std::size_t i = 0; i < n; ++i)
+            {
+                int erz = -1;
+                in >> erz;
+                if (erz >= 0)
+                    neueWelt.assayed.insert(erz);
             }
         }
         else if (wort == "erz_gewuerfelt")

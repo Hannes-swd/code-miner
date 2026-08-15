@@ -9,8 +9,16 @@ struct CraftPlan;
 struct AlloyPlan;
 struct Limits;
 
-// Eine Konsole als Quelltext-Stueck. Alle Konsolen zusammen ergeben EIN
-// Programm - deshalb sieht Konsole 1 auch die Variablen aus Konsole 2.
+// Eine Konsole als Quelltext-Stueck.
+//
+// Jede Konsole mit einem eigenen  int main()  wird ein eigenes Programm und
+// laeuft als eigener Prozess - so kann eine abbauen, waehrend die naechste
+// verkauft. Konsolen OHNE main() sind gemeinsamer Vorrat: ihre Funktionen und
+// Variablen werden in jedes dieser Programme mit hineinuebersetzt.
+//
+// Achtung dabei: jeder Prozess bekommt seine EIGENE Kopie einer solchen
+// Variablen. Wer etwas zwischen den Programmen teilen will, nimmt shared[...] -
+// das liegt im Spiel und nicht im Prozess.
 struct SourceFile
 {
     int         id = 0;  // Nummer der Konsole
@@ -54,8 +62,20 @@ public:
     virtual RunState state() const = 0;
 
     // Wo laeuft es gerade? 0 = nirgends.
+    //
+    // Es laufen mehrere Programme gleichzeitig, also gibt es auch mehrere
+    // laufende Zeilen. Diese beiden liefern eine davon - fuer die Markierung
+    // im Editor ist lineIn() das Richtige.
     virtual int currentConsole() const = 0;
     virtual int currentLine() const    = 0;
+
+    // Welche Zeile laeuft gerade IN dieser Konsole? 0 = keine.
+    //
+    // Genau das braucht der Editor: jede Konsole fragt nach sich selbst, und
+    // dadurch koennen auch mehrere Markierungen gleichzeitig stehen. Ruft ein
+    // Programm eine Funktion auf, die in einer anderen Konsole steht, wandert
+    // die Markierung dorthin mit.
+    virtual int lineIn(int console) const = 0;
 
     // Wo steckt der Fehler? 0 = keiner.
     virtual int errorConsole() const = 0;

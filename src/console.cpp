@@ -233,8 +233,10 @@ bool DrawConsole(Console& c, Engine& engine)
         // Laufende Zeile markieren - aber nur in der Konsole, in der es gerade
         // laeuft. Bei einem Funktionsaufruf in eine andere Konsole wandert die
         // Markierung dorthin.
-        const bool hereNow = engine.currentConsole() == c.id;
-        const int  line    = hereNow ? engine.currentLine() : 0;
+        // Es laufen mehrere Programme gleichzeitig - also fragt jede Konsole
+        // nach SICH SELBST. Frueher gab es nur eine laufende Zeile im ganzen
+        // Spiel, und die Frage war, ob sie zufaellig hier steht.
+        const int line = engine.lineIn(c.id);
 
         TextEditor::Breakpoints marks;
         if (line > 0)

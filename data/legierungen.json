@@ -60,7 +60,7 @@
       "farbe1": "#D9A05B",
       "farbe2": "#4A3018",
       "muster": 6,
-      "zustaende": ["alloy", "cast", "cleaned", "polished", "hardened", "refined"],
+      "zustaende": ["alloy", "cast", "cleaned", "polished", "hardened", "refined", "etched", "fused"],
       "legierbar_mit": []
     },
     {
@@ -74,7 +74,7 @@
       "farbe1": "#F0DC82",
       "farbe2": "#6B5A2A",
       "muster": 4,
-      "zustaende": ["alloy", "cast", "cleaned", "polished", "refined"],
+      "zustaende": ["alloy", "cast", "cleaned", "polished", "refined", "etched", "fused"],
       "legierbar_mit": ["Silver"]
     },
     {
@@ -88,7 +88,7 @@
       "farbe1": "#F2F0E6",
       "farbe2": "#8A8574",
       "muster": 3,
-      "zustaende": ["alloy", "cleaned", "polished", "refined"],
+      "zustaende": ["alloy", "cleaned", "polished", "refined", "etched", "fused"],
       "legierbar_mit": []
     }
   ]

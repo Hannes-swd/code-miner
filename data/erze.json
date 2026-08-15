@@ -72,7 +72,7 @@
       "farbe1": "#C98F86",
       "farbe2": "#5E4744",
       "muster": 9,
-      "zustaende": ["raw", "washed", "cleaned", "polished", "pressed", "hardened"],
+      "zustaende": ["raw", "washed", "cleaned", "polished", "pressed", "hardened", "etched"],
       "legierbar_mit": []
     },
     {
@@ -85,7 +85,7 @@
       "farbe1": "#E08A4E",
       "farbe2": "#5C3A26",
       "muster": 6,
-      "zustaende": ["raw", "washed", "smelted", "cast", "polished", "hardened", "refined", "cleaned", "oxidized", "alloy"],
+      "zustaende": ["raw", "washed", "smelted", "cast", "polished", "hardened", "refined", "cleaned", "oxidized", "alloy", "etched", "fused"],
       "legierbar_mit": ["Iron", "Silver", "Gold"]
     },
     {
@@ -98,7 +98,7 @@
       "farbe1": "#DCD6CC",
       "farbe2": "#6B6259",
       "muster": 5,
-      "zustaende": ["raw", "washed", "smelted", "cast", "polished", "hardened", "refined", "cleaned", "oxidized", "alloy"],
+      "zustaende": ["raw", "washed", "smelted", "cast", "polished", "hardened", "refined", "cleaned", "oxidized", "alloy", "etched", "fused"],
       "legierbar_mit": ["Copper", "Silver"]
     },
     {
@@ -111,7 +111,7 @@
       "farbe1": "#EFF3F8",
       "farbe2": "#7C8490",
       "muster": 4,
-      "zustaende": ["raw", "washed", "smelted", "cast", "polished", "refined", "cleaned", "oxidized", "alloy"],
+      "zustaende": ["raw", "washed", "smelted", "cast", "polished", "refined", "cleaned", "oxidized", "alloy", "etched", "fused"],
       "legierbar_mit": ["Gold", "Copper", "Iron", "Electrum"]
     },
     {
@@ -125,7 +125,7 @@
       "farbe1": "#F5C542",
       "farbe2": "#6B5320",
       "muster": 4,
-      "zustaende": ["raw", "washed", "smelted", "cast", "polished", "refined", "cleaned", "alloy"],
+      "zustaende": ["raw", "washed", "smelted", "cast", "polished", "refined", "cleaned", "alloy", "etched", "fused"],
       "legierbar_mit": ["Silver", "Copper"]
     },
     {
@@ -139,7 +139,7 @@
       "farbe1": "#4BE38C",
       "farbe2": "#1B4A33",
       "muster": 3,
-      "zustaende": ["raw", "washed", "cleaned", "polished"],
+      "zustaende": ["raw", "washed", "cleaned", "polished", "etched"],
       "legierbar_mit": []
     },
     {
@@ -154,7 +154,7 @@
  
       "farbe2": "#26505E",
       "muster": 3,
-      "zustaende": ["raw", "washed", "cleaned", "polished", "hardened"],
+      "zustaende": ["raw", "washed", "cleaned", "polished", "hardened", "etched", "fused"],
       "legierbar_mit": []
     }
   ]

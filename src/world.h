@@ -83,6 +83,11 @@ struct World
     int        roundNumber = 1;
     float      roundLeft   = 0.0f;  // Restzeit in Sekunden
 
+    // Was diese Runde verlangt. Rechnet main jedes Bild aus data/runden.json
+    // aus - die Welt kennt den Rundenplan nicht. Steht hier, damit
+    // round.target() im Spielercode danach fragen kann.
+    int roundTargetNow = 0;
+
     // Stand beim Start der Runde - daraus wird spaeter die Differenz.
     int roundMoneyStart = 0;
     int roundMinedStart = 0;
@@ -181,6 +186,48 @@ struct World
     // Ergebnis.
     int level = 1;
 
+    // ---- Was man ueber ein Erz weiss -------------------------------------
+    //
+    // Frueher stand die Behandlung nur im Wiki, und der Spielercode musste sie
+    // als feste if-Kette abschreiben - Erz fuer Erz, immer wieder neu, weil
+    // sich das Spiel ja endlos neue ausdenkt. Jetzt ist es eine Frage, die man
+    // im Programm stellen kann: info(erz) gibt es erst, wenn man das Erz
+    // untersucht hat.
+    //
+    // Erze aus data/erze.json sind von Anfang an bekannt - sie stehen im Wiki
+    // und waren nie ein Raetsel. Gewuerfelte muss man untersuchen.
+    std::set<int> assayed;
+
+    bool knowsOre(const OrePlan& ores, int ore) const;
+
+    // Ein Erz untersuchen. Rueckgabe: was es gekostet hat, 0 = ging nicht
+    // (kein Geld, schon bekannt, oder es laeuft schon eine Untersuchung).
+    int startAssay(const OrePlan& ores, int ore, int kosten, float dauer);
+
+    // Laeuft gerade eine Untersuchung? Sie belegt KEINEN Ofenplatz - es ist
+    // Kopfarbeit, keine Werkstatt.
+    bool  assaying     = false;
+    int   assayOre     = 0;
+    float assayTimer   = 0.0f;
+    float assaySeconds = 0.0f;
+
+    void tickAssay(float dt);
+
+    // ---- Der Markt --------------------------------------------------------
+    //
+    // Der Preis eines Erzes schwankt ueber die Runde um seinen Grundwert.
+    // Dadurch ist "wann verkaufe ich" zum ersten Mal eine Frage, die sich
+    // programmieren laesst.
+    //
+    // Gerechnet wird aus einer Uhr und der Erznummer: derselbe Stoff hat
+    // ueberall denselben Preis, und zwei Erze schwingen nicht im Gleichtakt.
+    float marketTime  = 0.0f;
+    float marketSwing = 0.25f;  // +/- so viel um den Grundwert
+    float marketSpeed = 0.06f;  // wie schnell es sich dreht
+
+    // Faktor auf den Grundwert, um 1.0 herum.
+    float marketFactor(int ore) const;
+
     // Geld gibt es beim Verkaufen: anzahl * wert * moneyPerBlock.
     int money         = 0;
     int moneyPerBlock = 1;
@@ -202,25 +249,58 @@ struct World
 
     std::mt19937 rng{20260808u};  // wuerfelt das naechste Erz
 
-    // Verarbeiten braucht Zeit, und es laeuft immer nur EIN Auftrag. Was drin
-    // ist, liegt solange nicht in der Tasche - verkaufen kann man es also
-    // nicht, waehrend es in Arbeit ist.
-    // Legieren benutzt denselben Platz: es ist derselbe Ofen. Deshalb steht
-    // hier kein zweiter Satz Felder - beim Legieren ist craftItem eben schon
+    // Ein laufender Auftrag. Verarbeiten braucht Zeit, und was drin ist, liegt
+    // solange nicht in der Tasche - verkaufen kann man es also nicht, waehrend
+    // es in Arbeit ist.
+    //
+    // Legieren benutzt denselben Platz: es ist derselbe Ofen. Deshalb gibt es
+    // hier keinen zweiten Satz Felder - beim Legieren ist "item" eben schon
     // das Ergebnis.
-    bool  crafting    = false;
-    bool  craftByHand = false;  // aus der Tasche gestartet: laeuft ohne Programm
-    Item  craftItem;            // was herauskommt (Erz und Zielzustand)
-    int   craftCount  = 0;
-    int   craftPurity = 0;      // Reinheit, mit der es hineinging
-    int   craftTo     = 0;      // OreState, was herauskommt
-    int   craftDelta  = 0;      // was der Schritt an der Reinheit macht
-    float craftTimer  = 0.0f;
-    float craftSeconds = 0.0f;  // Gesamtdauer: dauer mal Anzahl
-    std::string craftName;      // "Waschen" - fuer die Anzeige
+    struct Job
+    {
+        bool  active = false;
+        bool  byHand = false;  // aus der Tasche gestartet: laeuft ohne Programm
+        Item  item;            // was herauskommt (Erz und Zielzustand)
+        int   count   = 0;
+        int   purity  = 0;     // Reinheit, mit der es hineinging
+        int   to      = 0;     // OreState, was herauskommt
+        int   delta   = 0;     // was der Schritt an der Reinheit macht
+        float timer   = 0.0f;
+        float seconds = 0.0f;  // Gesamtdauer: dauer mal Anzahl
+        std::string name;      // "Wash" - fuer die Anzeige
 
-    // Was dafuer aus der Tasche genommen wurde.
-    std::vector<Taken> craftTaken;
+        // Was dafuer aus der Tasche genommen wurde. Beim Abbruch muss alles
+        // zurueck, genau so, wie es hineinging.
+        std::vector<Taken> taken;
+
+        float progress() const { return (seconds > 0.0f) ? timer / seconds : 1.0f; }
+        float left() const { return (seconds > timer) ? seconds - timer : 0.0f; }
+    };
+
+    // So viele Auftraege laufen gleichzeitig. Frueher war das genau einer, und
+    // das war die haerteste Grenze im ganzen Spiel: egal wie gut das Programm
+    // war, es lief immer nur ein Ofen.
+    //
+    // Die Zahl setzt main jedes Bild neu aus den Limits - genau wie frozen.
+    // Deshalb steht sie nicht im Spielstand: sie ergibt sich aus dem Baum.
+    std::vector<Job> jobs;
+
+    // Legt so viele Plaetze an. Laufende Auftraege bleiben dabei stehen; wird
+    // verkleinert, verschwindet kein laufender Auftrag, es kommt nur so lange
+    // keiner mehr dazu, bis wieder Platz ist.
+    void setJobSlots(int anzahl);
+
+    int  jobsRunning() const;
+    int  jobsIdle() const;
+    bool anyCrafting() const;
+    bool anyCraftByHand() const;
+
+    // Der Auftrag, der als naechstes fertig wird. nullptr = keiner laeuft.
+    // Fuer die Anzeige auf der Welt-Seite, wo nur einer Platz hat.
+    const Job* nextDone() const;
+
+    // Ein freier Platz, nullptr = alle belegt.
+    Job* freeJob();
 
     // Faengt an abzubauen; false = da ist nichts (mehr). Mit welcher Behandlung
     // gearbeitet wird, sagt der Aufrufer bei JEDEM Aufruf mit - block.mine()
@@ -279,6 +359,10 @@ struct World
     // Fuer item.has(Stein): wie viele davon liegen in der Tasche.
     int inventoryOf(const OrePlan& ores, const std::string& name) const;
 
+    // Fuer item.purity(Stein): die Reinheit ueber alle Zustaende, nach Anzahl
+    // gewichtet. Nichts da = 0.
+    int inventoryPurity(const OrePlan& ores, const std::string& name) const;
+
     // Wie viele Stuecke dieses Erzes in einem der Zustaende liegen (ein Bit je
     // OreState).
     int bagCount(int ore, unsigned states) const;
@@ -294,12 +378,21 @@ struct World
     // Abbau abbrechen, der Block bleibt ganz. Beim Stoppen des Programms.
     void cancelMining();
 
-    // Dasselbe fuers Verarbeiten: es laeuft nur, solange das Programm laeuft -
-    // ausser der Auftrag kam aus der Tasche.
-    void tickCraft(float dt);
+    // Dasselbe fuers Verarbeiten: ein Auftrag laeuft nur, solange das Programm
+    // laeuft - ausser er kam aus der Tasche.
+    //
+    // Die Frage wird JE AUFTRAG gestellt und nicht fuer alle zusammen: mit
+    // mehreren Oefen kann der eine von Hand angestossen sein und der andere
+    // vom Programm. Waere es eine Frage fuer alle, wuerde ein einziger
+    // Handauftrag das ganze Werk am Laufen halten.
+    void tickCraft(float dt, bool programLaeuft);
 
-    // Auftrag abbrechen. Was drin war, kommt unveraendert zurueck.
-    void cancelCraft();
+    // Auftraege abbrechen. Was drin war, kommt unveraendert zurueck.
+    //
+    // nurProgramm = true laesst die von Hand gestarteten stehen. Genau das
+    // passiert, wenn das Programm endet: was man selbst angeklickt hat, soll
+    // davon nichts merken.
+    void cancelCraft(bool nurProgramm = false);
 
     // Nachwachsen und Effekte. Laeuft immer, auch im Skilltree - der Block
     // waechst ja auch nach, waehrend man dort etwas kauft. Beim Nachwachsen
@@ -312,8 +405,11 @@ struct World
 //
 // Steht an EINER Stelle, damit Verkauf, Tasche und Tooltip nie etwas
 // Verschiedenes behaupten.
+// "market" ist der Faktor aus World::marketFactor(). Er steht hinten mit einem
+// Vorgabewert, damit jede Stelle, die nur den reinen Wert wissen will (das Wiki
+// zum Beispiel), ihn einfach weglassen kann.
 int StackValue(const OrePlan& ores, const CraftPlan& craft, int ore, int state, int purity,
-               int anzahl, int moneyPerBlock);
+               int anzahl, int moneyPerBlock, float market = 1.0f);
 
 // Mit welcher Reinheit ein Block dieses Erzes aus dem Boden kommt.
 int StartPurity(const OrePlan& ores, const CraftPlan& craft, int ore);

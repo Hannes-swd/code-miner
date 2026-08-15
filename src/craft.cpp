@@ -25,6 +25,7 @@ const CommandSkill kCommands[] = {
     {"wash", Skill::Wash},     {"smelt", Skill::Smelt},   {"cast", Skill::Cast},
     {"clean", Skill::Clean},   {"polish", Skill::Polish}, {"harden", Skill::Harden},
     {"refine", Skill::Refine}, {"press", Skill::Press},
+    {"etch", Skill::Etch},     {"fuse", Skill::Fuse},
 };
 
 Skill SkillFor(const std::string& command)
@@ -75,6 +76,8 @@ bool CraftUnlocked(const CraftStep& step, const Limits& limits)
     case Skill::Harden: return limits.allowHarden;
     case Skill::Refine: return limits.allowRefine;
     case Skill::Press: return limits.allowPress;
+    case Skill::Etch: return limits.allowEtch;
+    case Skill::Fuse: return limits.allowFuse;
     default: return false;
     }
 }

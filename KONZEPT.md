@@ -70,46 +70,64 @@ Einzelschritt, Stopp-Knopf.
 
 Tastenkürzel: **Strg+Enter** = starten/pausieren, **Strg+Alt+F** = formatieren.
 
-### Alle Konsolen zusammen sind EIN Programm
+### Jede Konsole mit `main()` ist ein eigenes Programm
 
-Das ist der wichtigste Punkt am ganzen Aufbau. Eine Konsole ist **kein eigenes Programm**,
-sondern ein Stück davon — wie eine Datei in einem normalen C++-Projekt.
+Das ist der wichtigste Punkt am ganzen Aufbau. Eine Konsole ist entweder **ein eigenes
+Programm** (sie hat ein `main()`) oder **gemeinsamer Vorrat** (sie hat keins).
 
 ```cpp
-// Konsole 2                    // Konsole 1
-bool test   = true;             int main() {
-int  wieOft = 0;                    while (test) {
-                                        if (block.isThere()) {
-                                            block.mine();
-                                            wieOft++;
-                                        }
-                                    }
-                                }
+// Konsole 1: baut ab            // Konsole 2: verkauft
+int main() {                     int main() {
+    while (true) {                   while (true) {
+        block.mine();                    if (item.count(Stone) > 20)
+    }                                        item.sell(Stone);
+}                                        wait(1.0f);
+                                     }
+                                 }
+
+// Konsole 3: kein main() - Vorrat für beide
+int wieViel(Ore erz) { return item.count(erz); }
 ```
 
-Konsole 1 benutzt `test` und `wieOft` einfach so — ohne `extern`, ohne `#include`, ohne
-Sonderregeln. Es sind ganz normale Variablen.
+Beide laufen **gleichzeitig**, als zwei echte Prozesse mit je eigenem Zeilenbudget. Das ist
+die einzige Stelle im Spiel, an der sich der Durchsatz *vervielfacht* statt zu wachsen —
+deshalb ist „+1 Konsole" im Skilltree der teuerste und seltenste Punkt.
 
-**Drei Dinge ergeben sich daraus:**
+**Vier Dinge ergeben sich daraus:**
 
-1. **Genau eine Konsole braucht ein `main()`.** Keine → *„Keine Konsole hat ein int main()"*.
-   Zwei → *„Konsole 1 und Konsole 3 haben beide ein main()"*.
-2. **Der ▶-Knopf startet das ganze Programm**, egal in welcher Konsole man ihn drückt.
-   Deshalb sieht er in allen Konsolen gleich aus und alle zeigen dieselbe Ausgabezeile.
-3. Ruft der Code eine Funktion auf, die in einer anderen Konsole steht, **wandert die
-   Zeilenmarkierung dorthin mit**.
+1. **Mindestens eine Konsole braucht ein `main()`.** Keine → *„No console has an int main()"*.
+   Mehrere sind ausdrücklich erwünscht — das ist der ganze Sinn.
+2. **Der ▶-Knopf startet alle**, egal in welcher Konsole man ihn drückt. Deshalb sieht er in
+   allen gleich aus und alle zeigen dieselbe Ausgabezeile.
+3. Ruft der Code eine Funktion auf, die in einer Vorratskonsole steht, **wandert die
+   Zeilenmarkierung dorthin mit**. Es können also mehrere Markierungen gleichzeitig stehen —
+   jede Konsole fragt über `engine.lineIn(id)` nach sich selbst.
+4. **Globale Variablen aus dem Vorrat sind NICHT geteilt.** Jeder Prozess bekommt seine
+   eigene Kopie, denn es sind eigene Prozesse mit eigenem Speicher. Geteilt ist nur
+   `shared[...]` — das liegt im Spiel. Genau dafür gibt es den Punkt.
 
-**Wie das gebaut ist** (`CombineSources` in `native.cpp`):
+**Wie das gebaut ist** (`CombineSources` und `CompileToExe` in `native.cpp`):
 
-- Alle Konsolen werden zu **einer** `.cpp` zusammengesetzt.
-- **Reihenfolge:** erst alle Konsolen *ohne* `main()`, dann die *mit*. In C++ muss eine
-  Variable vor ihrer Benutzung stehen — so sieht die Konsole mit `main()` automatisch alles
-  aus den anderen, ohne dass man auf die Reihenfolge achten muss.
+- Für **jede** Konsole mit `main()` entsteht eine eigene `.cpp`: erst alle Vorratskonsolen,
+  dann diese eine. In C++ muss eine Variable vor ihrer Benutzung stehen — so sieht das
+  `main()` automatisch alles andere, ohne dass man auf die Reihenfolge achten muss.
+- Übersetzt wird **nebeneinander**, ein Thread je Programm. Nacheinander würde es bei drei
+  Konsolen dreimal so lange dauern.
+- Gemerkt wird das Ergebnis **je Konsole**: ändert man nur eine von dreien, wird auch nur die
+  eine neu übersetzt.
 - Vor jedes Stück kommt ein **`#line 1 "konsoleN"`**. Dadurch meldet der Compiler Fehler als
   `konsole2(7,5): error ...` statt als Zeile in der zusammengesetzten Datei — der rote Marker
   landet also in der richtigen Konsole und der richtigen Zeile.
 - Die Instrumentierung schreibt `ck::line(2, 7)` statt `ck::line(7)`, also **Konsole und
   Zeile**. Deshalb weiß die Oberfläche, wo sie markieren muss.
+- Hakt es bei **einem** Programm, wird **keines** gestartet. Ein halb laufender Satz wäre
+  schlimmer als keiner: man sucht den Fehler dann in der falschen Konsole.
+
+> Nebenwirkung, die beim Umbau aufgefallen ist: `GetToolchain()` suchte den Compiler hinter
+> einem schlichten `static bool done`. Das reichte, solange nur ein Übersetzer lief. Bei
+> zweien sah der zweite Thread `done == true`, während der erste noch in `vcvars64.bat`
+> steckte — und bekam einen leeren Compilerpfad. Jetzt ist es ein `static` mit
+> Initialisierer: der erste sucht, alle anderen warten.
 
 ---
 
