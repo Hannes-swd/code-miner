@@ -108,6 +108,11 @@ bool SaveGame(const World& world, const SkillTree& tree,
     for (const World::OreStep& s : world.oreSteps)
         out << s.ore << " " << s.from << " " << s.to << "\n";
 
+    // Wo die Marktuhr steht. Ohne sie faengt der Kurs nach jedem Start wieder
+    // beim Grundwert an - und ein Programm, das auf einen guten Preis wartet,
+    // haette beim Laden ploetzlich einen anderen vor sich.
+    out << "markt " << world.marketTime << "\n";
+
     // Welche Erze untersucht sind. Das ist bezahltes Wissen: assay() kostet
     // Geld, und ohne diese Zeile waere es nach jedem Start wieder weg - und
     // ein Programm, das sich auf info() verlaesst, stuende ploetzlich blind da.
@@ -319,6 +324,12 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
             int lebt = 1;
             in >> neueWelt.ore >> neueWelt.oreSeed >> lebt >> neueWelt.respawnTimer;
             neueWelt.blockAlive = (lebt != 0);
+        }
+        else if (wort == "markt")
+        {
+            in >> neueWelt.marketTime;
+            if (!(neueWelt.marketTime > 0.0f))
+                neueWelt.marketTime = 0.0f;
         }
         else if (wort == "block_care")
         {

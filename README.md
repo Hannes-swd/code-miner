@@ -324,6 +324,7 @@ also nichts kopieren.
 src/
   main.cpp            das Spiel selbst - plattformfrei, kein einziges #ifdef
   world.cpp           Block, Tasche, Abbau, Verkauf
+  market.cpp          der Preis eines Erzes und die Marktseite mit dem Kurs
   round.cpp           Runden, Ziel, Abrechnung
   skilltree.cpp       der Baum, skillfile.cpp liest data/skills.txt
   native.cpp          übersetzt und startet den Code des Spielers

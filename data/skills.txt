@@ -142,7 +142,14 @@
 #                 a line per pass.
 #   status        money(), timeLeft(), roundTarget().
 #   market        market.price(ore) and market.average(ore) - prices move
-#                 during the round.
+#                 during the round. Until this point is bought nothing moves
+#                 at all: every ore sits on its base value. A price that
+#                 swings while you cannot read it is a dice roll nobody sees.
+#   chart         the Market page: a chart of every ore you have held, with
+#                 its base value, what it costs right now and how the price
+#                 ran. The number was already there - here you watch it move,
+#                 and holding a stack back becomes a decision instead of a
+#                 guess.
 #
 #   furnace+      one more job at the same time. Processing and alloying share
 #                 the places; at the start there is exactly one, and that was
@@ -341,6 +348,11 @@ wait           10-18       14   once 1   needs check
 job            11-20       16   once 1   needs wash
 status         12-20       18   once 1
 market         13-22       24   once 1   needs sell
+
+# The chart hangs off the market, not the other way round: first the number,
+# then the picture. That way the page arrives at the moment you have already
+# asked yourself whether now is a good time to sell.
+chart          15-26       34   once 2   needs market
 info           14-22       28   once 3   needs care
 assay          16-26       30   once 2   needs info
 

@@ -104,6 +104,12 @@ enum class Skill
     // Abbauen und Verarbeiten laengst sitzen und die Wiederholung anfaengt,
     // duenn zu werden.
     Quests,
+
+    // Die Marktseite: der Kurs aller Erze als Bild. Bis hierher war der Preis
+    // eine Zahl, die man im Programm abfragen konnte - jetzt sieht man ihn
+    // laufen, und "halten oder verkaufen" wird zu einer Entscheidung, die man
+    // trifft statt sie zu erraten. Braucht market.price().
+    Chart,
 };
 
 const char* SkillName(Skill skill);

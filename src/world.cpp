@@ -891,20 +891,38 @@ void World::tickAssay(float dt)
 
 // ---- Der Markt ------------------------------------------------------------
 
-float World::marketFactor(int ore) const
+// Wie lange der Markt braucht, bis er ganz ausschlaegt - gezaehlt in Marktzeit,
+// nicht in Sekunden.
+//
+// Ohne das wuerde der Preis in dem Moment springen, in dem man "market" kauft:
+// die Welle steht bei ihrer Zeit 0 ja irgendwo, nur nicht bei 1.0. So faengt
+// stattdessen jedes Erz bei genau seinem Grundwert an und kommt von dort aus in
+// Bewegung - und die Kurve auf der Marktseite beginnt als gerade Linie.
+static constexpr float kMarketWake = 2.0f;
+
+float World::marketFactorAt(int ore, float zeit) const
 {
-    if (marketSwing <= 0.0f)
+    if (marketSwing <= 0.0f || zeit <= 0.0f)
         return 1.0f;
 
     // Zwei Wellen mit unterschiedlicher Laenge, dazu ein Versatz aus der
     // Erznummer. Dadurch schwingt kein Erz im Gleichtakt mit einem anderen,
     // und der Verlauf wiederholt sich nicht auf den ersten Blick.
     const float phase = (float)ore * 2.399963f;
-    const float a     = std::sin(marketTime + phase);
-    const float b     = std::sin(marketTime * 0.37f + phase * 1.7f);
+    const float a     = std::sin(zeit + phase);
+    const float b     = std::sin(zeit * 0.37f + phase * 1.7f);
 
-    const float f = 1.0f + marketSwing * (a * 0.65f + b * 0.35f);
+    float wach = zeit / kMarketWake;
+    if (wach > 1.0f)
+        wach = 1.0f;
+
+    const float f = 1.0f + marketSwing * wach * (a * 0.65f + b * 0.35f);
     return (f < 0.1f) ? 0.1f : f;
+}
+
+float World::marketFactor(int ore) const
+{
+    return marketFactorAt(ore, marketTime);
 }
 
 void World::update(float dt, const OrePlan& ores)
@@ -914,7 +932,11 @@ void World::update(float dt, const OrePlan& ores)
     // Beides laeuft nur, solange die Welt laeuft. Ein Markt, der sich in der
     // Vorbereitung weiterdreht, waere ein Wartespiel: man wuerde vor dem
     // Rundenstart sitzen und auf einen guten Preis warten.
-    if (!frozen)
+    //
+    // Und sie laeuft erst, wenn es den Markt ueberhaupt gibt: solange nichts
+    // schwankt, wuerde die Uhr nur ins Leere zaehlen - und beim Freischalten
+    // stuende die Welle dann mitten in ihrem Ausschlag statt am Grundwert.
+    if (!frozen && marketSwing > 0.0f)
         marketTime += dt * marketSpeed;
 
     tickAssay(dt);

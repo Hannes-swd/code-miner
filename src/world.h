@@ -262,12 +262,26 @@ struct World
     //
     // Gerechnet wird aus einer Uhr und der Erznummer: derselbe Stoff hat
     // ueberall denselben Preis, und zwei Erze schwingen nicht im Gleichtakt.
+    //
+    // Bis "market" im Baum gekauft ist, steht marketSwing auf 0 (siehe main):
+    // dann liefert marketFactor() ueberall 1.0, und die Uhr laeuft gar nicht
+    // erst. Am Anfang hat also alles seinen festen Grundwert - der Markt wacht
+    // erst auf, wenn man ihn auch ablesen kann. Alles andere waere ein
+    // Wuerfel, den niemand sieht.
     float marketTime  = 0.0f;
-    float marketSwing = 0.25f;  // +/- so viel um den Grundwert
+    float marketSwing = 0.0f;   // +/- so viel um den Grundwert, 0 = fester Preis
     float marketSpeed = 0.06f;  // wie schnell es sich dreht
 
     // Faktor auf den Grundwert, um 1.0 herum.
     float marketFactor(int ore) const;
+
+    // Derselbe Faktor zu einem frueheren Zeitpunkt der Marktuhr.
+    //
+    // Der Kurs braucht deshalb KEINE Aufzeichnung: der Preis ist eine reine
+    // Rechnung aus Zeit und Erznummer, also laesst sich jeder vergangene Punkt
+    // jederzeit nachrechnen. Nichts davon muss in den Spielstand, und die
+    // Kurve ist nach dem Laden dieselbe wie vorher.
+    float marketFactorAt(int ore, float zeit) const;
 
     // Geld gibt es beim Verkaufen: anzahl * wert * moneyPerBlock.
     int money         = 0;

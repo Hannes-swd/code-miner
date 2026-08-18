@@ -7,6 +7,7 @@
 #include "alloy.h"
 #include "codecheck.h"
 #include "console.h"
+#include "market.h"
 #include "quest.h"
 #include "craft.h"
 #include "native.h"
@@ -111,7 +112,11 @@ enum class Page
     Welt,
     Tasche,
     Skills,
-    Wiki
+    Wiki,
+
+    // Der Markt. Es gibt ihn erst mit dem Punkt "chart" im Baum - vorher wird
+    // der Reiter nicht gezeichnet und die Seite nie geoeffnet.
+    Markt
 };
 
 // Reiter in der Menueleiste. Die offene Seite wird hervorgehoben.
@@ -259,6 +264,13 @@ int main(int, char**)
     // Beide vor dem Ausliefern wieder auf false.
     const bool kAuftraegeSofort = false;
     const bool kAlleAuftraege   = false;
+
+    // Der Markt sofort: der Reiter "Market" ist da, und die Preise schwanken,
+    // ohne dass "market" und "chart" im Baum gekauft sind. Zum Anschauen der
+    // Seite - im fertigen Spiel haengt sie an den beiden Punkten.
+    //
+    // Vor dem Ausliefern wieder auf false.
+    const bool kMarktSofort = true;
 
     // Startgeld. Beim Zuruecksetzen kommt genau das wieder.
     const int kStartGeld = kUnendlichGeld ? kVielGeld : 0;
@@ -508,6 +520,13 @@ int main(int, char**)
         if (kAuftraegeSofort)
             limits.allowQuests = true;
 
+        // Testschalter: der Markt und seine Seite gibt es sofort.
+        if (kMarktSofort)
+        {
+            limits.allowMarket = true;
+            limits.allowChart  = true;
+        }
+
         world.moneyPerBlock   = limits.moneyPerBlock;
         world.respawnSeconds  = limits.respawnSeconds;
         engine.setSpeed(limits.linesPerSecond);
@@ -523,8 +542,19 @@ int main(int, char**)
 
         // Wie stark der Markt schwankt, ist Balance und steht deshalb in
         // data/skills.txt und nicht im Programm.
-        world.marketSwing = plan.marketSwing;
+        //
+        // Und er schwankt erst, wenn man ihn auch ablesen kann: ohne
+        // market.price() waere der Preis ein Wuerfel, den niemand sieht - man
+        // haette denselben Stapel mal fuer 80 und mal fuer 120 verkauft, ohne
+        // je zu erfahren, warum. Bis dahin hat alles seinen festen Grundwert.
+        world.marketSwing = limits.allowMarket ? plan.marketSwing : 0.0f;
         world.marketSpeed = plan.marketSpeed;
+
+        // Der Baum kann einem die Seite wieder wegnehmen (Spielstand geloescht,
+        // Baum zurueckgesetzt). Dann waere man auf einer Seite, zu der es
+        // keinen Reiter mehr gibt.
+        if (page == Page::Markt && !limits.allowChart)
+            page = Page::Welt;
 
         if (ImGui::BeginMainMenuBar())
         {
@@ -538,6 +568,11 @@ int main(int, char**)
 
             if (PageTab("Skills", page == Page::Skills))
                 page = Page::Skills;
+
+            // Der Markt kommt erst mit dem Punkt "chart" dazu. Ein Reiter,
+            // hinter dem nichts steht, waere ein Versprechen ohne Deckung.
+            if (limits.allowChart && PageTab("Market", page == Page::Markt))
+                page = Page::Markt;
 
             // Das Wiki ist immer erreichbar - auch in der Vorbereitung. Wer
             // nachschlaegt, soll dafuer keine Runde verbrauchen.
@@ -725,6 +760,10 @@ int main(int, char**)
         else if (page == Page::Wiki)
         {
             DrawWikiPage(wiki, limits, world, ores, crafts);
+        }
+        else if (page == Page::Markt)
+        {
+            DrawMarketPage(world, ores, crafts, limits);
         }
         else
         {

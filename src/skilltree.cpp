@@ -142,6 +142,7 @@ const char* SkillName(Skill skill)
     case Skill::Wait: return "wait()";
     case Skill::Status: return "money()";
     case Skill::Market: return "market.price()";
+    case Skill::Chart: return "Market board";
     case Skill::ExtraFurnace: return "+1 furnace";
     case Skill::Quests: return "Contracts";
     case Skill::Etch: return "item.etch()";
@@ -204,6 +205,7 @@ const char* SkillInfo(Skill skill)
     case Skill::Wait: return "wait(0.5) waits without burning lines, block.loading() says how long until the block is back. A waiting loop costs a line every pass - this costs exactly one. Needs block.isThere().";
     case Skill::Status: return "money(), timeLeft() and roundTarget() - how much you have, how many seconds are left, how much the round wants. Now your program can decide for itself when to play it safe.";
     case Skill::Market: return "market.price(Gold) - prices move during the round, market.average(Gold) is the long-run mean. Selling at the right moment is worth real money. Needs item.sell().";
+    case Skill::Chart: return "A page of its own with the chart: every ore you own, its base value, what it costs right now and how the price ran. Until now the price was a number you could ask for - here you watch it move, and holding a stack back becomes a decision instead of a guess. Needs market.price().";
     case Skill::ExtraFurnace: return "One more job at the same time. Processing and alloying share the slots - until now there was exactly one, and that was the hardest ceiling in the game.";
     case Skill::Quests: return "Contracts. Before every round three offers are on the board - take one or none. Each says beforehand what it pays and what it costs if you fail, and it runs for that one round only. It is the first thing in this game you WANT instead of something you fend off. Needs selling.";
     case Skill::Etch: return "item.etch(Gold) - etching. It takes a long time and eats purity, but it is worth far more than refined. The first step past the end of the old chain. Needs refining.";
@@ -266,6 +268,7 @@ const char* SkillTag(Skill skill)
     case Skill::Wait: return "ZZ";
     case Skill::Status: return "$?";
     case Skill::Market: return "MKT";
+    case Skill::Chart: return "~";
     case Skill::ExtraFurnace: return "+F";
     case Skill::Quests: return "!";
     case Skill::Etch: return "ET";
@@ -654,7 +657,10 @@ Limits SkillTree::limits() const
         // Der einzige Punkt im Baum, der MAL rechnet statt PLUS. Deshalb wird
         // er hier nur gezaehlt und erst ganz zum Schluss angewandt - sonst
         // haenge das Ergebnis daran, in welcher Reihenfolge die Knoten stehen.
-        case Skill::Optimize: ++optimize; break;
+        case Skill::Optimize:
+            ++optimize;
+            limits.allowOptimize = true;
+            break;
 
         case Skill::Info: limits.allowInfo = true; break;
         case Skill::Assay: limits.allowAssay = true; break;
@@ -663,6 +669,7 @@ Limits SkillTree::limits() const
         case Skill::Wait: limits.allowWait = true; break;
         case Skill::Status: limits.allowStatus = true; break;
         case Skill::Market: limits.allowMarket = true; break;
+        case Skill::Chart: limits.allowChart = true; break;
 
         case Skill::ExtraFurnace: ++jobs; break;
 

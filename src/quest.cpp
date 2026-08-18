@@ -235,6 +235,7 @@ bool Unlocked(const QuestDef& def, const Limits& limits)
     case Skill::Care: return limits.allowCare;
     case Skill::Assay: return limits.allowAssay;
     case Skill::Market: return limits.allowMarket;
+    case Skill::Chart: return limits.allowChart;
     case Skill::Sell: return limits.allowSell;
     case Skill::ExtraFurnace: return limits.maxJobs > 1;
     default: return true;

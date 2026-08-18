@@ -70,6 +70,7 @@ const KeyEntry kKeys[] = {
     {"wait", Skill::Wait},
     {"status", Skill::Status},
     {"market", Skill::Market},
+    {"chart", Skill::Chart},
 
     {"furnace+", Skill::ExtraFurnace},
 

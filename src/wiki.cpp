@@ -16,6 +16,8 @@
 #include <cstdio>
 #include <fstream>
 #include <sstream>
+#include <utility>
+#include <vector>
 
 namespace
 {
@@ -137,7 +139,36 @@ bool Unlocked(Skill skill, const Limits& l)
     case Skill::Refine: return l.allowRefine;
     case Skill::Press: return l.allowPress;
     case Skill::Alloy: return l.allowAlloy;
-    default: return false;  // Erweiterungen und Werte haben keine eigene Seite
+    case Skill::Care: return l.allowCare;
+    case Skill::Etch: return l.allowEtch;
+    case Skill::Fuse: return l.allowFuse;
+    case Skill::Quests: return l.allowQuests;
+
+    // Sprache, die es frueher umsonst gab, und der Compiler.
+    case Skill::Switch: return l.allowSwitch;
+    case Skill::Ternary: return l.allowTernary;
+    case Skill::Goto: return l.allowGoto;
+    case Skill::Recursion: return l.allowRecursion;
+    case Skill::Container: return l.allowContainer;
+    case Skill::Inline: return l.allowInline;
+    case Skill::Optimize: return l.allowOptimize;
+
+    // Fragen an die Welt.
+    case Skill::Info: return l.allowInfo;
+    case Skill::Assay: return l.allowAssay;
+    case Skill::Count: return l.allowCount;
+    case Skill::JobQuery: return l.allowJob;
+    case Skill::Wait: return l.allowWait;
+    case Skill::Status: return l.allowStatus;
+    case Skill::Market: return l.allowMarket;
+    case Skill::Chart: return l.allowChart;
+
+    // Die stapelbaren Punkte haben keine eigene Zahl im Baum - man sieht
+    // ihnen nur an, dass mehr als eines davon dasteht.
+    case Skill::ExtraConsole: return l.maxConsoles > 1;
+    case Skill::ExtraFurnace: return l.maxJobs > 1;
+
+    default: return false;  // Werte (Tempo, Geld, ...) haben keine eigene Seite
     }
 }
 
@@ -757,17 +788,55 @@ void DrawTimeline(const WikiPage& page, float width)
                             (i <= g_wiki.step) ? kAccent : IM_COL32(70, 76, 88, 255));
         if (i == g_wiki.step)
             dl->AddCircle(ImVec2(px, y), r + 3.5f, IM_COL32(255, 255, 255, 220), 0, 2.0f);
+    }
 
-        // Beschriftung: die erste linksbuendig, die letzte rechtsbuendig - so
-        // laeuft nichts ueber den Rand hinaus.
+    // ---- Die Aufschriften ------------------------------------------------
+    //
+    // Acht Schritte passen nicht mit acht Aufschriften nebeneinander - frueher
+    // liefen sie ineinander und ergaben einen Brei, aus dem man kein Wort mehr
+    // lesen konnte.
+    //
+    // Deshalb wird der Platz vergeben statt verteilt: der laufende Schritt
+    // zuerst, dann der unter der Maus, dann der Rest von links nach rechts. Wo
+    // schon etwas steht, bleibt die Aufschrift eben weg - der Punkt ist ja
+    // trotzdem da, und die Maus sagt, wie er heisst.
+    std::vector<int> reihe;
+    reihe.reserve((std::size_t)n);
+    reihe.push_back(g_wiki.step);
+    if (hovered >= 0 && hovered != g_wiki.step)
+        reihe.push_back(hovered);
+    for (int i = 0; i < n; ++i)
+        if (i != g_wiki.step && i != hovered)
+            reihe.push_back(i);
+
+    std::vector<std::pair<float, float>> belegt;  // schon vergebene Stuecke
+
+    for (const int i : reihe)
+    {
+        if (i < 0 || i >= n)
+            continue;
+
         const char*  label = page.steps[(std::size_t)i].point.c_str();
         const float  ls    = 13.0f;
         const ImVec2 ts    = TextSize(ls, label);
 
-        // Am Rand einklappen, damit keine Beschriftung hinauslaeuft.
-        float tx = px - ts.x * 0.5f;
+        // Am Rand einklappen, damit keine Aufschrift hinauslaeuft.
+        float tx = pointX(i) - ts.x * 0.5f;
         tx = std::max(tx, p0.x + 2.0f);
         tx = std::min(tx, p0.x + w - 2.0f - ts.x);
+
+        const float a = tx - 6.0f;
+        const float b = tx + ts.x + 6.0f;
+
+        bool frei = true;
+        for (const auto& belegtes : belegt)
+            if (a < belegtes.second && belegtes.first < b)
+                frei = false;
+
+        if (!frei)
+            continue;
+
+        belegt.push_back(std::make_pair(a, b));
 
         TextAt(dl, ls, ImVec2(tx, y + 14.0f),
                (i == g_wiki.step) ? kTextHead : ((i == hovered) ? kTextBody : kTextDim), label);

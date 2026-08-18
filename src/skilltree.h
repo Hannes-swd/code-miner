@@ -86,6 +86,11 @@ struct Limits
     // optimize dreht am Tempo - und zwar MAL statt PLUS.
     bool allowInline = false;
 
+    // "optimize" rechnet MAL statt PLUS und hat deshalb keine eigene Zahl
+    // hier - dieser Schalter sagt nur, DASS man es hat. Das Wiki braucht das:
+    // sonst haette der Punkt eine Seite, die man nie zu sehen bekommt.
+    bool allowOptimize = false;
+
     // Fragen an die Welt.
     bool allowInfo   = false;
     bool allowAssay  = false;
@@ -94,6 +99,10 @@ struct Limits
     bool allowWait   = false;
     bool allowStatus = false;
     bool allowMarket = false;
+
+    // Die Marktseite. Ohne diesen Punkt gibt es den Reiter gar nicht - und
+    // deshalb auch keinen Kurs zu sehen.
+    bool allowChart  = false;
 
     int maxLoops     = 0;
     int maxIfs       = 0;

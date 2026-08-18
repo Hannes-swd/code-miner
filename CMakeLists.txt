@@ -31,6 +31,7 @@ set(GAME_SOURCES
     src/main.cpp
     src/console.cpp
     src/world.cpp
+    src/market.cpp
     src/round.cpp
     src/quest.cpp
     src/skills.cpp

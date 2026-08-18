@@ -5,6 +5,7 @@
 #include "alloy.h"
 #include "craft.h"
 #include "instrument.h"
+#include "market.h"
 #include "ore.h"
 #include "skilltree.h"
 #include "world.h"
@@ -1974,10 +1975,12 @@ void Native::handle(Proc& proc, const std::string& msg, World& world, const OreP
         // Ein rohes Stueck bei voller Reinheit. Verarbeitet ist es mehr wert,
         // aber der Ausschlag ist derselbe - und so ist die Zahl zwischen zwei
         // Erzen vergleichbar.
-        const int jetzt  = StackValue(ores, craft, nummer, (int)OreState::Raw, 100, 1,
-                                      world.moneyPerBlock, world.marketFactor(nummer));
-        const int mittel = StackValue(ores, craft, nummer, (int)OreState::Raw, 100, 1,
-                                      world.moneyPerBlock, 1.0f);
+        //
+        // Gerechnet wird das in market.cpp, nicht hier: die Marktseite zeigt
+        // dieselben Zahlen, und zwei Rechnungen laufen frueher oder spaeter
+        // auseinander. Dann behauptet das Bild etwas anderes als das Programm.
+        const int jetzt  = MarketPriceNow(ores, craft, world, nummer);
+        const int mittel = MarketBase(ores, craft, world, nummer);
 
         char antwort[64];
         std::snprintf(antwort, sizeof(antwort), "%d %d\n", jetzt, mittel);
