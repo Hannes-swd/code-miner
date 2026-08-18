@@ -350,12 +350,12 @@ void DrawMarketPage(World& world, const OrePlan& ores, const CraftPlan& craft,
         ImGui::PopStyleColor();
 
         ImGui::SameLine();
-        if (world.marketSwing > 0.0f)
+        if (limits.allowMarket)
             ImGui::TextDisabled("  prices drift around the base value - one raw piece at full"
                                 " purity, exactly what market.price(...) reports");
         else
-            ImGui::TextDisabled("  every price sits on its base value - unlock market.price()"
-                                " and they start to move");
+            ImGui::TextDisabled("  prices drift around the base value - one raw piece at full"
+                                " purity. Pick the moment yourself and sell.");
 
         ImGui::Spacing();
         ImGui::Separator();
@@ -439,13 +439,20 @@ void DrawMarketPage(World& world, const OrePlan& ores, const CraftPlan& craft,
 
         ImGui::Spacing();
 
-        // Der Satz, um den es hier eigentlich geht: der Kurs ist kein Bild zum
-        // Anschauen, sondern eine Zahl, nach der ein Programm fragen kann.
-        if (limits.allowMarket && limits.allowSell)
+        // Der Satz, um den es hier eigentlich geht.
+        //
+        // Solange market.price() noch nicht gekauft ist, ist der Kurs etwas,
+        // das man ansieht und von Hand ausnutzt - und genau das soll auf die
+        // Dauer anstrengend werden. Deshalb steht hier dann kein Code,
+        // sondern der Hinweis, worauf es hinauslaeuft.
+        if (limits.allowMarket)
             ImGui::TextDisabled("if (market.price(%s) > market.average(%s)) item.sell(%s);",
                                 OreCodeName(ores, g_markt.ore).c_str(),
                                 OreCodeName(ores, g_markt.ore).c_str(),
                                 OreCodeName(ores, g_markt.ore).c_str());
+        else
+            ImGui::TextDisabled("Sell by hand while the price is up. Later market.price(...)"
+                                " lets your program watch for you.");
 
         ImGui::Spacing();
 
@@ -459,6 +466,10 @@ void DrawMarketPage(World& world, const OrePlan& ores, const CraftPlan& craft,
 
             const float zeileH = 56.0f;
 
+            // Erst nach der Schleife verkaufen: sonst wackelt einem die Tasche
+            // unter den Fingern weg, waehrend man noch ueber sie zeichnet.
+            int verkaufen = -1;
+
             for (const int ore : erze)
             {
                 const Ore& erz   = OreOf(ores, ore);
@@ -471,9 +482,22 @@ void DrawMarketPage(World& world, const OrePlan& ores, const CraftPlan& craft,
                 const ImVec2 ra     = ImGui::GetCursorScreenPos();
                 const ImVec2 rb(ra.x + breite, ra.y + zeileH - 6.0f);
 
+                // Der Knopf gibt es nur, wenn davon auch etwas daliegt. Solange
+                // market.price() fehlt, ist er der einzige Weg, einen guten
+                // Preis wirklich mitzunehmen - ohne ihn muesste man die Seite
+                // wechseln, und bis dahin ist der Moment vorbei.
+                const bool  mitKnopf = (limits.allowSell && tasche > 0);
+                const float knopfB   = mitKnopf ? 74.0f : 0.0f;
+
                 char kennung[32];
                 std::snprintf(kennung, sizeof(kennung), "##kurs%d", ore);
-                ImGui::InvisibleButton(kennung, ImVec2(breite, zeileH - 6.0f));
+                ImGui::InvisibleButton(kennung,
+                                       ImVec2(std::max(40.0f, breite - knopfB - 26.0f),
+                                              zeileH - 6.0f));
+
+                // Wo die naechste Zeile anfangen soll. Der Knopf wird gleich
+                // von Hand gesetzt und darf das nicht verschieben.
+                const ImVec2 weiter = ImGui::GetCursorScreenPos();
 
                 const bool hovered = ImGui::IsItemHovered();
                 const bool gewaehlt = (ore == g_markt.ore);
@@ -502,9 +526,10 @@ void DrawMarketPage(World& world, const OrePlan& ores, const CraftPlan& craft,
                 // Rechts: die kleine Kurve, davor Ausschlag und Preis. Von
                 // rechts nach links gerechnet, damit alles buendig steht, egal
                 // wie breit das Fenster gerade ist.
-                const float kurveB = std::min(170.0f, std::max(60.0f, breite * 0.22f));
-                const ImVec2 ka(rb.x - 14.0f - kurveB, ra.y + 12.0f);
-                const ImVec2 kb(rb.x - 14.0f, rb.y - 12.0f);
+                const float  rechts = rb.x - 14.0f - (mitKnopf ? (knopfB + 12.0f) : 0.0f);
+                const float  kurveB = std::min(170.0f, std::max(60.0f, breite * 0.20f));
+                const ImVec2 ka(rechts - kurveB, ra.y + 12.0f);
+                const ImVec2 kb(rechts, rb.y - 12.0f);
                 if (kb.x > ka.x + 20.0f)
                     DrawCurve(kdl, ka, kb, world, ores, craft, ore, false);
 
@@ -518,7 +543,28 @@ void DrawMarketPage(World& world, const OrePlan& ores, const CraftPlan& craft,
                 const ImVec2      qs    = ImGui::CalcTextSize(preis.c_str());
                 kdl->AddText(ImVec2(ka.x - 18.0f - ps.x - 22.0f - qs.x, mitte - zeile * 0.5f),
                             ui::kText, preis.c_str());
+
+                if (mitKnopf)
+                {
+                    char knopf[48];
+                    std::snprintf(knopf, sizeof(knopf), "Sell##v%d", ore);
+
+                    ImGui::SetCursorScreenPos(
+                        ImVec2(rb.x - 14.0f - knopfB, mitte - ImGui::GetFrameHeight() * 0.5f));
+
+                    if (ImGui::Button(knopf, ImVec2(knopfB, 0.0f)))
+                        verkaufen = ore;
+
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("Sell all %d - every state, at today's price",
+                                          tasche);
+
+                    ImGui::SetCursorScreenPos(weiter);
+                }
             }
+
+            if (verkaufen >= 0)
+                world.sell(ores, craft, OreOf(ores, verkaufen).name, -1);
         }
         ImGui::EndChild();
     }

@@ -96,9 +96,11 @@
 #                 the strongest point in the whole tree, which is why it is
 #                 late, expensive and rare.
 #
-#   speed         +0.5 lines per second
-#   money         +1 money per block
-#   regrow        the block regrows 8% faster
+#   speed         more lines per second (speed_plus below)
+#   money         more money per block (money_plus below). Careful: this one
+#                 multiplies EVERY sale you will ever make, so it is the
+#                 strongest thing in the tree that looks harmless.
+#   regrow        the block regrows faster (regrow_mul below)
 #
 #
 # MORE LANGUAGE
@@ -141,15 +143,18 @@
 #   wait          wait(seconds) and block.loading() - waiting without burning
 #                 a line per pass.
 #   status        money(), timeLeft(), roundTarget().
-#   market        market.price(ore) and market.average(ore) - prices move
-#                 during the round. Until this point is bought nothing moves
-#                 at all: every ore sits on its base value. A price that
-#                 swings while you cannot read it is a dice roll nobody sees.
 #   chart         the Market page: a chart of every ore you have held, with
 #                 its base value, what it costs right now and how the price
-#                 ran. The number was already there - here you watch it move,
-#                 and holding a stack back becomes a decision instead of a
-#                 guess.
+#                 ran. THIS is what wakes the market up - until it is bought
+#                 nothing moves at all, every ore sits on its base value. A
+#                 price that swings while nobody can see it is a dice roll.
+#                 From here on you sell by hand, at the moment YOU pick.
+#   market        market.price(ore) and market.average(ore) - the same numbers
+#                 the board shows, but now your PROGRAM can ask for them. This
+#                 is where watching turns into automating, so it comes a good
+#                 while after the board: first you sit there and think "I
+#                 should have sold just then", and then you get the tool that
+#                 does it for you.
 #
 #   furnace+      one more job at the same time. Processing and alloying share
 #                 the places; at the start there is exactly one, and that was
@@ -159,9 +164,14 @@
 # This many steps the tree has. 0 = no end, it keeps growing forever.
 steps       0
 
-# The further out, the more expensive: every step costs 1.8 times as much.
+# The further out, the more expensive: every step costs 1.85 times as much.
 # That is why you clear out the nearby points first and then work outwards.
-growth      1.8
+#
+# Careful with this number: money is a 32 bit integer, so a point can never
+# cost more than a billion. The bigger the growth, the earlier everything deep
+# runs into that ceiling and costs the same - somewhere around step 28 it does
+# either way. Under 1.9 is the sane range.
+growth      1.85
 
 # This many new points one purchase opens up (smallest and largest number).
 children    1 3
@@ -172,6 +182,24 @@ open        10
 
 # What "optimize" multiplies the speed by. 1.2 = a fifth more, and it stacks.
 optimize_mul  1.2
+
+
+# ---- what the stackable points are worth ---------------------------------
+#
+# These used to sit in the program with these very numbers - they are written
+# out here now because they are the OTHER half of how long the game lasts.
+# "spacing" decides how often something new arrives, these decide how fast you
+# can afford it.
+#
+# Smaller numbers = slower game. money_plus is the sharpest of them: it does
+# not add to your income, it multiplies it, and you buy that point dozens of
+# times over a run.
+
+speed_start   3.0     # lines per second at the very start
+speed_plus    0.25    # per "speed" point
+money_plus    1       # per "money" point - multiplies every sale
+regrow_start  0.6     # seconds until the block is back
+regrow_mul    0.94    # per "regrow" point (0.94 = 6% faster each time)
 
 # What assay() costs and how long it takes.
 assay_cost     40
@@ -190,10 +218,19 @@ market_speed  0.06
 #
 # Points with a fixed step (e.g. "mine 1") do not follow this: those sit
 # exactly where they should.
-# There are half again as many one-off points as there used to be. With the
-# old distance of 9 the whole tree would take twice as long to walk - so the
-# points move a little closer together.
-spacing     6
+# THIS IS THE MAIN KNOB FOR HOW LONG THE GAME LASTS.
+#
+# Counted in points the tree OPENS, not in points you buy - and once the board
+# is full (see "open" above) a purchase opens about one. So mid-game this is
+# roughly "every tenth purchase is something new", early on every fifth.
+#
+# 6 was too quick: you unlocked a new command, and two purchases later the
+# next one was already lying there. Nothing had time to feel like a limit, and
+# the whole tree was walked through in one sitting.
+#
+# Bigger = longer game, more time with each new thing before the next arrives.
+# 14 or 16 stretches it further; below 6 it turns into a firework.
+spacing     10
 
 
 # ---- the language ------------------------------------------------------
@@ -204,20 +241,20 @@ spacing     6
 # The ranges may overlap - the spacing above makes sure there is still air
 # in between.
 
-mine           1            6   once 1
-sell           2            6   once 1
-while          3            8   once 1
-if             4-9         18   once 2
-variables      6-11        16   once 1
-print          7-13        12   once 1
-bag            6-11        16   once 2   needs if
-check          8-14        14   once 1
-care           12-20       22   once 1   needs check
-else           10-16       18   once 1   needs if
-for            11-17       20   once 1   needs while
-functions      12-18       20   once 1   needs variables
-classes        14-24       22   once 1   needs functions
-shared         15-24       24   once 1
+mine           1           6    once 1
+sell           2           6    once 1
+while          3           8    once 1
+if             4-10        18   once 2
+variables      6-13        16   once 1
+print          8-16        12   once 1
+bag            7-13        16   once 2   needs if
+check          9-17        14   once 1
+care           13-22       22   once 1   needs check
+else           11-19       18   once 1   needs if
+for            12-21       20   once 1   needs while
+functions      14-23       20   once 1   needs variables
+classes        16-27       22   once 1   needs functions
+shared         17-27       24   once 1
 
 
 # ---- processing --------------------------------------------------------
@@ -230,14 +267,14 @@ shared         15-24       24   once 1
 # needs smelting, hardening needs casting, refining needs polishing.
 # Everything else may come in any order.
 
-wash           8-16        10   once 2   needs bag
-smelt          10-18       20   once 1   needs wash
-clean          12-20       18   once 1   needs wash
-press          13-21       22   once 1   needs wash
-cast           14-22       26   once 1   needs smelt
-polish         16-24       28   once 1   needs cast
-harden         18-26       32   once 1   needs cast
-refine         20-32       40   once 1   needs polish
+wash           9-18        10   once 2   needs bag
+smelt          11-21       20   once 1   needs wash
+clean          13-23       18   once 1   needs wash
+press          14-24       22   once 1   needs wash
+cast           16-25       26   once 1   needs smelt
+polish         18-27       28   once 1   needs cast
+harden         19-28       32   once 1   needs cast
+refine         21-32       40   once 1   needs polish
 
 # The end of the chain. Etching costs purity and a lot of time, fusing costs
 # even more - but "fused" is worth more than twice what "refined" is. Late in
@@ -272,11 +309,10 @@ fuse           28-44       80   once 1   needs etch
 # waechst der Baum vor allem in die BREITE - wer guenstig kauft, steht nach 150
 # Kaeufen erst bei Schritt 18.
 #
-# 14-22 ist dagegen wirklich spaet und trotzdem erreichbar: das ist dieselbe
+# 16-25 ist dagegen wirklich spaet und trotzdem erreichbar: das ist dieselbe
 # Gegend wie Legieren und Veredeln, also genau der Moment, in dem Abbauen und
-# Verarbeiten sitzen und die Wiederholung duenn wird. In Geld sind das rund
-# 190k bei Schritt 14 und 20M bei Schritt 22.
-quests         14-22       90   once 3   needs sell
+# Verarbeiten sitzen und die Wiederholung duenn wird.
+quests         16-25       90   once 3   needs sell
 
 # Processing is a chain: washing is the start, everything else hangs off it
 # through "needs". And washing itself needs "bag" - that is item.has(...).
@@ -285,23 +321,23 @@ quests         14-22       90   once 3   needs sell
 #
 # Alloying needs smelting: the ingredients have to be molten before you can
 # pour them together (see "von" in data/legierungen.json).
-alloy          18-28       34   once 1   needs smelt
+alloy          19-30       34   once 1   needs smelt
 
 
 # ---- more of it --------------------------------------------------------
 #
 # These points only show up once the matching thing has been bought.
 
-loop+          4-          16   often 1    rise 1.20   needs while
-condition+     6-          16   often 1    rise 1.20   needs if
-variable+      8-          12   often 1    rise 1.20   needs variables
-function+      14-         16   often 1    rise 1.22   needs functions
-class+         16-         18   often 1    rise 1.22   needs classes
+loop+          4-          16   often 1   rise 1.20   needs while
+condition+     6-          16   often 1   rise 1.20   needs if
+variable+      8-          12   often 1   rise 1.20   needs variables
+function+      14-         16   often 1   rise 1.22   needs functions
+class+         16-         18   often 1   rise 1.22   needs classes
 
 # One more console is one more PROGRAM running at the same time - it does not
 # add to your speed, it multiplies it. Nothing else in the tree does that, so
 # it starts late, costs a lot, and stays rare however far out you go.
-console+       10-         45   often 1    rise 1.05
+console+       13-         70   often 1   rise 1.04
 
 
 # ---- more language -----------------------------------------------------
@@ -314,11 +350,11 @@ console+       10-         45   often 1    rise 1.05
 # Everything here hangs off the thing it improves on, so it never turns up
 # before you have felt the problem it solves.
 
-ternary        10-18       16   once 1   needs if
-goto           9-17        12   once 1   needs while
-container      12-20       18   once 1   needs variables
-switch         14-24       26   once 2   needs if
-recursion      16-26       24   once 1   needs functions
+ternary        11-20       16   once 1   needs if
+goto           10-18       12   once 1   needs while
+container      13-22       18   once 1   needs variables
+switch         16-26       26   once 2   needs if
+recursion      18-28       24   once 1   needs functions
 
 
 # ---- the compiler ------------------------------------------------------
@@ -330,8 +366,8 @@ recursion      16-26       24   once 1   needs functions
 # nothing, late it is worth more than any speed point - so it may come again
 # and again, but it stays rare and expensive.
 
-inline         15-24       26   once 2   needs functions
-optimize       12-         40   often 1    rise 1.18
+inline         17-26       26   once 2   needs functions
+optimize       15-         55   often 1   rise 1.12
 
 
 # ---- questions to the world --------------------------------------------
@@ -343,18 +379,23 @@ optimize       12-         40   often 1    rise 1.18
 # assay is its other half - without it info() stays nullptr for everything the
 # game invents.
 
-count          9-16        14   once 2   needs bag
-wait           10-18       14   once 1   needs check
-job            11-20       16   once 1   needs wash
-status         12-20       18   once 1
-market         13-22       24   once 1   needs sell
-
-# The chart hangs off the market, not the other way round: first the number,
-# then the picture. That way the page arrives at the moment you have already
-# asked yourself whether now is a good time to sell.
-chart          15-26       34   once 2   needs market
-info           14-22       28   once 3   needs care
-assay          16-26       30   once 2   needs info
+count          10-18       14   once 2   needs bag
+wait           11-20       14   once 1   needs check
+job            12-22       16   once 1   needs wash
+status         13-22       18   once 1
+# Seeing comes before automating, and the two sit far apart on purpose.
+#
+# The board is the whole market as a mechanic: from the moment you own it the
+# prices move, and you sell by hand at the moment you pick. That is a real way
+# to play for a while - and it is meant to get on your nerves, because you
+# cannot sit and watch nine ores at once.
+#
+# market.price() is the answer to that, and it only means something once you
+# have felt the problem. Hence the gap of a few steps.
+chart          16-25       28   once 2   needs sell
+market         20-28       30   once 1   needs chart
+info           16-25       28   once 3   needs care
+assay          18-28       30   once 2   needs info
 
 
 # ---- more workshop ------------------------------------------------------
@@ -363,14 +404,19 @@ assay          16-26       30   once 2   needs info
 # net collapsed into "the furnace is busy anyway". This is the point that
 # multiplies throughput instead of adding to it - so it is rare and expensive.
 
-furnace+       12-         30   often 1    rise 1.15   needs wash
+furnace+       14-         45   often 1   rise 1.10   needs wash
 
 
 # ---- values ------------------------------------------------------------
 #
 # The bread-and-butter stuff. High weights: most of what comes should be
-# this, so that money comes in at all.
+# this, so that money comes in at all - and so there is something to buy in
+# between two real unlocks (see "spacing").
+#
+# "money" is deliberately rarer than "speed": it multiplies every sale, so a
+# handful of them is worth more than everything else on this list together.
+# That was what made a run collapse into an afternoon.
 
 speed          2-          10   often 6
-money          2-          12   often 6
+money          2-          12   often 4
 regrow         2-          10   often 4

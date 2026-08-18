@@ -142,7 +142,7 @@ const char* SkillName(Skill skill)
     case Skill::Wait: return "wait()";
     case Skill::Status: return "money()";
     case Skill::Market: return "market.price()";
-    case Skill::Chart: return "Market board";
+    case Skill::Chart: return "The market";
     case Skill::ExtraFurnace: return "+1 furnace";
     case Skill::Quests: return "Contracts";
     case Skill::Etch: return "item.etch()";
@@ -204,8 +204,8 @@ const char* SkillInfo(Skill skill)
     case Skill::JobQuery: return "job.busy(), job.free() and job.progress() - is the furnace working, how many are idle, how far along is it. Without it you only find out by trying, and the attempt costs a line. Needs washing.";
     case Skill::Wait: return "wait(0.5) waits without burning lines, block.loading() says how long until the block is back. A waiting loop costs a line every pass - this costs exactly one. Needs block.isThere().";
     case Skill::Status: return "money(), timeLeft() and roundTarget() - how much you have, how many seconds are left, how much the round wants. Now your program can decide for itself when to play it safe.";
-    case Skill::Market: return "market.price(Gold) - prices move during the round, market.average(Gold) is the long-run mean. Selling at the right moment is worth real money. Needs item.sell().";
-    case Skill::Chart: return "A page of its own with the chart: every ore you own, its base value, what it costs right now and how the price ran. Until now the price was a number you could ask for - here you watch it move, and holding a stack back becomes a decision instead of a guess. Needs market.price().";
+    case Skill::Market: return "market.price(Gold) and market.average(Gold) - the same two numbers the market board shows you, but now your PROGRAM can ask for them. This is where watching turns into automating: hold a stack back until the price climbs, and sell without sitting there. Needs the market board.";
+    case Skill::Chart: return "A page of its own: every ore you have held, its base value, what it costs right now and how the price ran. It is what wakes the market up - before this every ore sits on its base value and nothing moves. From here on the moment of the sale is yours to pick, by hand. Automating it comes later. Needs item.sell().";
     case Skill::ExtraFurnace: return "One more job at the same time. Processing and alloying share the slots - until now there was exactly one, and that was the hardest ceiling in the game.";
     case Skill::Quests: return "Contracts. Before every round three offers are on the board - take one or none. Each says beforehand what it pays and what it costs if you fail, and it runs for that one round only. It is the first thing in this game you WANT instead of something you fend off. Needs selling.";
     case Skill::Etch: return "item.etch(Gold) - etching. It takes a long time and eats purity, but it is worth far more than refined. The first step past the end of the old chain. Needs refining.";

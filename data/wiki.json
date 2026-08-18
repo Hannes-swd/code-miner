@@ -2120,14 +2120,14 @@
           "punkt": "Not every moment is the same",
           "code": "print(market.price(Gold));",
           "markiere": "market.price(Gold)",
-          "text": "The price of an ore drifts around its base value over the round. Sell at the wrong moment and you leave money on the table.",
+          "text": "You have watched this number on the market board for a while now. This is the same number - only now your program can ask for it, instead of you sitting there and watching.",
           "dauer": 6.0
         },
         {
           "punkt": "Compared with what?",
           "code": "if (market.price(Gold) > market.average(Gold))\n{\n    item.sell(Gold);\n}",
           "markiere": "market.price(Gold) > market.average(Gold)",
-          "text": "average is the long-run mean of that ore. Above it is a good moment, below it is not.",
+          "text": "average is the long-run mean of that ore - the dashed line on the board. Above it is a good moment, below it is not. That one comparison replaces all the staring.",
           "dauer": 7.0
         },
         {
@@ -2156,26 +2156,30 @@
       "schritte": [
         {
           "punkt": "The Market tab",
-          "code": "if (market.price(Diamond) > 5000)\n{\n    item.sell(Diamond);\n}",
-          "markiere": "market.price(Diamond)",
-          "text": "Once you own the chart point, a tab of its own appears next to Skills. It lists every ore you have ever held in your bag - nothing else, because an ore you have never seen has no price you could have found out.",
+          "code": "item.sell(Diamond);",
+          "markiere": "item.sell(Diamond)",
+          "text": "With this point a tab of its own appears next to Skills. It lists every ore you have ever held in your bag - nothing else, because an ore you have never seen has no price you could have found out.",
           "dauer": 7.5
         },
         {
+          "punkt": "Nothing moved before this",
+          "text": "Up to here every ore sat exactly on its base value and nothing swung at all. The board is what wakes the market up: a price that moves while nobody can see it would be a dice roll, and you would have sold the same stack once for 80 and once for 120 without ever learning why.",
+          "dauer": 8.5
+        },
+        {
           "punkt": "What the number means",
-          "markiere": "market.price(Diamond)",
-          "text": "Every price on that page is one RAW piece at full purity - exactly the number market.price(...) hands your program. Processed the piece is worth more, but the swing is the same, so two ores can be compared directly.",
-          "dauer": 8.0
+          "text": "Every price here is one RAW piece at full purity. Processed the piece is worth more, but the swing is the same - so two ores can be compared directly, however far along the chain they are.",
+          "dauer": 7.5
         },
         {
           "punkt": "Base value and swing",
-          "text": "Next to each ore stands its base value and how far the price is above or below it right now: green above, red below. The base value is what market.average(...) returns - the line the price always comes back to.",
+          "text": "Next to each ore stands its base value and how far the price is above or below it right now: green above, red below. The dashed line across the chart is that base value - the line the price always comes back to.",
           "dauer": 8.0
         },
         {
           "punkt": "The curve is the last two minutes",
-          "text": "Under the big price runs the chart. The dashed line across it is the base value, the dot on the right is now. One full swing takes roughly a minute and a half, so you can see a low coming before it arrives.",
-          "dauer": 8.0
+          "text": "Under the big price runs the chart, and the dot on the right is now. Hold the mouse over it and you get the price at that moment and how long ago it was. One full swing takes roughly a minute and a half, so a low is visible before it arrives.",
+          "dauer": 8.5
         },
         {
           "punkt": "Click a row, see it big",
@@ -2183,20 +2187,22 @@
           "dauer": 7.0
         },
         {
-          "punkt": "Nothing moved before this",
-          "text": "Until market.price() is bought, every ore sits exactly on its base value and nothing swings at all. A price that moves while you cannot read it would be a dice roll nobody sees - so the market only wakes up once you can look at it.",
-          "dauer": 8.5
-        },
-        {
-          "punkt": "This is what it is for",
-          "markiere": "> 5000",
-          "text": "Holding a stack back until the price climbs is an investment: it is money that is not in the bank yet. Your program decides when - the board is where you find the number to put into the comparison.",
-          "dauer": 8.0
-        },
-        {
-          "punkt": "And then it sells itself",
+          "punkt": "Now the moment is yours",
           "markiere": "item.sell(Diamond)",
-          "text": "Above the line you set, the stack goes over the counter without you watching. Below it, it stays in the bag. That is the whole trick: the round ends whether the price came back or not, so a limit that never triggers is money you never made.",
+          "text": "Every row you hold something of has a Sell button. That is the whole game for a while: watch, wait for the price to climb, sell by hand. Holding a stack back is an investment - it is money that is not in the bank yet, and the round ends whether the price came back or not.",
+          "dauer": 9.0
+        },
+        {
+          "punkt": "And it will get on your nerves",
+          "text": "Which is the point. You cannot watch nine ores at once, and the good moment always turns up while you are looking somewhere else. That is the problem market.price() solves - it comes a good few steps after this board, and by then you will know exactly what you want it for.",
+          "dauer": 9.0
+        },
+        {
+          "braucht": "market",
+          "punkt": "Later your program watches for you",
+          "code": "if (market.price(Diamond) > market.average(Diamond))\n{\n    item.sell(Diamond);\n}",
+          "markiere": "market.price(Diamond) > market.average(Diamond)",
+          "text": "market.price(Diamond) is the number on this page, and market.average(Diamond) is the dashed line. With those two the decision moves into your code, and you never have to sit and stare again.",
           "dauer": 8.5
         }
       ],

@@ -263,10 +263,10 @@ struct World
     // Gerechnet wird aus einer Uhr und der Erznummer: derselbe Stoff hat
     // ueberall denselben Preis, und zwei Erze schwingen nicht im Gleichtakt.
     //
-    // Bis "market" im Baum gekauft ist, steht marketSwing auf 0 (siehe main):
+    // Bis "chart" im Baum gekauft ist, steht marketSwing auf 0 (siehe main):
     // dann liefert marketFactor() ueberall 1.0, und die Uhr laeuft gar nicht
     // erst. Am Anfang hat also alles seinen festen Grundwert - der Markt wacht
-    // erst auf, wenn man ihn auch ablesen kann. Alles andere waere ein
+    // in dem Moment auf, in dem man ihn SEHEN kann. Alles andere waere ein
     // Wuerfel, den niemand sieht.
     float marketTime  = 0.0f;
     float marketSwing = 0.0f;   // +/- so viel um den Grundwert, 0 = fester Preis

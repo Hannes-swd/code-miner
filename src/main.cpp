@@ -270,7 +270,7 @@ int main(int, char**)
     // Seite - im fertigen Spiel haengt sie an den beiden Punkten.
     //
     // Vor dem Ausliefern wieder auf false.
-    const bool kMarktSofort = true;
+    const bool kMarktSofort = false;
 
     // Startgeld. Beim Zuruecksetzen kommt genau das wieder.
     const int kStartGeld = kUnendlichGeld ? kVielGeld : 0;
@@ -520,11 +520,13 @@ int main(int, char**)
         if (kAuftraegeSofort)
             limits.allowQuests = true;
 
-        // Testschalter: der Markt und seine Seite gibt es sofort.
+        // Testschalter: die Marktseite und die Funktionen dazu sofort. Im
+        // fertigen Spiel kommt erst die Seite ("chart") und ein gutes Stueck
+        // spaeter market.price() ("market") - siehe data/skills.txt.
         if (kMarktSofort)
         {
-            limits.allowMarket = true;
             limits.allowChart  = true;
+            limits.allowMarket = true;
         }
 
         world.moneyPerBlock   = limits.moneyPerBlock;
@@ -543,11 +545,15 @@ int main(int, char**)
         // Wie stark der Markt schwankt, ist Balance und steht deshalb in
         // data/skills.txt und nicht im Programm.
         //
-        // Und er schwankt erst, wenn man ihn auch ablesen kann: ohne
-        // market.price() waere der Preis ein Wuerfel, den niemand sieht - man
-        // haette denselben Stapel mal fuer 80 und mal fuer 120 verkauft, ohne
-        // je zu erfahren, warum. Bis dahin hat alles seinen festen Grundwert.
-        world.marketSwing = limits.allowMarket ? plan.marketSwing : 0.0f;
+        // Und er schwankt erst, wenn man ihn auch SIEHT - also mit der
+        // Marktseite, nicht mit market.price(). Ein Preis, der sich bewegt,
+        // waehrend niemand hinschaut, ist ein Wuerfel: man haette denselben
+        // Stapel mal fuer 80 und mal fuer 120 verkauft und nie erfahren,
+        // warum. Bis dahin hat alles seinen festen Grundwert.
+        //
+        // Erst danach kommt market.price() - da weiss man dann schon, WARUM
+        // man die Zahl haben will.
+        world.marketSwing = limits.allowChart ? plan.marketSwing : 0.0f;
         world.marketSpeed = plan.marketSpeed;
 
         // Der Baum kann einem die Seite wieder wegnehmen (Spielstand geloescht,
