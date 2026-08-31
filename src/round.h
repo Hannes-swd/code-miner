@@ -101,7 +101,13 @@ std::string RoundClock(float seconds);
 bool DrawRoundHud(const World& world, const RoundPlan& plan, bool paused, bool& togglePause);
 
 // Die Abrechnung, mitten im Bild.
+//
+// legacyPoints ist eine Vorschau: was ein Klick auf "Start over" an
+// Erbe-Punkten bringen wuerde (0 = nichts anzeigen, siehe prestige.h). Die
+// Runde kennt das Erbe-System selbst nicht - sie zeigt nur die Zahl, die der
+// Aufrufer schon ausgerechnet hat.
+//
 // Rueckgabe: true = weitergeklickt. Bei einer Niederlage mit "alles auf
 // Anfang" heisst das: neu anfangen - das macht der Aufrufer, die Runde kennt
 // den Rest des Spiels nicht.
-bool DrawRoundReport(const World& world, const RoundPlan& plan);
+bool DrawRoundReport(const World& world, const RoundPlan& plan, int legacyPoints = 0);

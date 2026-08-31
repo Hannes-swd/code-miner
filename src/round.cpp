@@ -434,7 +434,7 @@ bool DrawRoundHud(const World& world, const RoundPlan& plan, bool paused, bool& 
     return start;
 }
 
-bool DrawRoundReport(const World& world, const RoundPlan& plan)
+bool DrawRoundReport(const World& world, const RoundPlan& plan, int legacyPoints)
 {
     bool weiter = false;
 
@@ -555,6 +555,13 @@ bool DrawRoundReport(const World& world, const RoundPlan& plan)
 
             ImGui::SameLine();
             ImGui::TextColored(rot, "Everything starts over.");
+
+            // Was ueberlebt: die Erbe-Punkte, die dieser Anlauf bringt. Steht
+            // hier und nicht erst nach dem Klick - sonst sieht man nie, wofuer
+            // man gerade verliert.
+            if (legacyPoints > 0)
+                ImGui::TextColored(gruen, "+%s Legacy Points carry over.",
+                                   ui::Money(legacyPoints).c_str());
         }
         else
         {

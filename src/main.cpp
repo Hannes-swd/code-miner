@@ -14,6 +14,7 @@
 #include "ore.h"
 #include "oregen.h"
 #include "platform.h"
+#include "prestige.h"
 #include "round.h"
 #include "save.h"
 #include "skillfile.h"
@@ -26,6 +27,7 @@
 #include "imgui.h"
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <vector>
 
@@ -116,7 +118,11 @@ enum class Page
 
     // Der Markt. Es gibt ihn erst mit dem Punkt "chart" im Baum - vorher wird
     // der Reiter nicht gezeichnet und die Seite nie geoeffnet.
-    Markt
+    Markt,
+
+    // Das Erbe: Erbe-Punkte gegen dauerhafte Boni, ueberlebt "Start over".
+    // Siehe prestige.h.
+    Erbe
 };
 
 // Reiter in der Menueleiste. Die offene Seite wird hervorgehoben.
@@ -303,10 +309,24 @@ int main(int, char**)
     // Wie lange eine Runde dauert und was in der Vorbereitung still steht,
     // steht in data/runden.json. Fuer eine kurze Testrunde einfach dort die
     // Zahl kleiner machen - hier steht sie mit Absicht nicht.
-    const RoundPlan rounds = LoadRoundPlan();
+    //
+    // Nicht mehr const: das Erbe (siehe unten) darf Rundenzeit und Rundenziel
+    // dauerhaft ein Stueck verschieben. Die Grundwerte aus der Datei bleiben
+    // dafuer separat gemerkt.
+    RoundPlan   rounds           = LoadRoundPlan();
+    const float baseRoundSeconds = rounds.seconds;
+    const int   baseTargetStart  = rounds.targetStart;
+
+    // Das Erbe: Erbe-Punkte gegen dauerhafte Boni, ueberlebt "Start over".
+    // Anders als der normale Spielstand liegt es in einer eigenen Datei und
+    // wird von resetAll()/DeleteSave() nicht angeruehrt.
+    const PrestigePlan prestigePlan = LoadPrestigePlan();
+    Prestige           prestige;
+    if (!LoadPrestige(prestige))
+        RerollOffers(prestige, prestigePlan);  // allererster Start: erste Angebote wuerfeln
 
     World world;
-    world.money = kStartGeld;
+    world.money = kStartGeld + ComputePrestigeEffects(prestige, prestigePlan).startMoneyBonus;
 
     // EIN Motor fuer alle Konsolen: sie sind zusammen ein Programm.
     Native engine;
@@ -344,7 +364,7 @@ int main(int, char**)
         DeleteSave();
 
         world = World();
-        world.money = kStartGeld;
+        world.money = kStartGeld + ComputePrestigeEffects(prestige, prestigePlan).startMoneyBonus;
 
         tree.start(plan, 20260808u);
 
@@ -509,6 +529,7 @@ int main(int, char**)
         if (saveTimer >= 10.0f)
         {
             SaveGame(world, tree, consoles, ores, alloys);
+            SavePrestige(prestige);  // Kaeufe auf der Legacy-Seite sollen auch ohne Verlieren bleiben
             saveTimer = 0.0f;
         }
 
@@ -529,9 +550,21 @@ int main(int, char**)
             limits.allowMarket = true;
         }
 
-        world.moneyPerBlock   = limits.moneyPerBlock;
-        world.respawnSeconds  = limits.respawnSeconds;
-        engine.setSpeed(limits.linesPerSecond);
+        // Das Erbe legt sich ueber die Werte aus dem Baum - genauso jedes Bild
+        // neu, damit ein Kauf auf der Erbe-Seite sofort wirkt, auch ohne
+        // Neustart.
+        const PrestigeEffects peff = ComputePrestigeEffects(prestige, prestigePlan);
+
+        rounds.seconds     = baseRoundSeconds + peff.extraSeconds;
+        rounds.targetStart = std::max(0, (int)std::llround((double)baseTargetStart * peff.targetMul));
+
+        limits.maxJobs     += peff.extraJobs;
+        limits.maxConsoles += peff.extraConsoles;
+        limits.assayCost = std::max(1, (int)std::llround((double)limits.assayCost * peff.assayCostMul));
+
+        world.moneyPerBlock  = std::max(1, (int)std::llround((double)limits.moneyPerBlock * peff.moneyMul));
+        world.respawnSeconds = std::max(0.05f, limits.respawnSeconds * peff.respawnMul);
+        engine.setSpeed(limits.linesPerSecond * peff.speedMul);
 
         // Was die Runde verlangt. Die Welt rechnet es nicht selbst aus, sie
         // kennt data/runden.json nicht - sie bekommt nur das Ergebnis, damit
@@ -586,6 +619,12 @@ int main(int, char**)
             // merkt man erst beim Hineinschauen, dass es etwas Neues gibt.
             if (CountTab("Wiki", WikiUnseen(wiki, limits, world, ores), page == Page::Wiki))
                 page = Page::Wiki;
+
+            // Das Erbe ist immer erreichbar, auch wenn gerade nichts zu holen
+            // ist - Erbe-Punkte sammeln sich ja nur beim Verlieren an, und man
+            // soll trotzdem jederzeit nachschauen koennen, was schon da ist.
+            if (CountTab("Legacy", prestige.points, page == Page::Erbe))
+                page = Page::Erbe;
 
             // Rechts stehen die Sachen, die zur Seite gehoeren - Geld ganz
             // aussen, davor der Knopf fuer eine weitere Konsole. Links die
@@ -771,6 +810,10 @@ int main(int, char**)
         {
             DrawMarketPage(world, ores, crafts, limits);
         }
+        else if (page == Page::Erbe)
+        {
+            DrawPrestigePage(prestige, prestigePlan);
+        }
         else
         {
             DrawSkillPage(world, tree);
@@ -801,13 +844,27 @@ int main(int, char**)
         if (togglePause)
             paused = !paused;
 
-        if (world.phase == RoundPhase::Report && DrawRoundReport(world, rounds))
+        // Ziel verfehlt und die Datei sagt "alles auf Anfang": dann ist das
+        // Spiel wirklich vorbei, nicht nur die Runde - und genau dann gibt es
+        // Erbe-Punkte, die den Neuanfang ueberleben. Schon HIER ausgerechnet,
+        // nicht erst nach dem Klick: die Abrechnung soll die Zahl vorher
+        // zeigen koennen (siehe DrawRoundReport).
+        const bool verloren = !RoundWon(world, rounds) && rounds.resetOnLoss &&
+                             RoundTarget(rounds, world.roundNumber) > 0;
+        const int  legacyPreview =
+            verloren ? PrestigePointsEarned(prestigePlan, world.roundNumber, world.money) : 0;
+
+        if (world.phase == RoundPhase::Report &&
+            DrawRoundReport(world, rounds, legacyPreview))
         {
-            // Ziel verfehlt und die Datei sagt "alles auf Anfang": dann ist das
-            // Spiel wirklich vorbei, nicht nur die Runde.
-            if (!RoundWon(world, rounds) && rounds.resetOnLoss &&
-                RoundTarget(rounds, world.roundNumber) > 0)
+            if (verloren)
+            {
+                prestige.points += legacyPreview;
+                prestige.totalEarned += legacyPreview;
+                RerollOffers(prestige, prestigePlan);
+                SavePrestige(prestige);
                 resetAll();
+            }
             else
                 NextRound(world, rounds);
         }
@@ -822,6 +879,7 @@ int main(int, char**)
     }
 
     SaveGame(world, tree, consoles, ores, alloys);
+    SavePrestige(prestige);
 
     plat::Shutdown();
     return 0;
