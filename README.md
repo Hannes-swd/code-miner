@@ -1,4 +1,4 @@
-# Code Miner
+# Code Miner 
 
 Ein Spiel, in dem du **echten C++-Code schreibst**, um zu spielen. In der Mitte liegt ein
 Block. Du baust ihn nicht mit der Maus ab, sondern so:
