@@ -278,7 +278,9 @@ std::string Instrument(const std::string& src, int consoleId)
 
     return out;
 }
-
+// -----------------------------------------------------------------------------
+//schau ki hier
+// -----------------------------------------------------------------------------
 bool ContainsMainFunction(const std::string& src)
 {
     for (std::size_t i = 0; i < src.size(); ++i)
