@@ -8,6 +8,7 @@
 
 #include "imgui.h"
 
+#include <cfloat>
 #include <cmath>
 #include <cstdio>
 
@@ -1255,6 +1256,41 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
     meldungen("data/verarbeitung.json:", craft.problems);
     meldungen("data/legierungen.json:", alloys.problems);
     meldungen("data/runden.json:", rounds.problems);
+}
+
+// Dieselbe Farbe, aber mit weniger Deckkraft - fuers Ein- und Ausblenden.
+static ImU32 FadeColor(ImU32 farbe, float alpha)
+{
+    ImVec4 v = ImGui::ColorConvertU32ToFloat4(farbe);
+    v.w *= alpha;
+    return ImGui::ColorConvertFloat4ToU32(v);
+}
+
+void DrawSellToast(const World& world)
+{
+    if (world.sellFx <= 0.0f)
+        return;
+
+    // Nur die Zahl: steigt auf, wird dabei kleiner und blasser - wie Rauch,
+    // der sich aufloest. Kein Rahmen, kein Symbol, das lenkt vom eigentlichen
+    // Hinweis nur ab.
+    const float t     = 1.0f - world.sellFx;  // 0 = gerade erst verkauft, 1 = vorbei
+    const float alpha = world.sellFx;         // faellt gleichmaessig von 1 auf 0
+
+    char text[32];
+    std::snprintf(text, sizeof(text), "+%s", ui::Money(world.lastSold).c_str());
+
+    ImGuiViewport* vp   = ImGui::GetMainViewport();
+    ImDrawList*    dl   = ImGui::GetForegroundDrawList();
+    ImFont*        font = ImGui::GetFont();
+
+    const float size = ImGui::GetFontSize() * (1.3f - 0.5f * t);  // 1.3x -> 0.8x
+    const ImVec2 ts  = font->CalcTextSizeA(size, FLT_MAX, 0.0f, text);
+
+    const float x = vp->WorkPos.x + vp->WorkSize.x - ui::kRightMargin - ts.x;
+    const float y = vp->WorkPos.y + ImGui::GetFrameHeight() + 14.0f - t * 34.0f;
+
+    dl->AddText(font, size, ImVec2(x, y), FadeColor(ui::kGood, alpha), text);
 }
 
 void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,

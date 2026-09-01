@@ -486,6 +486,13 @@ const Ore& OreOf(const OrePlan& ores, int index);
 void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const AlloyPlan& alloys,
                const RoundPlan& rounds);
 
+// Kleiner Hinweis oben rechts, egal welche Seite gerade offen ist: "verkauft"
+// soll man auch im Markt oder im Skilltree merken, nicht nur auf der
+// Welt-Seite, wo der Abbau-Effekt aus DrawWorld() sitzt. Nutzt denselben
+// sellFx/lastSold wie dort, zeichnet aber auf den Vordergrund - unabhaengig
+// vom Fenster der aktuellen Seite.
+void DrawSellToast(const World& world);
+
 // Die Tasche: was man abgebaut hat. Das Rechtsklickmenue auf einer Karte
 // bietet genau die Schritte an, die von hier aus moeglich sind - deshalb
 // braucht die Seite die Limits.

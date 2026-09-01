@@ -736,6 +736,10 @@ int main(int, char**)
             ImGui::EndMainMenuBar();
         }
 
+        // Verkauft: der Hinweis oben rechts soll man auf jeder Seite sehen,
+        // nicht nur auf der Welt-Seite - deshalb hier und nicht in DrawWorld().
+        DrawSellToast(world);
+
         // Das Programm laeuft weiter, egal welche Seite offen ist - aber nur
         // waehrend der Runde. In der Vorbereitung ruehrt sich der Motor nicht.
         if (world.phase == RoundPhase::Run)
