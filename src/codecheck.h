@@ -5,7 +5,7 @@
 
 #include <string>
 #include <vector>
-//test
+
 // Prueft, ob der Code nur benutzt, was im Skilltree freigeschaltet ist.
 //
 // Passiert VOR dem Kompilieren. Die Meldung landet dort, wo auch
