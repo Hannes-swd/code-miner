@@ -414,9 +414,11 @@ void World::tickMining(float dt, const OrePlan& ores, const CraftPlan& craft)
     if (!blockAlive || !mining)
         return;
 
-    mineTimer += dt;
-
     const Ore& erz = OreOf(ores, ore);
+
+    // power.rushMine(): der Abbau springt in diesem Durchgang gleich auf sein
+    // Ende, statt normal Zeit zu brauchen.
+    mineTimer += (powerActive && powerKind == PowerKind::Mine) ? erz.mineSeconds : dt;
     if (mineTimer < erz.mineSeconds)
         return;
 
@@ -780,7 +782,8 @@ void World::tickCraft(float dt, bool programLaeuft)
         if (!job.byHand && !programLaeuft)
             continue;
 
-        job.timer += dt;
+        // power.rushWork(): dieser Auftrag springt gleich auf sein Ende.
+        job.timer += (powerActive && powerKind == PowerKind::Work) ? job.seconds : dt;
         if (job.timer < job.seconds)
             continue;
 
@@ -880,7 +883,9 @@ void World::tickAssay(float dt)
     if (frozen || !assaying)
         return;
 
-    assayTimer += dt;
+    // power.rushWork() beschleunigt die Untersuchung genauso wie den Ofen -
+    // beides ist Warten auf eine Uhr in der Werkstatt.
+    assayTimer += (powerActive && powerKind == PowerKind::Work) ? assaySeconds : dt;
     if (assayTimer < assaySeconds)
         return;
 
@@ -888,6 +893,24 @@ void World::tickAssay(float dt)
     ++stats.assayed;
     assaying   = false;
     assayTimer = 0.0f;
+}
+
+int World::startPower(PowerKind art, int kosten, float dauer, float marktBoost, float abklingzeit)
+{
+    if (frozen)
+        return 0;
+    if (!powerReady())
+        return 0;
+    if (money < kosten)
+        return 0;
+
+    money              -= kosten;
+    powerActive        = true;
+    powerKind          = art;
+    powerTimer         = (dauer > 0.0f) ? dauer : 0.1f;
+    powerMarketBoost   = (marktBoost > 0.0f) ? marktBoost : 1.0f;
+    powerCooldownAfter = (abklingzeit > 0.0f) ? abklingzeit : 0.0f;
+    return kosten;
 }
 
 // ---- Der Markt ------------------------------------------------------------
@@ -923,6 +946,11 @@ float World::marketFactorAt(int ore, float zeit) const
 
 float World::marketFactor(int ore) const
 {
+    // power.rushMarket(): der Kurs ist fuer einen Moment egal, es zaehlt nur
+    // der Schub. Steht an derselben Stelle wie die normale Rechnung, damit
+    // Verkauf und Marktseite nie etwas Verschiedenes behaupten.
+    if (powerActive && powerKind == PowerKind::Market)
+        return powerMarketBoost;
     return marketFactorAt(ore, marketTime);
 }
 
@@ -957,7 +985,9 @@ void World::update(float dt, const OrePlan& ores)
 
     if ((!frozen || handMine) && !blockAlive && respawnTimer > 0.0f)
     {
-        respawnTimer -= dt;
+        // power.rushGrow(): der Rest der Wartezeit faellt in diesem Durchgang
+        // auf einen Schlag weg.
+        respawnTimer -= (powerActive && powerKind == PowerKind::Grow) ? respawnTimer : dt;
         if (respawnTimer <= 0.0f)
         {
             respawnTimer = 0.0f;
@@ -989,6 +1019,30 @@ void World::update(float dt, const OrePlan& ores)
         sellFx -= dt * 0.9f;
         if (sellFx < 0.0f)
             sellFx = 0.0f;
+    }
+
+    // Der Schub laeuft von selbst aus - genau wie fx und sellFx darueber.
+    // Absichtlich ans Ende gestellt: alles, was ihn diesen Durchgang noch
+    // ausnutzen sollte (Nachwachsen oben), ist da schon durchgelaufen.
+    //
+    // Danach beginnt die Abklingzeit - ohne die koennte man den naechsten
+    // Schub in der Sekunde starten, in der der alte endet, und haette den
+    // Effekt praktisch dauerhaft.
+    if (powerActive)
+    {
+        powerTimer -= dt;
+        if (powerTimer <= 0.0f)
+        {
+            powerActive   = false;
+            powerTimer    = 0.0f;
+            powerCooldown = powerCooldownAfter;
+        }
+    }
+    else if (powerCooldown > 0.0f)
+    {
+        powerCooldown -= dt;
+        if (powerCooldown < 0.0f)
+            powerCooldown = 0.0f;
     }
 }
 

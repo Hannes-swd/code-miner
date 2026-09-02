@@ -67,6 +67,13 @@ struct SkillPlan
     int   assayCost    = 40;
     float assaySeconds = 3.0f;
 
+    // Sonderfaehigkeiten: was ein Schub kostet, wie lange er dauert, und wie
+    // stark "rush_market" den Preis waehrenddessen anhebt.
+    int   powerCost            = 60;
+    float powerSeconds         = 3.0f;
+    float powerMarketBoost     = 1.5f;
+    float powerCooldownSeconds = 12.0f;  // Pause nach dem Ende, bevor der naechste darf
+
     // Wie weit der Marktpreis um den Grundwert schwankt (0.25 = +/- 25 %) und
     // wie schnell er sich dreht.
     float marketSwing = 0.25f;

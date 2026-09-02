@@ -485,6 +485,23 @@ void DrawStatus(const Limits& limits, const World& world)
         // Nur was da ist. Eine Zeile "Klassen: 0" wuerde verraten, dass es
         // Klassen ueberhaupt gibt - das soll der Baum machen, nicht diese Ecke.
 
+        // Laeuft gerade ein Schub, oder klingt er noch ab? Ohne diese Zeile
+        // saehe man dem Spiel nicht an, wofuer man da bezahlt hat - und nicht,
+        // warum der naechste Aufruf gerade nichts bringt.
+        if (world.powerActive)
+        {
+            static const char* kNamen[] = {"Mining", "Regrowth", "The workshop", "The market"};
+            const int          i = (int)world.powerKind;
+            ImGui::TextColored(ui::V(ui::kAccent), "RUSH: %s (%.1fs)",
+                               (i >= 0 && i < 4) ? kNamen[i] : "?", world.powerTimer);
+            ImGui::Spacing();
+        }
+        else if (world.powerCooldown > 0.0f)
+        {
+            ImGui::TextColored(ui::V(ui::kTextDim), "Rush cooling down (%.1fs)", world.powerCooldown);
+            ImGui::Spacing();
+        }
+
         // ---- Die zwei grossen Zahlen -------------------------------------
         const float halb = ImGui::GetContentRegionAvail().x * 0.5f;
 

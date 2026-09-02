@@ -445,6 +445,36 @@ std::string CheckLimits(const std::vector<SourceFile>& files, const Limits& limi
                     return locked("market.price(...)");
             }
 
+            // ---- Sonderfaehigkeiten -----------------------------------------
+            //
+            // ready() ist kostenlos und haengt an allowPower - das steht schon,
+            // sobald man die ERSTE der vier Faehigkeiten besitzt.
+            else if (t.word == "ready" && call)
+            {
+                if (!limits.allowPower)
+                    return locked("power.ready()");
+            }
+            else if (t.word == "rushMine" && call)
+            {
+                if (!limits.allowRushMine)
+                    return locked("power.rushMine()");
+            }
+            else if (t.word == "rushGrow" && call)
+            {
+                if (!limits.allowRushGrow)
+                    return locked("power.rushGrow()");
+            }
+            else if (t.word == "rushWork" && call)
+            {
+                if (!limits.allowRushWork)
+                    return locked("power.rushWork()");
+            }
+            else if (t.word == "rushMarket" && call)
+            {
+                if (!limits.allowRushMarket)
+                    return locked("power.rushMarket()");
+            }
+
             // ---- Behaelter -------------------------------------------------
             else if (IsContainerWord(t.word))
             {

@@ -104,6 +104,16 @@ struct Limits
     // deshalb auch keinen Kurs zu sehen.
     bool allowChart  = false;
 
+    // Sonderfaehigkeiten: kurze, teure Schuebe (siehe World::powerActive).
+    // allowPower steht schon bei der ERSTEN davon auf true - power.ready()
+    // haengt nicht an einer einzelnen, sonst muesste man fuer jede eigens
+    // nachsehen koennen.
+    bool allowPower      = false;
+    bool allowRushMine   = false;
+    bool allowRushGrow   = false;
+    bool allowRushWork   = false;
+    bool allowRushMarket = false;
+
     int maxLoops     = 0;
     int maxIfs       = 0;
     int maxConsoles  = 1;
@@ -120,6 +130,17 @@ struct Limits
     // bekommt nur die Limits.
     int   assayCost    = 40;
     float assaySeconds = 3.0f;
+
+    // Was ein Schub kostet, wie lange er dauert, und wie stark "Markt" den
+    // Preis waehrenddessen anhebt. Kommt ebenfalls aus data/skills.txt.
+    int   powerCost            = 60;
+    float powerSeconds         = 3.0f;
+    float powerMarketBoost     = 1.5f;
+
+    // Wie lange nach dem Ende eines Schubs Pause ist, bevor der naechste
+    // losgehen darf. Ohne das liesse sich der Effekt fuer ein paar Muenzen
+    // alle drei Sekunden neu anschieben und waere praktisch dauerhaft.
+    float powerCooldownSeconds = 12.0f;
 
     // Wie viele Auftraege gleichzeitig laufen duerfen. Einer gehoert einem
     // von Anfang an - jeder "furnace+" legt einen dazu.

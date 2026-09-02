@@ -254,6 +254,47 @@ struct World
 
     void tickAssay(float dt);
 
+    // ---- Sonderfaehigkeiten (der Skilltree "power") ------------------------
+    //
+    // Ein kurzer, teurer Schub: waehrend er laeuft, wird eine Sache im Spiel
+    // sofort fertig statt normal zu brauchen. Es laeuft immer nur EINER
+    // gleichzeitig - deshalb gibt es power.ready() im Spielercode, sonst
+    // wuerde man blind bezahlen, waehrend schon einer laeuft.
+    //
+    // Nach dem Ende kommt eine Abklingzeit: ohne die koennte man alle drei
+    // Sekunden den naechsten anschieben und das Warten waere fuer immer weg,
+    // solange Geld da ist. power.ready() ist erst wieder true, wenn auch die
+    // Abklingzeit vorbei ist - der Spielercode muss davon nichts wissen.
+    enum class PowerKind
+    {
+        Mine,    // jeder Abbau ist sofort fertig
+        Grow,    // der Block waechst sofort nach
+        Work,    // jeder Ofen-Auftrag und jede Untersuchung ist sofort fertig
+        Market,  // der Verkauf zahlt kurz den Hoechstpreis
+        Count
+    };
+
+    bool      powerActive      = false;
+    PowerKind powerKind        = PowerKind::Mine;
+    float     powerTimer       = 0.0f;
+    float     powerMarketBoost = 1.5f;  // nur gueltig, waehrend powerKind == Market
+
+    // Laeuft nach dem Ende eines Schubs ab. Erst wenn sie bei 0 ist, darf der
+    // naechste losgehen. cooldownAfter merkt sich, wie lang sie sein soll -
+    // das steht erst beim Start fest (kommt aus dem Skilltree) und muss bis
+    // zum Ende des Schubs ueberleben.
+    float powerCooldown      = 0.0f;
+    float powerCooldownAfter = 0.0f;
+
+    // Ob gerade ein neuer Schub angeschaltet werden duerfte - weder aktiv
+    // noch am Abklingen. Das ist genau, was power.ready() im Spielercode
+    // beantwortet.
+    bool powerReady() const { return !powerActive && powerCooldown <= 0.0f; }
+
+    // Schub anschalten. Rueckgabe: was es gekostet hat, 0 = ging nicht (kein
+    // Geld, es laeuft schon einer, oder er klingt noch ab).
+    int startPower(PowerKind art, int kosten, float dauer, float marktBoost, float abklingzeit);
+
     // ---- Der Markt --------------------------------------------------------
     //
     // Der Preis eines Erzes schwankt ueber die Runde um seinen Grundwert.

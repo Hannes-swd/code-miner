@@ -159,6 +159,29 @@
 #   furnace+      one more job at the same time. Processing and alloying share
 #                 the places; at the start there is exactly one, and that was
 #                 the hardest ceiling in the game.
+#
+#
+# SPECIAL ABILITIES
+#
+#   Short, expensive bursts. Each one is called by hand from your own code,
+#   and each call costs money whether it fires or not - power.ready() says
+#   beforehand whether one is already running, and THAT is free. Only one
+#   burst can ever run at once, no matter how many consoles you have.
+#
+#   After a burst ends it needs a break (power_cooldown below) before the
+#   next one may start. Without that you could relaunch it every few seconds
+#   for a handful of coins and the thing it speeds up would never really
+#   happen anymore - power.ready() only turns true again once the break is
+#   over too, so the player code never has to know the break exists.
+#
+#   rush_mine     power.rushMine() - for a few seconds every block finishes
+#                 mining instantly.
+#   rush_grow     power.rushGrow() - for a few seconds the block regrows the
+#                 instant it is mined.
+#   rush_work     power.rushWork() - for a few seconds every furnace job and
+#                 every assay finishes instantly.
+#   rush_market   power.rushMarket() - for a few seconds every sale is paid
+#                 at the market's best price (power_market_boost below).
 
 
 # This many steps the tree has. 0 = no end, it keeps growing forever.
@@ -209,6 +232,14 @@ assay_seconds  3.0
 # and how fast it turns.
 market_swing  0.25
 market_speed  0.06
+
+# What a rush ability costs per call, how many seconds it lasts, how much it
+# multiplies the sale price by while rush_market is running, and how many
+# seconds of break follow before the next call is allowed to fire.
+power_cost           60
+power_seconds        3.0
+power_market_boost   1.5
+power_cooldown       12.0
 
 
 # Minimum distance between two "once" points, counted in points.
@@ -405,6 +436,17 @@ assay          18-28       30   once 2   needs info
 # multiplies throughput instead of adding to it - so it is rare and expensive.
 
 furnace+       14-         45   often 1   rise 1.10   needs wash
+
+
+# ---- special abilities ---------------------------------------------------
+#
+# Each one hangs off the thing it speeds up, so it never turns up before you
+# have felt what it fixes: mining takes a while, so does the furnace, and the
+# market only matters once its chart is up and running.
+rush_mine      8-18        24   once 1   needs mine
+rush_grow      10-20       26   once 1   needs mine
+rush_work      14-24       34   once 1   needs wash
+rush_market    22-30       40   once 1   needs chart
 
 
 # ---- values ------------------------------------------------------------

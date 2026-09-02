@@ -2438,6 +2438,140 @@
         "info(...)",
         "market.price(...)"
       ]
+    },
+    {
+      "kategorie": "functions",
+      "titel": "power.rushMine()",
+      "braucht": "rush_mine",
+      "kurz": "A few seconds of instant mining.",
+      "schritte": [
+        {
+          "punkt": "Every call costs money",
+          "code": "power.rushMine();",
+          "markiere": "power.rushMine();",
+          "text": "For a few seconds every block you mine finishes the instant you start it. That costs money EVERY time you call it - whether it fires or not.",
+          "dauer": 7.0
+        },
+        {
+          "punkt": "So ask first",
+          "code": "if (power.ready())\n    power.rushMine();",
+          "markiere": "power.ready()",
+          "text": "power.ready() is free. It says whether a rush is already running - only one runs at a time, no matter how many consoles you have. Calling rushMine() while one is already going still charges you and does nothing.",
+          "dauer": 7.5
+        },
+        {
+          "punkt": "Then it needs to rest",
+          "text": "After it ends there is a much longer break before the next one is allowed to fire - power.ready() only turns true again once that break is over too. Without it you could relaunch this every few seconds and mining would never really take time at all.",
+          "dauer": 7.5
+        }
+      ],
+      "siehe_auch": [
+        "power.rushGrow()",
+        "block.mine()"
+      ]
+    },
+    {
+      "kategorie": "functions",
+      "titel": "power.rushGrow()",
+      "braucht": "rush_grow",
+      "kurz": "The block regrows instantly.",
+      "schritte": [
+        {
+          "punkt": "The wait after mining, gone",
+          "code": "power.rushGrow();",
+          "markiere": "power.rushGrow();",
+          "text": "For a few seconds the block is back the instant you mine it - the usual regrow wait does not apply. Every call costs money, whether it fires or not.",
+          "dauer": 7.0
+        },
+        {
+          "punkt": "Check power.ready() first",
+          "code": "if (power.ready())\n    power.rushGrow();",
+          "markiere": "power.ready()",
+          "text": "ready() is free and tells you whether a rush is already running. Only one runs at once, so paying for a second one on top does nothing.",
+          "dauer": 7.0
+        },
+        {
+          "punkt": "Then it needs to rest",
+          "text": "After it ends there is a much longer break before the next one is allowed to fire - power.ready() only turns true again once that break is over too.",
+          "dauer": 7.0
+        }
+      ],
+      "siehe_auch": [
+        "power.rushMine()",
+        "block.mine()"
+      ]
+    },
+    {
+      "kategorie": "functions",
+      "titel": "power.rushWork()",
+      "braucht": "rush_work",
+      "kurz": "The furnace finishes instantly.",
+      "schritte": [
+        {
+          "punkt": "Every job, done at once",
+          "code": "power.rushWork();",
+          "markiere": "power.rushWork();",
+          "text": "For a few seconds every running furnace job AND every running assay finishes the instant it is called. Every call costs money, whether it fires or not.",
+          "dauer": 7.5
+        },
+        {
+          "punkt": "Check power.ready() first",
+          "code": "if (power.ready())\n    power.rushWork();",
+          "markiere": "power.ready()",
+          "text": "ready() is free. Only one rush ever runs at a time - calling rushWork() while one is already active still charges you and changes nothing.",
+          "dauer": 7.0
+        },
+        {
+          "punkt": "It only helps what is already running",
+          "text": "This does not start a job for you - it only finishes what is already cooking. An empty furnace stays empty.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "Then it needs to rest",
+          "text": "After it ends there is a much longer break before the next one is allowed to fire - power.ready() only turns true again once that break is over too.",
+          "dauer": 7.0
+        }
+      ],
+      "siehe_auch": [
+        "job.busy()",
+        "assay(...)"
+      ]
+    },
+    {
+      "kategorie": "functions",
+      "titel": "power.rushMarket()",
+      "braucht": "rush_market",
+      "kurz": "A few seconds at the best price.",
+      "schritte": [
+        {
+          "punkt": "The market pays its peak",
+          "code": "power.rushMarket();",
+          "markiere": "power.rushMarket();",
+          "text": "For a few seconds every sale is paid as if the market were at its best swing, no matter where the price actually stands. Every call costs money, whether it fires or not.",
+          "dauer": 7.5
+        },
+        {
+          "punkt": "Check power.ready() first",
+          "code": "if (power.ready())\n    power.rushMarket();",
+          "markiere": "power.ready()",
+          "text": "ready() is free and says whether a rush is already running - only one runs at a time.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "Sell while it lasts",
+          "text": "The boost only pays out on sales made WHILE it is running. Selling comes first, the rush does not stockpile itself for later.",
+          "dauer": 6.5
+        },
+        {
+          "punkt": "Then it needs to rest",
+          "text": "After it ends there is a much longer break before the next one is allowed to fire - power.ready() only turns true again once that break is over too.",
+          "dauer": 7.0
+        }
+      ],
+      "siehe_auch": [
+        "market.price(...)",
+        "item.sell()"
+      ]
     }
   ]
 }

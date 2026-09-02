@@ -110,6 +110,15 @@ enum class Skill
     // laufen, und "halten oder verkaufen" wird zu einer Entscheidung, die man
     // trifft statt sie zu erraten. Braucht market.price().
     Chart,
+
+    // Sonderfaehigkeiten: kurze, teure Schuebe. Jede einzeln im Baum, jede
+    // bringt genau ein power.rushX() mit. power.ready() kommt gratis mit der
+    // ERSTEN davon, die man kauft - sonst muesste man fuer jede einzeln
+    // nachsehen koennen, ob gerade eine laeuft.
+    RushMine,    // power.rushMine() - Abbau ist kurz sofort fertig
+    RushGrow,    // power.rushGrow() - der Block waechst kurz sofort nach
+    RushWork,    // power.rushWork() - Ofen und Untersuchung sind kurz sofort fertig
+    RushMarket,  // power.rushMarket() - der Verkauf zahlt kurz den Hoechstpreis
 };
 
 const char* SkillName(Skill skill);

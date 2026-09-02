@@ -70,6 +70,12 @@ void marketOf(const char* erz, int& jetzt, int& mittel);
 
 void waitMs(int ms);
 int  blockLoadingMs();
+
+// Sonderfaehigkeiten. powerReady() kostet nichts, powerRush() dagegen jedes
+// Mal - auch wenn es nicht anschlaegt. Rueckgabe von powerRush: was es
+// gekostet hat, 0 = ging nicht.
+bool powerReady();
+int  powerRush(int art);
 }
 
 // Eine geteilte Variable. Sie liegt nicht in diesem Programm, sondern im Spiel -
@@ -479,6 +485,35 @@ struct CkJob
 };
 
 static const CkJob job;
+
+// ---------------------------------------------------------------------------
+// Sonderfaehigkeiten - kurze, teure Schuebe
+// ---------------------------------------------------------------------------
+//
+// Jeder Aufruf hier kostet SOFORT Geld, egal ob er etwas bewirkt oder nicht -
+// deshalb erst nachsehen, dann bezahlen:
+//
+//     if (power.ready())
+//         power.rushMine();   // 3 Sekunden lang ist jeder Abbau sofort fertig
+//
+// Es laeuft immer nur EIN Schub gleichzeitig, ganz gleich, wie viele Konsolen
+// man hat - ready() fragt beim Spiel nach, nicht bei dieser einen Konsole.
+// Nach dem Ende braucht er eine deutlich laengere Pause, bevor der naechste
+// darf - ready() beruecksichtigt das automatisch, man muss nichts dafuer tun.
+struct CkPower
+{
+    // Laeuft gerade keiner? Kostet nichts.
+    bool ready() const { return ck::powerReady(); }
+
+    // Jede Zeile hier: Rueckgabe = was es gekostet hat, 0 = ging nicht (kein
+    // Geld, oder es laeuft schon einer).
+    int rushMine() const { return ck::powerRush(0); }    // Abbau sofort fertig
+    int rushGrow() const { return ck::powerRush(1); }    // Block waechst sofort nach
+    int rushWork() const { return ck::powerRush(2); }    // Ofen/Untersuchung sofort fertig
+    int rushMarket() const { return ck::powerRush(3); }  // kurz der Hoechstpreis beim Verkauf
+};
+
+static const CkPower power;
 
 // ---------------------------------------------------------------------------
 // Warten, ohne Zeilen zu verbrennen
@@ -949,6 +984,25 @@ void waitMs(int ms)
 int blockLoadingMs()
 {
     std::printf("T\n");
+    std::fflush(stdout);
+    return readInt();
+}
+
+// ---- Sonderfaehigkeiten ---------------------------------------------------
+
+bool powerReady()
+{
+    std::printf("H\n");
+    std::fflush(stdout);
+    char buf[32];
+    if (!std::fgets(buf, sizeof(buf), stdin))
+        std::exit(0);
+    return buf[0] == '1';
+}
+
+int powerRush(int art)
+{
+    std::printf("U %d\n", art);
     std::fflush(stdout);
     return readInt();
 }
@@ -2010,6 +2064,35 @@ void Native::handle(Proc& proc, const std::string& msg, World& world, const OreP
     {
         const float rest = world.blockAlive ? 0.0f : world.respawnTimer;
         sendTo(proc, (std::to_string((int)(rest * 1000.0f)) + "\n").c_str());
+        break;
+    }
+
+    case 'H':  // power.ready() - weder aktiv noch am Abklingen? Kostet nichts.
+        sendTo(proc, world.powerReady() ? "1\n" : "0\n");
+        break;
+
+    case 'U':  // power.rushX() anschalten:  U <art>   0=Mine 1=Grow 2=Work 3=Market
+    {
+        int art = (msg.size() > 2) ? std::atoi(msg.c_str() + 2) : -1;
+        if (art < 0 || art >= (int)World::PowerKind::Count)
+            art = -1;
+
+        const int bezahlt =
+            (art >= 0) ? world.startPower((World::PowerKind)art, limits.powerCost,
+                                          limits.powerSeconds, limits.powerMarketBoost,
+                                          limits.powerCooldownSeconds)
+                       : 0;
+        sendTo(proc, (std::to_string(bezahlt) + "\n").c_str());
+
+        static const char* kNamen[] = {"Mining", "Regrowth", "The workshop", "The market"};
+        if (bezahlt > 0)
+            mMsg = std::string(kNamen[art]) + " is instant for a moment.";
+        else if (world.powerActive)
+            mMsg = "A rush effect is already running.";
+        else if (world.powerCooldown > 0.0f)
+            mMsg = "The rush is still cooling down.";
+        else
+            mMsg = "Not enough money for a rush effect.";
         break;
     }
 

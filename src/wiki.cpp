@@ -163,6 +163,11 @@ bool Unlocked(Skill skill, const Limits& l)
     case Skill::Market: return l.allowMarket;
     case Skill::Chart: return l.allowChart;
 
+    case Skill::RushMine: return l.allowRushMine;
+    case Skill::RushGrow: return l.allowRushGrow;
+    case Skill::RushWork: return l.allowRushWork;
+    case Skill::RushMarket: return l.allowRushMarket;
+
     // Die stapelbaren Punkte haben keine eigene Zahl im Baum - man sieht
     // ihnen nur an, dass mehr als eines davon dasteht.
     case Skill::ExtraConsole: return l.maxConsoles > 1;

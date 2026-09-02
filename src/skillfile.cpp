@@ -72,6 +72,12 @@ const KeyEntry kKeys[] = {
     {"market", Skill::Market},
     {"chart", Skill::Chart},
 
+    // Sonderfaehigkeiten.
+    {"rush_mine", Skill::RushMine},
+    {"rush_grow", Skill::RushGrow},
+    {"rush_work", Skill::RushWork},
+    {"rush_market", Skill::RushMarket},
+
     {"furnace+", Skill::ExtraFurnace},
 
     {"quests", Skill::Quests},
@@ -232,6 +238,10 @@ SkillPlan LoadSkillPlan()
                 {"assay_seconds", &plan.assaySeconds, nullptr, 0.0f},
                 {"market_swing", &plan.marketSwing, nullptr, 0.0f},
                 {"market_speed", &plan.marketSpeed, nullptr, 0.0f},
+                {"power_cost", nullptr, &plan.powerCost, 0.0f},
+                {"power_seconds", &plan.powerSeconds, nullptr, 0.0f},
+                {"power_market_boost", &plan.powerMarketBoost, nullptr, 1.0f},
+                {"power_cooldown", &plan.powerCooldownSeconds, nullptr, 0.0f},
             };
 
             bool getroffen = false;

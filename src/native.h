@@ -45,6 +45,9 @@
 //                    Z ...  wait(...)  (wartet auf die Antwort)
 //                    T      block.loading()
 //                    O text print("text")
+//                    H      power.ready() - kein Schub aktiv?
+//                    U art  power.rushX()  - Schub anschalten, 0=Mine 1=Grow
+//                           2=Work 3=Market
 //                    X      main() ist zu Ende
 //
 //   Spiel -> Kind    g      Freigabe fuer die naechste Zeile

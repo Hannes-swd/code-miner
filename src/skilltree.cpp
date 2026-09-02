@@ -148,6 +148,11 @@ const char* SkillName(Skill skill)
     case Skill::Etch: return "item.etch()";
     case Skill::Fuse: return "item.fuse()";
 
+    case Skill::RushMine: return "power.rushMine()";
+    case Skill::RushGrow: return "power.rushGrow()";
+    case Skill::RushWork: return "power.rushWork()";
+    case Skill::RushMarket: return "power.rushMarket()";
+
     case Skill::None: return "-";
     }
     return "?";
@@ -211,6 +216,11 @@ const char* SkillInfo(Skill skill)
     case Skill::Etch: return "item.etch(Gold) - etching. It takes a long time and eats purity, but it is worth far more than refined. The first step past the end of the old chain. Needs refining.";
     case Skill::Fuse: return "item.fuse(Gold) - fusing. The last state there is, and the most valuable by a wide margin. Only works on something etched or hardened. Needs etching.";
 
+    case Skill::RushMine: return "power.rushMine() - for a few seconds every block finishes mining the instant you start it, then it needs a much longer break before it can fire again. Every call costs money, whether it fires or not - ask power.ready() first so you do not pay for nothing. Needs mining.";
+    case Skill::RushGrow: return "power.rushGrow() - for a few seconds the block regrows the instant it is mined, then it needs a much longer break before it can fire again. Every call costs money, whether it fires or not - ask power.ready() first. Needs mining.";
+    case Skill::RushWork: return "power.rushWork() - for a few seconds every furnace job and every assay finishes instantly, then it needs a much longer break before it can fire again. Every call costs money, whether it fires or not - ask power.ready() first. Needs washing.";
+    case Skill::RushMarket: return "power.rushMarket() - for a few seconds every sale is paid at the best price the market has, then it needs a much longer break before it can fire again. Every call costs money, whether it fires or not - ask power.ready() first. Needs the market chart.";
+
     case Skill::None: return "";
     }
     return "";
@@ -273,6 +283,11 @@ const char* SkillTag(Skill skill)
     case Skill::Quests: return "!";
     case Skill::Etch: return "ET";
     case Skill::Fuse: return "FU";
+
+    case Skill::RushMine: return "R.M";
+    case Skill::RushGrow: return "R.G";
+    case Skill::RushWork: return "R.W";
+    case Skill::RushMarket: return "R.$";
 
     case Skill::None: return "-";
     }
@@ -572,6 +587,10 @@ Limits SkillTree::limits() const
     limits.respawnSeconds = plan.respawnStart;
     limits.assayCost      = plan.assayCost;
     limits.assaySeconds   = plan.assaySeconds;
+    limits.powerCost            = plan.powerCost;
+    limits.powerSeconds         = plan.powerSeconds;
+    limits.powerMarketBoost     = plan.powerMarketBoost;
+    limits.powerCooldownSeconds = plan.powerCooldownSeconds;
 
     int loops     = 0;
     int ifs       = 0;
@@ -677,6 +696,25 @@ Limits SkillTree::limits() const
 
         case Skill::Etch: limits.allowEtch = true; break;
         case Skill::Fuse: limits.allowFuse = true; break;
+
+        // Sonderfaehigkeiten. Die erste davon, die man kauft, schaltet auch
+        // power.ready() frei - deshalb steht allowPower in jedem der vier.
+        case Skill::RushMine:
+            limits.allowPower    = true;
+            limits.allowRushMine = true;
+            break;
+        case Skill::RushGrow:
+            limits.allowPower    = true;
+            limits.allowRushGrow = true;
+            break;
+        case Skill::RushWork:
+            limits.allowPower    = true;
+            limits.allowRushWork = true;
+            break;
+        case Skill::RushMarket:
+            limits.allowPower      = true;
+            limits.allowRushMarket = true;
+            break;
 
         default: break;
         }
