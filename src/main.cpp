@@ -216,7 +216,6 @@ static void DrawMoney(const World& world, float rechts)
     const std::string text = ui::Money(world.money);
 
     const float punkt = 5.0f;
-    const float textW = ImGui::CalcTextSize(text.c_str()).x;
     const float innen = 14.0f;
     const float breit = MoneyWidth(world);
     const float hoch  = ImGui::GetTextLineHeight() + 12.0f;
@@ -408,9 +407,13 @@ int main(int, char**)
         return files;
     };
 
-    while (plat::BeginFrame())
+    // ---- Ein Bild simulieren: Uhr, Abbau, Verarbeitung, Auftrag ----------
+    //
+    // Alles, was voranschreitet, egal welche Seite gerade offen ist. Liefert
+    // dt zurueck, weil der Motor es nach dem Zeichnen der Menueleiste noch
+    // einmal braucht (siehe unten, engine.update()).
+    auto simulateFrame = [&]() -> float
     {
-
         // Pausieren geht nur im Lauf - in der Vorbereitung steht die Welt
         // ohnehin still, und in der Abrechnung gibt es nichts mehr anzuhalten.
         if (world.phase != RoundPhase::Run)
@@ -533,6 +536,12 @@ int main(int, char**)
             saveTimer = 0.0f;
         }
 
+        return dt;
+    };
+
+    // ---- Was der Spieler gerade darf - Baum plus Erbe ---------------------
+    auto computeLimits = [&]() -> Limits
+    {
         // Die Werte kommen aus dem Baum - jedes Bild neu ausgerechnet. Dadurch
         // stimmen sie immer, egal in welcher Reihenfolge gekauft wurde.
         Limits limits = tree.limits();
@@ -595,6 +604,12 @@ int main(int, char**)
         if (page == Page::Markt && !limits.allowChart)
             page = Page::Welt;
 
+        return limits;
+    };
+
+    // ---- Die Menueleiste: Reiter, Konsolen-Knopf, Geld, "..."-Menue -------
+    auto drawTopBar = [&](const Limits& limits)
+    {
         if (ImGui::BeginMainMenuBar())
         {
             if (PageTab("World", page == Page::Welt))
@@ -735,11 +750,11 @@ int main(int, char**)
 
             ImGui::EndMainMenuBar();
         }
+    };
 
-        // Verkauft: der Hinweis oben rechts soll man auf jeder Seite sehen,
-        // nicht nur auf der Welt-Seite - deshalb hier und nicht in DrawWorld().
-        DrawSellToast(world);
-
+    // ---- Die offene Seite -------------------------------------------------
+    auto drawActivePage = [&](const Limits& limits, float dt)
+    {
         // Das Programm laeuft weiter, egal welche Seite offen ist - aber nur
         // waehrend der Runde. In der Vorbereitung ruehrt sich der Motor nicht.
         if (world.phase == RoundPhase::Run)
@@ -826,6 +841,20 @@ int main(int, char**)
             // Kaufen will man ja sehen, was man damit ueberhaupt schon kann.
             DrawStatus(limits, world);
         }
+    };
+
+    while (plat::BeginFrame())
+    {
+        const float  dt     = simulateFrame();
+        const Limits limits = computeLimits();
+
+        drawTopBar(limits);
+
+        // Verkauft: der Hinweis oben rechts soll man auf jeder Seite sehen,
+        // nicht nur auf der Welt-Seite - deshalb hier und nicht in DrawWorld().
+        DrawSellToast(world);
+
+        drawActivePage(limits, dt);
 
         // Die Abrechnung liegt ueber allem - sie ist der Weg zur naechsten
         // Runde, egal auf welcher Seite man gerade ist.

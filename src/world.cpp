@@ -70,24 +70,17 @@ const Ore& OreOf(const OrePlan& ores, int index)
     return ores.ores[(std::size_t)index];
 }
 
+std::vector<int> KnownOres(const World& world, const OrePlan& ores)
+{
+    std::vector<int> out;
+    for (const auto& e : world.oreFirst)
+        if (e.first >= 0 && e.first < (int)ores.ores.size())
+            out.push_back(e.first);
+    return out;
+}
+
 namespace
 {
-
-// Aus einer Zustands-Liste ("ein Bit je OreState") lesbaren Text machen:
-// "Geschmolzen oder Legiert".
-std::string StatesText(unsigned bits)
-{
-    std::string out;
-    for (int i = 0; i < (int)OreState::Count; ++i)
-    {
-        if ((bits & (1u << (unsigned)i)) == 0)
-            continue;
-        if (!out.empty())
-            out += " or ";
-        out += OreStateName((OreState)i);
-    }
-    return out.empty() ? std::string("-") : out;
-}
 
 ImU32 Mix(const Color& a, const Color& b, float t, int alpha)
 {
@@ -348,10 +341,16 @@ int World::sell(const OrePlan& ores, const CraftPlan& craft, const std::string& 
     if (nummer < 0)
         return 0;  // Erz gibt es nicht - dann eben kein Geld
 
+    // Zum Tagespreis, wie beim Verkauf eines einzelnen Stapels - sonst waere
+    // market.price() aus dem Spielercode wirkungslos, sobald ueber den Namen
+    // statt ueber den Stapel verkauft wird.
+    const float markt = marketFactor(nummer);
+
     // Weniger als gewuenscht ist in Ordnung: es wird verkauft, was da ist.
     // Angefangen wird beim rohen Zeug - das Bearbeitete behaelt man lieber.
     int offen = anzahl;
     int geld  = 0;
+    int wieViel = 0;
 
     for (auto it = inventory.begin(); it != inventory.end();)
     {
@@ -366,7 +365,8 @@ int World::sell(const OrePlan& ores, const CraftPlan& craft, const std::string& 
             wie = it->second.count;
 
         geld += StackValue(ores, craft, nummer, it->first.state, it->second.purity, wie,
-                           moneyPerBlock);
+                           moneyPerBlock, markt);
+        wieViel += wie;
         if (anzahl >= 0)
             offen -= wie;
 
@@ -377,9 +377,18 @@ int World::sell(const OrePlan& ores, const CraftPlan& craft, const std::string& 
             ++it;
     }
 
-    if (geld > 0)
+    if (wieViel > 0)
     {
         money += geld;
+
+        // Fuer die Auftraege - wie beim Verkauf eines einzelnen Stapels.
+        stats.earned += geld;
+        stats.soldPieces += wieViel;
+        if (markt > 1.0f)
+            stats.soldAbove += wieViel;
+        if (geld > stats.biggestSale)
+            stats.biggestSale = geld;
+
         lastSold = geld;
         sellFx   = 1.0f;
     }
@@ -388,16 +397,32 @@ int World::sell(const OrePlan& ores, const CraftPlan& craft, const std::string& 
 
 int World::sell(const OrePlan& ores, const CraftPlan& craft)
 {
-    int geld = 0;
+    int geld    = 0;
+    int wieViel = 0;
+    int drueber = 0;  // Stueck, deren Erz gerade ueber dem Grundpreis stand
+
     for (const auto& e : inventory)
+    {
+        const float markt = marketFactor(e.first.ore);
         geld += StackValue(ores, craft, e.first.ore, e.first.state, e.second.purity, e.second.count,
-                           moneyPerBlock);
+                           moneyPerBlock, markt);
+        wieViel += e.second.count;
+        if (markt > 1.0f)
+            drueber += e.second.count;
+    }
 
     inventory.clear();
     money += geld;
 
-    if (geld > 0)
+    if (wieViel > 0)
     {
+        // Fuer die Auftraege - wie beim Verkauf eines einzelnen Stapels.
+        stats.earned += geld;
+        stats.soldPieces += wieViel;
+        stats.soldAbove += drueber;
+        if (geld > stats.biggestSale)
+            stats.biggestSale = geld;
+
         lastSold = geld;
         sellFx   = 1.0f;
     }
@@ -1046,21 +1071,12 @@ void World::update(float dt, const OrePlan& ores)
     }
 }
 
-void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const AlloyPlan& alloys,
-               const RoundPlan& rounds)
+// Die Mine: eine Karte oben rechts, mit dem Block darin - Feld, Block
+// (abgebaut oder nachwachsend), Effekte, Von-Hand-Klick samt Tooltip,
+// Pause-Hinweis und die Job-Fortschrittsanzeige darunter.
+static void DrawMineCard(World& world, const OrePlan& ores, const CraftPlan& craft, ImDrawList* dl,
+                         ImVec2 ka, ImVec2 kb)
 {
-    ImGuiViewport* vp = ImGui::GetMainViewport();
-    ImDrawList*    dl = ImGui::GetBackgroundDrawList();
-
-    // ---- Die Mine: eine Karte oben rechts ---------------------------------
-    //
-    // Frueher schwebte der Block frei in der Bildmitte und die Konsolen lagen
-    // darueber. Jetzt hat er sein eigenes Feld: Karte, Ueberschrift, Raster,
-    // Block in der Mitte, darunter der Balken fuers Nachwachsen.
-    const ImVec2 ka(vp->WorkPos.x + vp->WorkSize.x - ui::kRightMargin - ui::kRightWidth,
-                    vp->WorkPos.y + ui::kMineTop);
-    const ImVec2 kb(ka.x + ui::kRightWidth, ka.y + ui::kMineHeight);
-
     ui::Card(dl, ka, kb);
     dl->AddText(ImVec2(ka.x + ui::kCardPad, ka.y + ui::kCardPad), ui::kTextDim, "MINE");
 
@@ -1289,19 +1305,24 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
         dl->AddRectFilled(pa, ImVec2(pa.x + (pb.x - pa.x) * t, pb.y), IM_COL32(120, 170, 240, 255),
                           3.0f);
     }
+}
 
-    // Stimmt an den Dateien etwas nicht, muss man das sehen - sonst sucht man
-    // den Fehler im Spiel statt in der Datei.
-    float y = vp->WorkPos.y + 12.0f;
+// Stimmt an den Dateien etwas nicht, muss man das sehen - sonst sucht man
+// den Fehler im Spiel statt in der Datei.
+static void DrawWorldProblems(ImDrawList* dl, ImVec2 topLeft, const OrePlan& ores,
+                              const CraftPlan& craft, const AlloyPlan& alloys,
+                              const RoundPlan& rounds)
+{
+    float y = topLeft.y + 12.0f;
     auto  meldungen = [&](const char* datei, const std::vector<std::string>& liste)
     {
         if (liste.empty())
             return;
-        dl->AddText(ImVec2(vp->WorkPos.x + 16.0f, y), IM_COL32(250, 140, 108, 255), datei);
+        dl->AddText(ImVec2(topLeft.x + 16.0f, y), IM_COL32(250, 140, 108, 255), datei);
         for (const std::string& p : liste)
         {
             y += ImGui::GetTextLineHeight() + 2.0f;
-            dl->AddText(ImVec2(vp->WorkPos.x + 16.0f, y), IM_COL32(250, 140, 108, 255), p.c_str());
+            dl->AddText(ImVec2(topLeft.x + 16.0f, y), IM_COL32(250, 140, 108, 255), p.c_str());
         }
         y += ImGui::GetTextLineHeight() + 8.0f;
     };
@@ -1310,6 +1331,25 @@ void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const 
     meldungen("data/verarbeitung.json:", craft.problems);
     meldungen("data/legierungen.json:", alloys.problems);
     meldungen("data/runden.json:", rounds.problems);
+}
+
+void DrawWorld(World& world, const OrePlan& ores, const CraftPlan& craft, const AlloyPlan& alloys,
+               const RoundPlan& rounds)
+{
+    ImGuiViewport* vp = ImGui::GetMainViewport();
+    ImDrawList*    dl = ImGui::GetBackgroundDrawList();
+
+    // ---- Die Mine: eine Karte oben rechts ---------------------------------
+    //
+    // Frueher schwebte der Block frei in der Bildmitte und die Konsolen lagen
+    // darueber. Jetzt hat er sein eigenes Feld: Karte, Ueberschrift, Raster,
+    // Block in der Mitte, darunter der Balken fuers Nachwachsen.
+    const ImVec2 ka(vp->WorkPos.x + vp->WorkSize.x - ui::kRightMargin - ui::kRightWidth,
+                    vp->WorkPos.y + ui::kMineTop);
+    const ImVec2 kb(ka.x + ui::kRightWidth, ka.y + ui::kMineHeight);
+
+    DrawMineCard(world, ores, craft, dl, ka, kb);
+    DrawWorldProblems(dl, vp->WorkPos, ores, craft, alloys, rounds);
 }
 
 // Dieselbe Farbe, aber mit weniger Deckkraft - fuers Ein- und Ausblenden.
@@ -1345,6 +1385,204 @@ void DrawSellToast(const World& world)
     const float y = vp->WorkPos.y + ImGui::GetFrameHeight() + 14.0f - t * 34.0f;
 
     dl->AddText(font, size, ImVec2(x, y), FadeColor(ui::kGood, alpha), text);
+}
+
+// Eine Karte in der Tasche: Bild, Name/Zustand/Reinheit/Anzahl, der Zaehler
+// samt Tippfeld, der Verkaufen-Knopf und das Rechtsklickmenue zum
+// Verarbeiten. Was der Spieler will, kommt ueber die letzten sechs
+// Parameter zurueck - erst nach der Schleife ueber alle Karten wird
+// tatsaechlich verkauft oder verarbeitet, sonst wackelt sie einem beim
+// Aendern der Tasche unter den Fingern weg.
+static void DrawInventoryCard(const World& world, const OrePlan& ores, const CraftPlan& craft,
+                              const Limits& limits, World::Item stapel, const Ore& erz, int anzahl,
+                              int rein, bool kannVerarbeiten, float kartenBreite, float kartenHoehe,
+                              float bild, World::Item& verkaufen, int& verkaufenWie,
+                              bool& verkaufenJa, World::Item& arbeitAn,
+                              const CraftStep*& arbeitSchritt, int& arbeitWie)
+{
+    const OreState zust = (OreState)stapel.state;
+
+    ImGui::PushID(stapel.ore * 100 + stapel.state);
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 12.0f);
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ui::V(ui::kCard));
+    ImGui::BeginChild("karte", ImVec2(kartenBreite, kartenHoehe), ImGuiChildFlags_Borders,
+                      ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+
+    const float innen = ImGui::GetContentRegionAvail().x;
+
+    // ---- Bild vom Erz -----------------------------------------
+    {
+        const ImVec2 ba(ImGui::GetCursorScreenPos().x + (innen - bild) * 0.5f,
+                        ImGui::GetCursorScreenPos().y);
+        DrawOreTile(ImGui::GetWindowDrawList(), ba, bild, erz, stapel.ore, 18);
+        ImGui::Dummy(ImVec2(innen, bild));
+    }
+
+    // ---- Name, Zustand, Anzahl --------------------------------
+    {
+        const float w = ImGui::CalcTextSize(erz.name.c_str()).x;
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (innen - w) * 0.5f);
+        ImGui::TextUnformatted(erz.name.c_str());
+    }
+
+    {
+        const char* zn = OreStateName(zust);
+        const float w  = ImGui::CalcTextSize(zn).x;
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (innen - w) * 0.5f);
+        ImGui::TextDisabled("%s", zn);
+    }
+
+    {
+        // Die Reinheit haengt direkt am Preis, also gehoert sie auf
+        // die Karte. Gruen ab sauber, sonst gedaempft.
+        char text[48];
+        std::snprintf(text, sizeof(text), "Reinheit %d%%", rein);
+        const float w = ImGui::CalcTextSize(text).x;
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (innen - w) * 0.5f);
+        ImGui::TextColored(rein >= 70 ? ui::V(ui::kText) : ui::V(ui::kTextDim), "%s", text);
+    }
+
+    char haben[48];
+    std::snprintf(haben, sizeof(haben), "x %d", anzahl);
+    const float hw = ImGui::CalcTextSize(haben).x;
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (innen - hw) * 0.5f);
+    ImGui::TextColored(ui::V(ui::kAccent), "%s", haben);
+
+    ImGui::Spacing();
+
+    // ---- Wie viele verkaufen? ---------------------------------
+    auto it = g_sell.menge.find(stapel);
+    if (it == g_sell.menge.end())
+        it = g_sell.menge.insert(std::make_pair(stapel, anzahl)).first;
+
+    int& wie = it->second;
+    if (wie > anzahl)
+        wie = anzahl;
+    if (wie < 1)
+        wie = 1;
+
+    const float pfeil = ImGui::GetFrameHeight();
+    const float mitte = innen - 2.0f * pfeil - 2.0f * ImGui::GetStyle().ItemSpacing.x;
+
+    ImGui::PushButtonRepeat(true);  // gedrueckt halten zaehlt weiter
+    if (ImGui::ArrowButton("weniger", ImGuiDir_Left) && wie > 1)
+        --wie;
+    ImGui::PopButtonRepeat();
+
+    ImGui::SameLine();
+
+    const bool tippeHier =
+        g_sell.tippt && !(g_sell.editing < stapel) && !(stapel < g_sell.editing);
+
+    if (tippeHier)
+    {
+        ImGui::SetNextItemWidth(mitte);
+        if (g_sell.focus)
+        {
+            ImGui::SetKeyboardFocusHere();
+            g_sell.focus = false;
+        }
+        // Kein EnterReturnsTrue: das mag InputInt nicht. Enter und
+        // Wegklicken fangen wir beide mit IsItemDeactivated ab.
+        ImGui::InputInt("##zahl", &wie, 0, 0);
+        if (ImGui::IsItemDeactivated())
+            g_sell.tippt = false;
+    }
+    else
+    {
+        char zahl[32];
+        std::snprintf(zahl, sizeof(zahl), "%d", wie);
+        if (ImGui::Button(zahl, ImVec2(mitte, 0.0f)))
+        {
+            g_sell.editing = stapel;  // Klick auf die Zahl: selbst tippen
+            g_sell.tippt   = true;
+            g_sell.focus   = true;
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Click to type a number");
+    }
+
+    ImGui::SameLine();
+
+    ImGui::PushButtonRepeat(true);
+    if (ImGui::ArrowButton("mehr", ImGuiDir_Right) && wie < anzahl)
+        ++wie;
+    ImGui::PopButtonRepeat();
+
+    // ---- Verkaufen --------------------------------------------
+    char knopf[64];
+    std::snprintf(knopf, sizeof(knopf), "Sell  %s",
+                  ui::Money(StackValue(ores, craft, stapel.ore, stapel.state, rein, wie,
+                                       world.moneyPerBlock))
+                      .c_str());
+
+    ImGui::PushStyleColor(ImGuiCol_Button, ui::V(ui::kAccent));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ui::V(ui::kAccentHot));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ui::V(ui::kAccent));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+    if (ImGui::Button(knopf, ImVec2(innen, 0.0f)))
+    {
+        verkaufen    = stapel;
+        verkaufenWie = wie;
+        verkaufenJa  = true;
+    }
+    ImGui::PopStyleColor(4);
+
+    // Verarbeiten. Angeboten wird genau das, was von hier aus
+    // wirklich geht: der Zustand muss passen, das Erz muss das Ziel
+    // erlauben, und gekauft sein muss der Schritt auch.
+    //
+    // Solange gar kein Schritt gekauft ist, gibt es das Menue nicht
+    // einmal - sonst klappt eines auf, das nur sagen kann, dass es
+    // nichts kann.
+    if (kannVerarbeiten && ImGui::BeginPopupContextWindow("verarbeiten"))
+    {
+        ImGui::TextDisabled("Process");
+        ImGui::Separator();
+
+        int moeglich = 0;
+        for (const CraftStep& s : craft.steps)
+        {
+            if (!s.fits(stapel.state) || !erz.allows((OreState)s.to) || !CraftUnlocked(s, limits))
+                continue;
+
+            ++moeglich;
+
+            char zeile[96];
+            std::snprintf(zeile, sizeof(zeile), "%s  ->  %s", s.name.c_str(),
+                          OreStateName((OreState)s.to));
+
+            if (ImGui::MenuItem(zeile, nullptr, false, world.jobsIdle() > 0 && !world.frozen))
+            {
+                arbeitAn      = stapel;
+                arbeitSchritt = &s;
+                arbeitWie     = wie;
+            }
+
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                ImGui::SetTooltip("%d pieces, %.1f s  -  purity %+d%%\nThen %s money", wie,
+                                  (double)(s.seconds * (float)wie), s.purity,
+                                  ui::Money(StackValue(ores, craft, stapel.ore, s.to,
+                                                       rein + s.purity, wie, world.moneyPerBlock))
+                                      .c_str());
+        }
+
+        if (moeglich == 0)
+            ImGui::TextDisabled("Nothing works from here.");
+        else if (world.frozen)
+            ImGui::TextDisabled(world.phase == RoundPhase::Run ? "The game is paused."
+                                                              : "Start the round first.");
+        else if (world.jobsIdle() <= 0)
+            ImGui::TextDisabled((int)world.jobs.size() > 1 ? "Every furnace is busy."
+                                                            : "A job is already running.");
+
+        ImGui::EndPopup();
+    }
+
+    ImGui::EndChild();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar();
+    ImGui::PopID();
 }
 
 void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
@@ -1515,7 +1753,6 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
                 const Ore&        erz    = OreOf(ores, stapel.ore);
                 const int         anzahl = e.second.count;
                 const int         rein   = e.second.purity;
-                const OreState    zust   = (OreState)stapel.state;
 
                 if (spalte > 0)
                     ImGui::SameLine(0.0f, luft);
@@ -1526,195 +1763,9 @@ void DrawInventory(World& world, const OrePlan& ores, const CraftPlan& craft,
                     spalte = 1;
                 }
 
-                ImGui::PushID(stapel.ore * 100 + stapel.state);
-                ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 12.0f);
-                ImGui::PushStyleColor(ImGuiCol_ChildBg, ui::V(ui::kCard));
-                ImGui::BeginChild("karte", ImVec2(kartenBreite, kartenHoehe),
-                                  ImGuiChildFlags_Borders,
-                                  ImGuiWindowFlags_NoScrollbar |
-                                      ImGuiWindowFlags_NoScrollWithMouse);
-
-                const float innen = ImGui::GetContentRegionAvail().x;
-
-                // ---- Bild vom Erz -----------------------------------------
-                {
-                    const ImVec2 ba(ImGui::GetCursorScreenPos().x + (innen - bild) * 0.5f,
-                                    ImGui::GetCursorScreenPos().y);
-                    DrawOreTile(ImGui::GetWindowDrawList(), ba, bild, erz, stapel.ore, 18);
-                    ImGui::Dummy(ImVec2(innen, bild));
-                }
-
-                // ---- Name, Zustand, Anzahl --------------------------------
-                {
-                    const float w = ImGui::CalcTextSize(erz.name.c_str()).x;
-                    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (innen - w) * 0.5f);
-                    ImGui::TextUnformatted(erz.name.c_str());
-                }
-
-                {
-                    const char* zn = OreStateName(zust);
-                    const float w  = ImGui::CalcTextSize(zn).x;
-                    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (innen - w) * 0.5f);
-                    ImGui::TextDisabled("%s", zn);
-                }
-
-                {
-                    // Die Reinheit haengt direkt am Preis, also gehoert sie auf
-                    // die Karte. Gruen ab sauber, sonst gedaempft.
-                    char text[48];
-                    std::snprintf(text, sizeof(text), "Reinheit %d%%", rein);
-                    const float w = ImGui::CalcTextSize(text).x;
-                    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (innen - w) * 0.5f);
-                    ImGui::TextColored(rein >= 70 ? ui::V(ui::kText) : ui::V(ui::kTextDim), "%s",
-                                       text);
-                }
-
-                char haben[48];
-                std::snprintf(haben, sizeof(haben), "x %d", anzahl);
-                const float hw = ImGui::CalcTextSize(haben).x;
-                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (innen - hw) * 0.5f);
-                ImGui::TextColored(ui::V(ui::kAccent), "%s", haben);
-
-                ImGui::Spacing();
-
-                // ---- Wie viele verkaufen? ---------------------------------
-                auto it = g_sell.menge.find(stapel);
-                if (it == g_sell.menge.end())
-                    it = g_sell.menge.insert(std::make_pair(stapel, anzahl)).first;
-
-                int& wie = it->second;
-                if (wie > anzahl)
-                    wie = anzahl;
-                if (wie < 1)
-                    wie = 1;
-
-                const float pfeil = ImGui::GetFrameHeight();
-                const float mitte = innen - 2.0f * pfeil - 2.0f * ImGui::GetStyle().ItemSpacing.x;
-
-                ImGui::PushButtonRepeat(true);  // gedrueckt halten zaehlt weiter
-                if (ImGui::ArrowButton("weniger", ImGuiDir_Left) && wie > 1)
-                    --wie;
-                ImGui::PopButtonRepeat();
-
-                ImGui::SameLine();
-
-                const bool tippeHier = g_sell.tippt && !(g_sell.editing < stapel) &&
-                                       !(stapel < g_sell.editing);
-
-                if (tippeHier)
-                {
-                    ImGui::SetNextItemWidth(mitte);
-                    if (g_sell.focus)
-                    {
-                        ImGui::SetKeyboardFocusHere();
-                        g_sell.focus = false;
-                    }
-                    // Kein EnterReturnsTrue: das mag InputInt nicht. Enter und
-                    // Wegklicken fangen wir beide mit IsItemDeactivated ab.
-                    ImGui::InputInt("##zahl", &wie, 0, 0);
-                    if (ImGui::IsItemDeactivated())
-                        g_sell.tippt = false;
-                }
-                else
-                {
-                    char zahl[32];
-                    std::snprintf(zahl, sizeof(zahl), "%d", wie);
-                    if (ImGui::Button(zahl, ImVec2(mitte, 0.0f)))
-                    {
-                        g_sell.editing = stapel;  // Klick auf die Zahl: selbst tippen
-                        g_sell.tippt   = true;
-                        g_sell.focus   = true;
-                    }
-                    if (ImGui::IsItemHovered())
-                        ImGui::SetTooltip("Click to type a number");
-                }
-
-                ImGui::SameLine();
-
-                ImGui::PushButtonRepeat(true);
-                if (ImGui::ArrowButton("mehr", ImGuiDir_Right) && wie < anzahl)
-                    ++wie;
-                ImGui::PopButtonRepeat();
-
-                // ---- Verkaufen --------------------------------------------
-                char knopf[64];
-                std::snprintf(knopf, sizeof(knopf), "Sell  %s",
-                              ui::Money(StackValue(ores, craft, stapel.ore, stapel.state, rein, wie,
-                                                   world.moneyPerBlock))
-                                  .c_str());
-
-                ImGui::PushStyleColor(ImGuiCol_Button, ui::V(ui::kAccent));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ui::V(ui::kAccentHot));
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ui::V(ui::kAccent));
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
-                if (ImGui::Button(knopf, ImVec2(innen, 0.0f)))
-                {
-                    verkaufen    = stapel;
-                    verkaufenWie = wie;
-                    verkaufenJa  = true;
-                }
-                ImGui::PopStyleColor(4);
-
-                // Verarbeiten. Angeboten wird genau das, was von hier aus
-                // wirklich geht: der Zustand muss passen, das Erz muss das Ziel
-                // erlauben, und gekauft sein muss der Schritt auch.
-                //
-                // Solange gar kein Schritt gekauft ist, gibt es das Menue nicht
-                // einmal - sonst klappt eines auf, das nur sagen kann, dass es
-                // nichts kann.
-                if (kannVerarbeiten && ImGui::BeginPopupContextWindow("verarbeiten"))
-                {
-                    ImGui::TextDisabled("Process");
-                    ImGui::Separator();
-
-                    int moeglich = 0;
-                    for (const CraftStep& s : craft.steps)
-                    {
-                        if (!s.fits(stapel.state) || !erz.allows((OreState)s.to) ||
-                            !CraftUnlocked(s, limits))
-                            continue;
-
-                        ++moeglich;
-
-                        char zeile[96];
-                        std::snprintf(zeile, sizeof(zeile), "%s  ->  %s", s.name.c_str(),
-                                      OreStateName((OreState)s.to));
-
-                        if (ImGui::MenuItem(zeile, nullptr, false,
-                                            world.jobsIdle() > 0 && !world.frozen))
-                        {
-                            arbeitAn      = stapel;
-                            arbeitSchritt = &s;
-                            arbeitWie     = wie;
-                        }
-
-                        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                            ImGui::SetTooltip("%d pieces, %.1f s  -  purity %+d%%\nThen %s money",
-                                              wie, (double)(s.seconds * (float)wie), s.purity,
-                                              ui::Money(StackValue(ores, craft, stapel.ore, s.to,
-                                                                   rein + s.purity, wie,
-                                                                   world.moneyPerBlock))
-                                                  .c_str());
-                    }
-
-                    if (moeglich == 0)
-                        ImGui::TextDisabled("Nothing works from here.");
-                    else if (world.frozen)
-                        ImGui::TextDisabled(world.phase == RoundPhase::Run
-                                                ? "The game is paused."
-                                                : "Start the round first.");
-                    else if (world.jobsIdle() <= 0)
-                        ImGui::TextDisabled((int)world.jobs.size() > 1
-                                                ? "Every furnace is busy."
-                                                : "A job is already running.");
-
-                    ImGui::EndPopup();
-                }
-
-                ImGui::EndChild();
-                ImGui::PopStyleColor();
-                ImGui::PopStyleVar();
-                ImGui::PopID();
+                DrawInventoryCard(world, ores, craft, limits, stapel, erz, anzahl, rein,
+                                  kannVerarbeiten, kartenBreite, kartenHoehe, bild, verkaufen,
+                                  verkaufenWie, verkaufenJa, arbeitAn, arbeitSchritt, arbeitWie);
             }
 
             if (verkaufenJa)

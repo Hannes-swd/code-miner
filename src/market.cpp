@@ -35,14 +35,10 @@ struct MarketView
 MarketView g_markt;
 
 // Welche Erze ueberhaupt auf die Seite kommen: die, die man schon einmal in der
-// Tasche hatte. Ein Kurs fuer ein Erz, das es in dieser Welt noch gar nicht
-// gibt, waere geraten - genau wie im Wiki.
-std::vector<int> KnownOres(const World& world, const OrePlan& ores, const CraftPlan& craft)
+// Tasche hatte (siehe world.h), sortiert nach Marktwert.
+std::vector<int> KnownOresByValue(const World& world, const OrePlan& ores, const CraftPlan& craft)
 {
-    std::vector<int> out;
-    for (const auto& e : world.oreFirst)
-        if (e.first >= 0 && e.first < (int)ores.ores.size())
-            out.push_back(e.first);
+    std::vector<int> out = KnownOres(world, ores);
 
     // Das Teuerste oben: da lohnt sich das Warten am ehesten, und dort schaut
     // man beim Aufschlagen der Seite zuerst hin.
@@ -337,7 +333,7 @@ void DrawMarketPage(World& world, const OrePlan& ores, const CraftPlan& craft,
 
     if (ImGui::Begin("##markt", nullptr, flags))
     {
-        const std::vector<int> erze = KnownOres(world, ores, craft);
+        const std::vector<int> erze = KnownOresByValue(world, ores, craft);
 
         // Beim ersten Aufschlagen - und nachdem ein Erz aus der Liste
         // verschwunden ist (neuer Spielstand) - das oberste nehmen.

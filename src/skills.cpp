@@ -67,35 +67,10 @@ struct View
 
 View g_view;
 
-float Clamp(float v, float lo, float hi)
-{
-    return v < lo ? lo : (v > hi ? hi : v);
-}
-
-ImU32 Mix(ImU32 a, ImU32 b, float t)
-{
-    const ImVec4 ca = ImGui::ColorConvertU32ToFloat4(a);
-    const ImVec4 cb = ImGui::ColorConvertU32ToFloat4(b);
-    return ImGui::GetColorU32(ImVec4(ca.x + (cb.x - ca.x) * t, ca.y + (cb.y - ca.y) * t,
-                                     ca.z + (cb.z - ca.z) * t, ca.w + (cb.w - ca.w) * t));
-}
-
-// Ein Farbverlauf mit runden Ecken: dieselbe runde Flaeche mehrmals zeichnen,
-// jedes Mal auf einen waagerechten Streifen beschnitten.
-void GradientRect(ImDrawList* dl, ImVec2 a, ImVec2 b, float round, ImU32 top, ImU32 bottom)
-{
-    const int bands = 8;
-    for (int i = 0; i < bands; ++i)
-    {
-        const float t0 = (float)i / (float)bands;
-        const float t1 = (float)(i + 1) / (float)bands;
-
-        dl->PushClipRect(ImVec2(a.x, a.y + (b.y - a.y) * t0),
-                         ImVec2(b.x, a.y + (b.y - a.y) * t1 + 1.0f), true);
-        dl->AddRectFilled(a, b, Mix(top, bottom, (t0 + t1) * 0.5f), round);
-        dl->PopClipRect();
-    }
-}
+// Clamp/Mix/GradientRect/BigFont sind gemeinsame UI-Bausteine, siehe theme.h.
+using ui::BigFont;
+using ui::Clamp;
+using ui::GradientRect;
 
 // Mittig, und nie breiter als die Karte: passt es nicht, wird die Schrift
 // kleiner. Abgeschnittene Namen sehen schlampig aus.
@@ -109,14 +84,6 @@ void TextCentered(ImDrawList* dl, ImFont* font, float size, float maxWidth, floa
         ts = font->CalcTextSizeA(size, FLT_MAX, 0.0f, text);
     }
     dl->AddText(font, size, ImVec2(cx - ts.x * 0.5f, top), col, text);
-}
-
-// Die groessere Schrift fuers Zeichen in der Karte. Liegt keine da, tut es
-// auch die normale.
-ImFont* BigFont()
-{
-    ImFontAtlas* atlas = ImGui::GetIO().Fonts;
-    return (atlas->Fonts.Size > 1) ? atlas->Fonts[1] : ImGui::GetFont();
 }
 
 State StateOf(const SkillNode& n, int money)

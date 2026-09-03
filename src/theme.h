@@ -64,6 +64,44 @@ inline ImVec4 V(ImU32 c)
     return ImGui::ColorConvertU32ToFloat4(c);
 }
 
+inline float Clamp(float v, float lo, float hi)
+{
+    return v < lo ? lo : (v > hi ? hi : v);
+}
+
+inline ImU32 Mix(ImU32 a, ImU32 b, float t)
+{
+    const ImVec4 ca = ImGui::ColorConvertU32ToFloat4(a);
+    const ImVec4 cb = ImGui::ColorConvertU32ToFloat4(b);
+    return ImGui::GetColorU32(ImVec4(ca.x + (cb.x - ca.x) * t, ca.y + (cb.y - ca.y) * t,
+                                     ca.z + (cb.z - ca.z) * t, ca.w + (cb.w - ca.w) * t));
+}
+
+// Ein Farbverlauf mit runden Ecken: dieselbe runde Flaeche mehrmals zeichnen,
+// jedes Mal auf einen waagerechten Streifen beschnitten.
+inline void GradientRect(ImDrawList* dl, ImVec2 a, ImVec2 b, float round, ImU32 top, ImU32 bottom)
+{
+    const int bands = 8;
+    for (int i = 0; i < bands; ++i)
+    {
+        const float t0 = (float)i / (float)bands;
+        const float t1 = (float)(i + 1) / (float)bands;
+
+        dl->PushClipRect(ImVec2(a.x, a.y + (b.y - a.y) * t0),
+                         ImVec2(b.x, a.y + (b.y - a.y) * t1 + 1.0f), true);
+        dl->AddRectFilled(a, b, Mix(top, bottom, (t0 + t1) * 0.5f), round);
+        dl->PopClipRect();
+    }
+}
+
+// Die zweite, groessere Schrift. Herunterskaliert bleibt sie scharf - deshalb
+// wird hier alles daraus gezeichnet und nicht aus der kleinen.
+inline ImFont* BigFont()
+{
+    ImFontAtlas* atlas = ImGui::GetIO().Fonts;
+    return (atlas->Fonts.Size > 1) ? atlas->Fonts[1] : ImGui::GetFont();
+}
+
 // Eine Karte: weisse Flaeche, weicher Rand, runde Ecken. Der Grundbaustein -
 // alles auf jeder Seite sitzt in so einem Ding.
 inline void Card(ImDrawList* dl, ImVec2 a, ImVec2 b, ImU32 fill = kCard, ImU32 border = kBorder)

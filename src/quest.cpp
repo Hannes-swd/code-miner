@@ -243,14 +243,15 @@ bool Unlocked(const QuestDef& def, const Limits& limits)
 }
 
 // Aus welchen Erzen ein Auftrag waehlen darf: nur aus denen, die der Spieler
-// schon einmal in der Tasche hatte. Sonst stuende da "bau 40 Mondsplitter ab"
-// fuer ein Erz, das es in seiner Welt noch gar nicht gibt.
-std::vector<int> KnownOres(const World& world, const OrePlan& ores)
+// schon einmal in der Tasche hatte, und nur, wenn sie ueberhaupt abbaubar
+// sind. Sonst stuende da "bau 40 Mondsplitter ab" fuer ein Erz, das es in
+// seiner Welt noch gar nicht gibt oder das man nie selbst finden kann.
+std::vector<int> MinableKnownOres(const World& world, const OrePlan& ores)
 {
     std::vector<int> out;
-    for (const auto& e : world.oreFirst)
-        if (e.first >= 0 && e.first < (int)ores.ores.size() && ores.ores[(std::size_t)e.first].minable)
-            out.push_back(e.first);
+    for (int ore : KnownOres(world, ores))
+        if (ores.ores[(std::size_t)ore].minable)
+            out.push_back(ore);
     return out;
 }
 
@@ -268,7 +269,7 @@ void QuestRollOffers(World& world, const QuestPlan& plan, const OrePlan& ores,
     if (ziel <= 0)
         return;
 
-    const std::vector<int> bekannt = KnownOres(world, ores);
+    const std::vector<int> bekannt = MinableKnownOres(world, ores);
 
     // Was ueberhaupt in Frage kommt.
     std::vector<int> moeglich;
@@ -486,7 +487,7 @@ bool OnceDone(const World& world, const Quest& q, QuestMetric m)
 }
 
 // Wie weit ein Once-Auftrag ist - nur fuer den Balken.
-int OnceProgress(const World& world, const Quest& q, QuestMetric m)
+int OnceProgress(const World& world, const Quest&, QuestMetric m)
 {
     switch (m)
     {
@@ -664,7 +665,7 @@ bool OfferCard(const Quest& q, float breite, float hoehe, bool machbar)
 
 }  // namespace
 
-void DrawQuestBoard(World& world, const QuestPlan& plan, const OrePlan& ores,
+void DrawQuestBoard(World& world, const QuestPlan&, const OrePlan& ores,
                     const Limits& limits)
 {
     if (!limits.allowQuests)

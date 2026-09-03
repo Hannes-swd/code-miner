@@ -519,6 +519,12 @@ void DrawOreTile(ImDrawList* dl, ImVec2 pos, float size, const Ore& erz, int ore
 // schlichten grauen Stein - so muss niemand vorher pruefen.
 const Ore& OreOf(const OrePlan& ores, int index);
 
+// Welche Erze der Spieler schon kennt, in der Reihenfolge aus data/erze.json:
+// nur die, die schon einmal in der Tasche waren. Ein Kurs oder ein Auftrag
+// fuer ein Erz, das es in dieser Welt noch gar nicht gibt, waere geraten -
+// deshalb nutzen Markt, Auftraege und Wiki alle diese eine Liste.
+std::vector<int> KnownOres(const World& world, const OrePlan& ores);
+
 // Zeichnet die Welt in den Hintergrund (hinter alle Konsolen).
 // Ein Klick auf den Block baut ihn ab - dafuer braucht man kein Programm.
 //

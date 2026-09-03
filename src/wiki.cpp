@@ -37,11 +37,12 @@ const ImU32 kTextDim  = ui::kTextDim;
 const ImU32 kCodeText = ui::kText;
 
 // ---- kleine Helfer --------------------------------------------------------
+// Clamp/Mix/GradientRect/BigFont sind gemeinsame UI-Bausteine, siehe theme.h.
 
-float Clamp(float v, float lo, float hi)
-{
-    return v < lo ? lo : (v > hi ? hi : v);
-}
+using ui::BigFont;
+using ui::Clamp;
+using ui::GradientRect;
+using ui::Mix;
 
 // 0 vor a, 1 nach b, dazwischen weich - damit nichts ruckartig einsetzt.
 float Ramp(float t, float a, float b)
@@ -53,43 +54,11 @@ float Ramp(float t, float a, float b)
     return x * x * (3.0f - 2.0f * x);
 }
 
-ImU32 Mix(ImU32 a, ImU32 b, float t)
-{
-    const ImVec4 ca = ImGui::ColorConvertU32ToFloat4(a);
-    const ImVec4 cb = ImGui::ColorConvertU32ToFloat4(b);
-    return ImGui::GetColorU32(ImVec4(ca.x + (cb.x - ca.x) * t, ca.y + (cb.y - ca.y) * t,
-                                     ca.z + (cb.z - ca.z) * t, ca.w + (cb.w - ca.w) * t));
-}
-
 ImU32 WithAlpha(ImU32 c, float a)
 {
     ImVec4 v = ImGui::ColorConvertU32ToFloat4(c);
     v.w *= Clamp(a, 0.0f, 1.0f);
     return ImGui::GetColorU32(v);
-}
-
-// Farbverlauf mit runden Ecken - dasselbe Verfahren wie im Skilltree.
-void GradientRect(ImDrawList* dl, ImVec2 a, ImVec2 b, float round, ImU32 top, ImU32 bottom)
-{
-    const int bands = 8;
-    for (int i = 0; i < bands; ++i)
-    {
-        const float t0 = (float)i / (float)bands;
-        const float t1 = (float)(i + 1) / (float)bands;
-
-        dl->PushClipRect(ImVec2(a.x, a.y + (b.y - a.y) * t0),
-                         ImVec2(b.x, a.y + (b.y - a.y) * t1 + 1.0f), true);
-        dl->AddRectFilled(a, b, Mix(top, bottom, (t0 + t1) * 0.5f), round);
-        dl->PopClipRect();
-    }
-}
-
-// Die zweite, groessere Schrift. Herunterskaliert bleibt sie scharf - deshalb
-// wird hier alles daraus gezeichnet und nicht aus der kleinen.
-ImFont* BigFont()
-{
-    ImFontAtlas* atlas = ImGui::GetIO().Fonts;
-    return (atlas->Fonts.Size > 1) ? atlas->Fonts[1] : ImGui::GetFont();
 }
 
 void TextAt(ImDrawList* dl, float size, ImVec2 pos, ImU32 col, const char* text,
@@ -398,16 +367,6 @@ std::vector<int> OreRows(const OrePlan& ores, const CraftPlan& craft, const Worl
                   return a < b;
               });
     return zeilen;
-}
-
-// Welche Erze der Spieler schon kennt, in der Reihenfolge aus data/erze.json.
-std::vector<int> KnownOres(const World& world, const OrePlan& ores)
-{
-    std::vector<int> out;
-    for (const auto& e : world.oreFirst)
-        if (e.first >= 0 && e.first < (int)ores.ores.size())
-            out.push_back(e.first);
-    return out;
 }
 
 // ---- Datei suchen ---------------------------------------------------------
@@ -1242,6 +1201,460 @@ void DrawOreCollection(World& world, const OrePlan& ores, const CraftPlan& craft
     ImGui::EndChild();
 }
 
+// ---- Startseite: nur die Oberkategorien, gross und mittig -----------------
+void DrawWikiHome(const WikiBook& book, const std::vector<int>& sichtbar,
+                  const std::set<std::string>& seen, const World& world, const OrePlan& ores)
+{
+    ImDrawList*  dl    = ImGui::GetWindowDrawList();
+    const ImVec2 area  = ImGui::GetCursorScreenPos();
+    const ImVec2 avail = ImGui::GetContentRegionAvail();
+
+    // Wie viele Seiten eine Kategorie gerade hat und wie viele davon
+    // noch keiner gelesen hat. Die Erze zaehlen anders: dort ist jedes
+    // gefundene Erz eine Seite.
+    auto zaehle = [&](const std::string& key, int& zahl, int& neu)
+    {
+        zahl = 0;
+        neu  = 0;
+
+        if (key == kOreCategory)
+        {
+            for (int oi : KnownOres(world, ores))
+            {
+                ++zahl;
+                if (seen.find(WikiOreKey(OreOf(ores, oi).name)) == seen.end())
+                    ++neu;
+            }
+            return;
+        }
+
+        for (int si : sichtbar)
+            if (book.pages[(std::size_t)si].category == key)
+            {
+                ++zahl;
+                if (seen.find(book.pages[(std::size_t)si].title) == seen.end())
+                    ++neu;
+            }
+    };
+
+    // Eine leere Kategorie gibt es gar nicht erst. "Functions" taucht
+    // also auf, sobald der erste Befehl gekauft ist, die Erze mit dem
+    // ersten abgebauten Brocken - eine Karte mit "0 Seiten" waere nur
+    // ein Versprechen, das man noch nicht einloesen kann.
+    std::vector<int> karten;
+    for (int i = 0; i < (int)book.categories.size(); ++i)
+    {
+        int zahl = 0, neu = 0;
+        zaehle(book.categories[(std::size_t)i].key, zahl, neu);
+        if (zahl > 0)
+            karten.push_back(i);
+    }
+
+    const int n = (int)karten.size();
+
+    if (n == 0)
+    {
+        const char* leer = "Nothing here yet. Mine a block or buy something "
+                           "in the skill tree.";
+        TextAt(dl, 15.0f,
+               ImVec2(area.x + avail.x * 0.5f - TextSize(15.0f, leer).x * 0.5f,
+                      area.y + avail.y * 0.35f),
+               kTextDim, leer);
+    }
+
+    if (n > 0)
+    {
+        const float gap   = 26.0f;
+        const float cardW =
+            std::max(120.0f, std::min(300.0f, (avail.x - gap * (float)(n - 1)) /
+                                                  (float)n));
+        const float cardH = 200.0f;
+        const float total = cardW * (float)n + gap * (float)(n - 1);
+        const float x0    = area.x + (avail.x - total) * 0.5f;
+        const float y0    = area.y + std::max(34.0f, (avail.y - cardH) * 0.33f);
+
+        const char* hallo = "Pick a topic.";
+        TextAt(dl, 17.0f,
+               ImVec2(area.x + avail.x * 0.5f - TextSize(17.0f, hallo).x * 0.5f,
+                      y0 - 46.0f),
+               kTextDim, hallo);
+
+        for (int slot = 0; slot < n; ++slot)
+        {
+            const int           i = karten[(std::size_t)slot];
+            const WikiCategory& c = book.categories[(std::size_t)i];
+
+            const ImVec2 ca(x0 + (cardW + gap) * (float)slot, y0);
+            const ImVec2 cb(ca.x + cardW, ca.y + cardH);
+
+            ImGui::SetCursorScreenPos(ca);
+            ImGui::InvisibleButton(("##kat" + c.key).c_str(), ImVec2(cardW, cardH));
+
+            const bool hovered = ImGui::IsItemHovered();
+            if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+            {
+                g_wiki.category = c.key;
+                g_wiki.page     = -1;
+            }
+
+            // Zeichen und Name, sonst nichts. Der erklaerende Satz aus
+            // der Datei stand frueher hier mit drauf - vier Zeilen
+            // Kleingedrucktes auf jeder Karte, die man ohnehin nur
+            // anklickt, um weiterzukommen.
+            dl->AddRectFilled(ca, cb, hovered ? ui::kAccentDim : ui::kCard, 16.0f);
+            dl->AddRect(ca, cb, hovered ? ui::kAccent : ui::kBorder, 16.0f, 0,
+                        hovered ? 2.0f : 1.0f);
+
+            const std::string zeichen =
+                c.icon.empty() ? c.name.substr(0, 1) : c.icon;
+
+            // Das Zeichen sitzt in einem eingelassenen Kaestchen - wie
+            // die Knoten im Skilltree, damit beides zusammengehoert.
+            const float  box = 66.0f;
+            const ImVec2 ia((ca.x + cb.x) * 0.5f - box * 0.5f, ca.y + 34.0f);
+            const ImVec2 ib(ia.x + box, ia.y + box);
+            dl->AddRectFilled(ia, ib, hovered ? ui::kCard : ui::kSunken, 14.0f);
+
+            const float  zs = 30.0f;
+            const ImVec2 zt = TextSize(zs, zeichen.c_str());
+            TextAt(dl, zs,
+                   ImVec2((ia.x + ib.x) * 0.5f - zt.x * 0.5f,
+                          (ia.y + ib.y) * 0.5f - zt.y * 0.5f),
+                   ui::kAccent, zeichen.c_str());
+
+            const ImVec2 ts = TextSize(24.0f, c.name.c_str());
+            TextAt(dl, 24.0f, ImVec2((ca.x + cb.x) * 0.5f - ts.x * 0.5f, ib.y + 20.0f),
+                   kTextHead, c.name.c_str());
+
+            int zahl = 0;
+            int neu  = 0;
+            zaehle(c.key, zahl, neu);
+
+            char label[48];
+            std::snprintf(label, sizeof(label), "%d page%s", zahl, (zahl == 1) ? "" : "s");
+            TextAt(dl, 13.0f, ImVec2(ca.x + 18.0f, cb.y - 27.0f), kAccent, label);
+
+            // Was hier neu ist, faellt sofort auf - man soll nicht erst
+            // in jede Kategorie hineinschauen muessen.
+            if (neu > 0)
+            {
+                char nl[32];
+                std::snprintf(nl, sizeof(nl), "%d new", neu);
+                const ImVec2 ns = TextSize(13.0f, nl);
+                const ImVec2 np(cb.x - 18.0f - ns.x, cb.y - 27.0f);
+
+                dl->AddRectFilled(ImVec2(np.x - 8.0f, np.y - 3.0f),
+                                  ImVec2(np.x + ns.x + 8.0f, np.y + ns.y + 3.0f),
+                                  IM_COL32(196, 96, 40, 255), 6.0f);
+                TextAt(dl, 13.0f, np, IM_COL32(255, 240, 226, 255), nl);
+            }
+        }
+    }
+}
+
+// ---- In einer Kategorie: Liste links, Animation rechts ---------------------
+void DrawWikiCategoryBody(const WikiBook& book, const Limits& limits, const WikiCategory& kat,
+                          const std::vector<int>& sichtbar, std::set<std::string>& seen)
+{
+    ImGui::BeginChild("##liste", ImVec2(250.0f, 0.0f), ImGuiChildFlags_Borders);
+
+    // Ein Eintrag in der Liste. Der Punkt dahinter heisst: noch nicht
+    // gelesen.
+    auto eintrag = [&](int i, bool eingerueckt)
+    {
+        const WikiPage& p   = book.pages[(std::size_t)i];
+        const bool      neu = seen.find(p.title) == seen.end();
+
+        if (eingerueckt)
+            ImGui::Indent(14.0f);
+
+        if (ImGui::Selectable(p.title.c_str(), i == g_wiki.page))
+            GoTo(i, book, seen);
+
+        if (neu)
+        {
+            const ImVec2 mitte(ImGui::GetItemRectMax().x - 12.0f,
+                               (ImGui::GetItemRectMin().y + ImGui::GetItemRectMax().y) *
+                                   0.5f);
+            ImGui::GetWindowDrawList()->AddCircleFilled(mitte, 4.5f, kAccent);
+        }
+
+        if (ImGui::IsItemHovered() && !p.shortText.empty())
+            ImGui::SetTooltip("%s", p.shortText.c_str());
+
+        if (eingerueckt)
+            ImGui::Unindent(14.0f);
+    };
+
+    // Die Unterseiten einer Seite, in der Reihenfolge der Datei.
+    auto kinderVon = [&](const std::string& titel)
+    {
+        std::vector<int> out;
+        for (int k : sichtbar)
+            if (book.pages[(std::size_t)k].parent == titel)
+                out.push_back(k);
+        return out;
+    };
+
+    // Liegt IRGENDWO darunter etwas Ungelesenes? Muss ueber alle Ebenen
+    // gehen: sonst bliebe ein neues item.wash() unbemerkt, solange
+    // "item" und "Process" beide zugeklappt sind.
+    auto neuDarunter = [&](auto&& self, int i) -> bool
+    {
+        if (seen.find(book.pages[(std::size_t)i].title) == seen.end())
+            return true;
+        for (int k : kinderVon(book.pages[(std::size_t)i].title))
+            if (self(self, k))
+                return true;
+        return false;
+    };
+
+    // Ein Punkt der Liste. Wer Unterseiten hat, wird zum Oberpunkt zum
+    // Auf- und Zuklappen - acht Verarbeitungs-Befehle einzeln
+    // untereinander waeren sonst die halbe Liste. Das geht ueber
+    // beliebig viele Ebenen: "item" > "Process" > "item.wash()".
+    auto zeichne = [&](auto&& self, int i, bool eingerueckt) -> void
+    {
+        const WikiPage&        p      = book.pages[(std::size_t)i];
+        const std::vector<int> kinder = kinderVon(p.title);
+
+        if (kinder.empty())
+        {
+            eintrag(i, eingerueckt);
+            return;
+        }
+
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth |
+                                   ImGuiTreeNodeFlags_OpenOnArrow |
+                                   ImGuiTreeNodeFlags_OpenOnDoubleClick;
+        if (i == g_wiki.page)
+            flags |= ImGuiTreeNodeFlags_Selected;
+
+        const bool offen = ImGui::TreeNodeEx(p.title.c_str(), flags);
+
+        // Klick auf den Namen schlaegt die Uebersicht auf, Klick auf
+        // das Dreieck klappt nur zu - deshalb OpenOnArrow.
+        if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+            GoTo(i, book, seen);
+
+        // Zugeklappt zeigt der Punkt, dass DARUNTER etwas Neues liegt.
+        bool neuDrin = seen.find(p.title) == seen.end();
+        if (!offen)
+            for (int k : kinder)
+                if (neuDarunter(neuDarunter, k))
+                    neuDrin = true;
+
+        if (neuDrin)
+        {
+            const ImVec2 mitte(ImGui::GetItemRectMax().x - 12.0f,
+                               (ImGui::GetItemRectMin().y + ImGui::GetItemRectMax().y) *
+                                   0.5f);
+            ImGui::GetWindowDrawList()->AddCircleFilled(mitte, 4.5f, kAccent);
+        }
+
+        if (offen)
+        {
+            // TreeNodeEx rueckt schon selbst ein - die 14 Punkte
+            // obendrauf gibt es nur fuer die Blaetter.
+            for (int k : kinder)
+                self(self, k, true);
+            ImGui::TreePop();
+        }
+    };
+
+    for (int i : sichtbar)
+    {
+        const WikiPage& p = book.pages[(std::size_t)i];
+        if (p.category != g_wiki.category || !p.parent.empty())
+            continue;
+
+        zeichne(zeichne, i, false);
+    }
+    ImGui::EndChild();
+
+    // Rechts eine schmale Spalte mit Verweisen - aber nur, wenn die
+    // offene Seite ueberhaupt welche hat, die man auch schon sehen darf.
+    std::vector<int> verwandt;
+    if (g_wiki.page >= 0)
+        for (const std::string& ziel : book.pages[(std::size_t)g_wiki.page].seeAlso)
+            for (int i : sichtbar)
+                if (book.pages[(std::size_t)i].title == ziel && i != g_wiki.page)
+                    verwandt.push_back(i);
+
+    // Die Spalte ist so breit wie ihr laengster Titel. Fest waere
+    // falsch: "Zustaende und Reinheit" wuerde abgeschnitten, und ein
+    // abgeschnittener Verweis sagt einem nicht, wohin er fuehrt.
+    float spalte = 0.0f;
+    if (!verwandt.empty())
+    {
+        float breit = ImGui::CalcTextSize("Related").x;
+        for (int i : verwandt)
+            breit = std::max(breit,
+                             ImGui::CalcTextSize(book.pages[(std::size_t)i].title.c_str()).x);
+
+        // Rand, Innenabstand und Platz fuer einen Rollbalken.
+        spalte = Clamp(breit + 46.0f, 170.0f, 340.0f);
+    }
+
+    ImGui::SameLine();
+    ImGui::BeginChild("##haupt", ImVec2(-spalte, 0.0f), ImGuiChildFlags_None);
+
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+
+    if (g_wiki.page < 0)
+    {
+        // Noch nichts gewaehlt: ein kurzer Text zur Kategorie.
+        ImGui::Dummy(ImVec2(0.0f, 22.0f));
+
+        const ImVec2 p    = ImGui::GetCursorScreenPos();
+        const float  wrap = std::max(240.0f, ImGui::GetContentRegionAvail().x - 40.0f);
+
+        TextAt(dl, 26.0f, p, kTextHead, kat.name.c_str());
+        TextAt(dl, 16.0f, ImVec2(p.x, p.y + 42.0f), kTextDim, kat.text.c_str(), wrap);
+
+        ImGui::Dummy(ImVec2(0.0f, 130.0f));
+        ImGui::TextDisabled("Pick one on the left.");
+    }
+    else
+    {
+        // Nur die Schritte, die der Spieler auch benutzen darf. Ein
+        // Schritt, der einen noch nicht gekauften Befehl zeigt, faellt
+        // heraus - samt seiner Marke auf der Zeitleiste. Die Kopie ist
+        // billig (eine Handvoll kurzer Texte) und spart es, jede Stelle
+        // weiter unten auf eine Umrechnungstabelle umzubauen.
+        WikiPage page = book.pages[(std::size_t)g_wiki.page];
+        {
+            const WikiPage& roh = book.pages[(std::size_t)g_wiki.page];
+
+            page.steps.clear();
+            for (const WikiStep& s : roh.steps)
+                if (SchrittSichtbar(s, limits))
+                    page.steps.push_back(s);
+
+            // Etwas muss dastehen: eine Seite ohne einen einzigen
+            // erlaubten Schritt waere ein leerer Rahmen.
+            if (page.steps.empty())
+                page.steps.push_back(roh.steps[0]);
+        }
+
+        if (g_wiki.step >= (int)page.steps.size())
+            g_wiki.step = 0;
+
+        // ---- Kopf ------------------------------------------------
+        TextAt(dl, 24.0f, ImGui::GetCursorScreenPos(), kTextHead, page.title.c_str());
+        ImGui::Dummy(ImVec2(0.0f, 30.0f));
+
+        if (!page.shortText.empty())
+        {
+            ImGui::PushTextWrapPos(0.0f);
+            ImGui::TextDisabled("%s", page.shortText.c_str());
+            ImGui::PopTextWrapPos();
+        }
+        ImGui::Spacing();
+
+        // ---- Tasten -----------------------------------------------
+        // Nur, wenn gerade niemand tippt - sonst haette man in einer
+        // Konsole kein Leerzeichen mehr.
+        if (!ImGui::GetIO().WantTextInput)
+        {
+            const int letzter = (int)page.steps.size() - 1;
+
+            if (ImGui::IsKeyPressed(ImGuiKey_Space, false))
+                g_wiki.playing = !g_wiki.playing;
+
+            if (ImGui::IsKeyPressed(ImGuiKey_RightArrow, true))
+            {
+                g_wiki.step = (g_wiki.step < letzter) ? g_wiki.step + 1 : 0;
+                g_wiki.time = 0.0f;
+            }
+
+            if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow, true))
+            {
+                // Erst an den Anfang des Schrittes, beim zweiten Druck
+                // eins zurueck - so wie bei einem Musikspieler.
+                if (g_wiki.time > 0.35f)
+                    g_wiki.time = 0.0f;
+                else
+                {
+                    g_wiki.step = (g_wiki.step > 0) ? g_wiki.step - 1 : letzter;
+                    g_wiki.time = 0.0f;
+                }
+            }
+
+            if (ImGui::IsKeyPressed(ImGuiKey_R, false))
+            {
+                g_wiki.step = 0;
+                g_wiki.time = 0.0f;
+            }
+        }
+
+        // ---- Zeit laeuft ------------------------------------------
+        const float dur = std::max(1.2f, page.steps[(std::size_t)g_wiki.step].seconds);
+
+        if (g_wiki.playing)
+            g_wiki.time += ImGui::GetIO().DeltaTime;
+
+        if (g_wiki.time >= dur)
+        {
+            // Am Ende laeuft die Animation wieder von vorn.
+            g_wiki.time = 0.0f;
+            g_wiki.step = (g_wiki.step + 1) % (int)page.steps.size();
+        }
+
+        // ---- Buehne -----------------------------------------------
+        const ImVec2 c0    = ImGui::GetCursorScreenPos();
+        const ImVec2 avail = ImGui::GetContentRegionAvail();
+        const float  canW  = std::max(avail.x, 120.0f);
+        const float  canH  = std::max(200.0f, avail.y - 104.0f);
+
+        ImGui::InvisibleButton("##buehne", ImVec2(canW, canH));
+
+        const ImVec2 c1(c0.x + canW, c0.y + canH);
+        dl->PushClipRect(c0, c1, true);
+        DrawAnimation(page, g_wiki.step, g_wiki.time, c0, c1);
+        dl->PopClipRect();
+
+        ImGui::Spacing();
+        DrawTimeline(page, canW);
+    }
+
+    ImGui::EndChild();
+
+    if (!verwandt.empty())
+    {
+        ImGui::SameLine();
+        ImGui::BeginChild("##verwandt", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);
+
+        ImGui::TextDisabled("Related");
+        ImGui::Spacing();
+
+        int springe = -1;
+        for (int i : verwandt)
+        {
+            const WikiPage& z = book.pages[(std::size_t)i];
+
+            // Klein und unaufdringlich: das ist ein Verweis, keine
+            // zweite Hauptsache.
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.78f, 0.98f, 1.0f));
+            if (ImGui::Selectable(z.title.c_str()))
+                springe = i;
+            ImGui::PopStyleColor();
+
+            if (ImGui::IsItemHovered() && !z.shortText.empty())
+                ImGui::SetTooltip("%s", z.shortText.c_str());
+        }
+
+        // Der Sprung darf auch in eine andere Kategorie gehen.
+        if (springe >= 0)
+        {
+            g_wiki.category = book.pages[(std::size_t)springe].category;
+            GoTo(springe, book, seen);
+        }
+
+        ImGui::EndChild();
+    }
+}
+
 }  // namespace
 
 // ===========================================================================
@@ -1686,460 +2099,12 @@ void DrawWikiPage(const WikiBook& book, const Limits& limits, World& world, cons
         }
 
         if (kat == nullptr)
-        {
-            // ---- Startseite: nur die Oberkategorien, gross und mittig -----
-            ImDrawList*  dl    = ImGui::GetWindowDrawList();
-            const ImVec2 area  = ImGui::GetCursorScreenPos();
-            const ImVec2 avail = ImGui::GetContentRegionAvail();
-
-            // Wie viele Seiten eine Kategorie gerade hat und wie viele davon
-            // noch keiner gelesen hat. Die Erze zaehlen anders: dort ist jedes
-            // gefundene Erz eine Seite.
-            auto zaehle = [&](const std::string& key, int& zahl, int& neu)
-            {
-                zahl = 0;
-                neu  = 0;
-
-                if (key == kOreCategory)
-                {
-                    for (int oi : KnownOres(world, ores))
-                    {
-                        ++zahl;
-                        if (seen.find(WikiOreKey(OreOf(ores, oi).name)) == seen.end())
-                            ++neu;
-                    }
-                    return;
-                }
-
-                for (int si : sichtbar)
-                    if (book.pages[(std::size_t)si].category == key)
-                    {
-                        ++zahl;
-                        if (seen.find(book.pages[(std::size_t)si].title) == seen.end())
-                            ++neu;
-                    }
-            };
-
-            // Eine leere Kategorie gibt es gar nicht erst. "Functions" taucht
-            // also auf, sobald der erste Befehl gekauft ist, die Erze mit dem
-            // ersten abgebauten Brocken - eine Karte mit "0 Seiten" waere nur
-            // ein Versprechen, das man noch nicht einloesen kann.
-            std::vector<int> karten;
-            for (int i = 0; i < (int)book.categories.size(); ++i)
-            {
-                int zahl = 0, neu = 0;
-                zaehle(book.categories[(std::size_t)i].key, zahl, neu);
-                if (zahl > 0)
-                    karten.push_back(i);
-            }
-
-            const int n = (int)karten.size();
-
-            if (n == 0)
-            {
-                const char* leer = "Nothing here yet. Mine a block or buy something "
-                                   "in the skill tree.";
-                TextAt(dl, 15.0f,
-                       ImVec2(area.x + avail.x * 0.5f - TextSize(15.0f, leer).x * 0.5f,
-                              area.y + avail.y * 0.35f),
-                       kTextDim, leer);
-            }
-
-            if (n > 0)
-            {
-                const float gap   = 26.0f;
-                const float cardW =
-                    std::max(120.0f, std::min(300.0f, (avail.x - gap * (float)(n - 1)) /
-                                                          (float)n));
-                const float cardH = 200.0f;
-                const float total = cardW * (float)n + gap * (float)(n - 1);
-                const float x0    = area.x + (avail.x - total) * 0.5f;
-                const float y0    = area.y + std::max(34.0f, (avail.y - cardH) * 0.33f);
-
-                const char* hallo = "Pick a topic.";
-                TextAt(dl, 17.0f,
-                       ImVec2(area.x + avail.x * 0.5f - TextSize(17.0f, hallo).x * 0.5f,
-                              y0 - 46.0f),
-                       kTextDim, hallo);
-
-                for (int slot = 0; slot < n; ++slot)
-                {
-                    const int           i = karten[(std::size_t)slot];
-                    const WikiCategory& c = book.categories[(std::size_t)i];
-
-                    const ImVec2 ca(x0 + (cardW + gap) * (float)slot, y0);
-                    const ImVec2 cb(ca.x + cardW, ca.y + cardH);
-
-                    ImGui::SetCursorScreenPos(ca);
-                    ImGui::InvisibleButton(("##kat" + c.key).c_str(), ImVec2(cardW, cardH));
-
-                    const bool hovered = ImGui::IsItemHovered();
-                    if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
-                    {
-                        g_wiki.category = c.key;
-                        g_wiki.page     = -1;
-                    }
-
-                    // Zeichen und Name, sonst nichts. Der erklaerende Satz aus
-                    // der Datei stand frueher hier mit drauf - vier Zeilen
-                    // Kleingedrucktes auf jeder Karte, die man ohnehin nur
-                    // anklickt, um weiterzukommen.
-                    dl->AddRectFilled(ca, cb, hovered ? ui::kAccentDim : ui::kCard, 16.0f);
-                    dl->AddRect(ca, cb, hovered ? ui::kAccent : ui::kBorder, 16.0f, 0,
-                                hovered ? 2.0f : 1.0f);
-
-                    const std::string zeichen =
-                        c.icon.empty() ? c.name.substr(0, 1) : c.icon;
-
-                    // Das Zeichen sitzt in einem eingelassenen Kaestchen - wie
-                    // die Knoten im Skilltree, damit beides zusammengehoert.
-                    const float  box = 66.0f;
-                    const ImVec2 ia((ca.x + cb.x) * 0.5f - box * 0.5f, ca.y + 34.0f);
-                    const ImVec2 ib(ia.x + box, ia.y + box);
-                    dl->AddRectFilled(ia, ib, hovered ? ui::kCard : ui::kSunken, 14.0f);
-
-                    const float  zs = 30.0f;
-                    const ImVec2 zt = TextSize(zs, zeichen.c_str());
-                    TextAt(dl, zs,
-                           ImVec2((ia.x + ib.x) * 0.5f - zt.x * 0.5f,
-                                  (ia.y + ib.y) * 0.5f - zt.y * 0.5f),
-                           ui::kAccent, zeichen.c_str());
-
-                    const ImVec2 ts = TextSize(24.0f, c.name.c_str());
-                    TextAt(dl, 24.0f, ImVec2((ca.x + cb.x) * 0.5f - ts.x * 0.5f, ib.y + 20.0f),
-                           kTextHead, c.name.c_str());
-
-                    int zahl = 0;
-                    int neu  = 0;
-                    zaehle(c.key, zahl, neu);
-
-                    char label[48];
-                    std::snprintf(label, sizeof(label), "%d page%s", zahl, (zahl == 1) ? "" : "s");
-                    TextAt(dl, 13.0f, ImVec2(ca.x + 18.0f, cb.y - 27.0f), kAccent, label);
-
-                    // Was hier neu ist, faellt sofort auf - man soll nicht erst
-                    // in jede Kategorie hineinschauen muessen.
-                    if (neu > 0)
-                    {
-                        char nl[32];
-                        std::snprintf(nl, sizeof(nl), "%d new", neu);
-                        const ImVec2 ns = TextSize(13.0f, nl);
-                        const ImVec2 np(cb.x - 18.0f - ns.x, cb.y - 27.0f);
-
-                        dl->AddRectFilled(ImVec2(np.x - 8.0f, np.y - 3.0f),
-                                          ImVec2(np.x + ns.x + 8.0f, np.y + ns.y + 3.0f),
-                                          IM_COL32(196, 96, 40, 255), 6.0f);
-                        TextAt(dl, 13.0f, np, IM_COL32(255, 240, 226, 255), nl);
-                    }
-                }
-            }
-        }
+            DrawWikiHome(book, sichtbar, seen, world, ores);
         else if (erzKat)
-        {
             // ---- Die Erze: keine Seiten aus der Datei, sondern Erspieltes --
             DrawOreCollection(world, ores, craft);
-        }
         else
-        {
-            // ---- In einer Kategorie: Liste links, Animation rechts --------
-            ImGui::BeginChild("##liste", ImVec2(250.0f, 0.0f), ImGuiChildFlags_Borders);
-
-            // Ein Eintrag in der Liste. Der Punkt dahinter heisst: noch nicht
-            // gelesen.
-            auto eintrag = [&](int i, bool eingerueckt)
-            {
-                const WikiPage& p   = book.pages[(std::size_t)i];
-                const bool      neu = seen.find(p.title) == seen.end();
-
-                if (eingerueckt)
-                    ImGui::Indent(14.0f);
-
-                if (ImGui::Selectable(p.title.c_str(), i == g_wiki.page))
-                    GoTo(i, book, seen);
-
-                if (neu)
-                {
-                    const ImVec2 mitte(ImGui::GetItemRectMax().x - 12.0f,
-                                       (ImGui::GetItemRectMin().y + ImGui::GetItemRectMax().y) *
-                                           0.5f);
-                    ImGui::GetWindowDrawList()->AddCircleFilled(mitte, 4.5f, kAccent);
-                }
-
-                if (ImGui::IsItemHovered() && !p.shortText.empty())
-                    ImGui::SetTooltip("%s", p.shortText.c_str());
-
-                if (eingerueckt)
-                    ImGui::Unindent(14.0f);
-            };
-
-            // Die Unterseiten einer Seite, in der Reihenfolge der Datei.
-            auto kinderVon = [&](const std::string& titel)
-            {
-                std::vector<int> out;
-                for (int k : sichtbar)
-                    if (book.pages[(std::size_t)k].parent == titel)
-                        out.push_back(k);
-                return out;
-            };
-
-            // Liegt IRGENDWO darunter etwas Ungelesenes? Muss ueber alle Ebenen
-            // gehen: sonst bliebe ein neues item.wash() unbemerkt, solange
-            // "item" und "Process" beide zugeklappt sind.
-            auto neuDarunter = [&](auto&& self, int i) -> bool
-            {
-                if (seen.find(book.pages[(std::size_t)i].title) == seen.end())
-                    return true;
-                for (int k : kinderVon(book.pages[(std::size_t)i].title))
-                    if (self(self, k))
-                        return true;
-                return false;
-            };
-
-            // Ein Punkt der Liste. Wer Unterseiten hat, wird zum Oberpunkt zum
-            // Auf- und Zuklappen - acht Verarbeitungs-Befehle einzeln
-            // untereinander waeren sonst die halbe Liste. Das geht ueber
-            // beliebig viele Ebenen: "item" > "Process" > "item.wash()".
-            auto zeichne = [&](auto&& self, int i, bool eingerueckt) -> void
-            {
-                const WikiPage&        p      = book.pages[(std::size_t)i];
-                const std::vector<int> kinder = kinderVon(p.title);
-
-                if (kinder.empty())
-                {
-                    eintrag(i, eingerueckt);
-                    return;
-                }
-
-                ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth |
-                                           ImGuiTreeNodeFlags_OpenOnArrow |
-                                           ImGuiTreeNodeFlags_OpenOnDoubleClick;
-                if (i == g_wiki.page)
-                    flags |= ImGuiTreeNodeFlags_Selected;
-
-                const bool offen = ImGui::TreeNodeEx(p.title.c_str(), flags);
-
-                // Klick auf den Namen schlaegt die Uebersicht auf, Klick auf
-                // das Dreieck klappt nur zu - deshalb OpenOnArrow.
-                if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
-                    GoTo(i, book, seen);
-
-                // Zugeklappt zeigt der Punkt, dass DARUNTER etwas Neues liegt.
-                bool neuDrin = seen.find(p.title) == seen.end();
-                if (!offen)
-                    for (int k : kinder)
-                        if (neuDarunter(neuDarunter, k))
-                            neuDrin = true;
-
-                if (neuDrin)
-                {
-                    const ImVec2 mitte(ImGui::GetItemRectMax().x - 12.0f,
-                                       (ImGui::GetItemRectMin().y + ImGui::GetItemRectMax().y) *
-                                           0.5f);
-                    ImGui::GetWindowDrawList()->AddCircleFilled(mitte, 4.5f, kAccent);
-                }
-
-                if (offen)
-                {
-                    // TreeNodeEx rueckt schon selbst ein - die 14 Punkte
-                    // obendrauf gibt es nur fuer die Blaetter.
-                    for (int k : kinder)
-                        self(self, k, true);
-                    ImGui::TreePop();
-                }
-            };
-
-            for (int i : sichtbar)
-            {
-                const WikiPage& p = book.pages[(std::size_t)i];
-                if (p.category != g_wiki.category || !p.parent.empty())
-                    continue;
-
-                zeichne(zeichne, i, false);
-            }
-            ImGui::EndChild();
-
-            // Rechts eine schmale Spalte mit Verweisen - aber nur, wenn die
-            // offene Seite ueberhaupt welche hat, die man auch schon sehen darf.
-            std::vector<int> verwandt;
-            if (g_wiki.page >= 0)
-                for (const std::string& ziel : book.pages[(std::size_t)g_wiki.page].seeAlso)
-                    for (int i : sichtbar)
-                        if (book.pages[(std::size_t)i].title == ziel && i != g_wiki.page)
-                            verwandt.push_back(i);
-
-            // Die Spalte ist so breit wie ihr laengster Titel. Fest waere
-            // falsch: "Zustaende und Reinheit" wuerde abgeschnitten, und ein
-            // abgeschnittener Verweis sagt einem nicht, wohin er fuehrt.
-            float spalte = 0.0f;
-            if (!verwandt.empty())
-            {
-                float breit = ImGui::CalcTextSize("Related").x;
-                for (int i : verwandt)
-                    breit = std::max(breit,
-                                     ImGui::CalcTextSize(book.pages[(std::size_t)i].title.c_str()).x);
-
-                // Rand, Innenabstand und Platz fuer einen Rollbalken.
-                spalte = Clamp(breit + 46.0f, 170.0f, 340.0f);
-            }
-
-            ImGui::SameLine();
-            ImGui::BeginChild("##haupt", ImVec2(-spalte, 0.0f), ImGuiChildFlags_None);
-
-            ImDrawList* dl = ImGui::GetWindowDrawList();
-
-            if (g_wiki.page < 0)
-            {
-                // Noch nichts gewaehlt: ein kurzer Text zur Kategorie.
-                ImGui::Dummy(ImVec2(0.0f, 22.0f));
-
-                const ImVec2 p    = ImGui::GetCursorScreenPos();
-                const float  wrap = std::max(240.0f, ImGui::GetContentRegionAvail().x - 40.0f);
-
-                TextAt(dl, 26.0f, p, kTextHead, kat->name.c_str());
-                TextAt(dl, 16.0f, ImVec2(p.x, p.y + 42.0f), kTextDim, kat->text.c_str(), wrap);
-
-                ImGui::Dummy(ImVec2(0.0f, 130.0f));
-                ImGui::TextDisabled("Pick one on the left.");
-            }
-            else
-            {
-                // Nur die Schritte, die der Spieler auch benutzen darf. Ein
-                // Schritt, der einen noch nicht gekauften Befehl zeigt, faellt
-                // heraus - samt seiner Marke auf der Zeitleiste. Die Kopie ist
-                // billig (eine Handvoll kurzer Texte) und spart es, jede Stelle
-                // weiter unten auf eine Umrechnungstabelle umzubauen.
-                WikiPage page = book.pages[(std::size_t)g_wiki.page];
-                {
-                    const WikiPage& roh = book.pages[(std::size_t)g_wiki.page];
-
-                    page.steps.clear();
-                    for (const WikiStep& s : roh.steps)
-                        if (SchrittSichtbar(s, limits))
-                            page.steps.push_back(s);
-
-                    // Etwas muss dastehen: eine Seite ohne einen einzigen
-                    // erlaubten Schritt waere ein leerer Rahmen.
-                    if (page.steps.empty())
-                        page.steps.push_back(roh.steps[0]);
-                }
-
-                if (g_wiki.step >= (int)page.steps.size())
-                    g_wiki.step = 0;
-
-                // ---- Kopf ------------------------------------------------
-                TextAt(dl, 24.0f, ImGui::GetCursorScreenPos(), kTextHead, page.title.c_str());
-                ImGui::Dummy(ImVec2(0.0f, 30.0f));
-
-                if (!page.shortText.empty())
-                {
-                    ImGui::PushTextWrapPos(0.0f);
-                    ImGui::TextDisabled("%s", page.shortText.c_str());
-                    ImGui::PopTextWrapPos();
-                }
-                ImGui::Spacing();
-
-                // ---- Tasten -----------------------------------------------
-                // Nur, wenn gerade niemand tippt - sonst haette man in einer
-                // Konsole kein Leerzeichen mehr.
-                if (!ImGui::GetIO().WantTextInput)
-                {
-                    const int letzter = (int)page.steps.size() - 1;
-
-                    if (ImGui::IsKeyPressed(ImGuiKey_Space, false))
-                        g_wiki.playing = !g_wiki.playing;
-
-                    if (ImGui::IsKeyPressed(ImGuiKey_RightArrow, true))
-                    {
-                        g_wiki.step = (g_wiki.step < letzter) ? g_wiki.step + 1 : 0;
-                        g_wiki.time = 0.0f;
-                    }
-
-                    if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow, true))
-                    {
-                        // Erst an den Anfang des Schrittes, beim zweiten Druck
-                        // eins zurueck - so wie bei einem Musikspieler.
-                        if (g_wiki.time > 0.35f)
-                            g_wiki.time = 0.0f;
-                        else
-                        {
-                            g_wiki.step = (g_wiki.step > 0) ? g_wiki.step - 1 : letzter;
-                            g_wiki.time = 0.0f;
-                        }
-                    }
-
-                    if (ImGui::IsKeyPressed(ImGuiKey_R, false))
-                    {
-                        g_wiki.step = 0;
-                        g_wiki.time = 0.0f;
-                    }
-                }
-
-                // ---- Zeit laeuft ------------------------------------------
-                const float dur = std::max(1.2f, page.steps[(std::size_t)g_wiki.step].seconds);
-
-                if (g_wiki.playing)
-                    g_wiki.time += ImGui::GetIO().DeltaTime;
-
-                if (g_wiki.time >= dur)
-                {
-                    // Am Ende laeuft die Animation wieder von vorn.
-                    g_wiki.time = 0.0f;
-                    g_wiki.step = (g_wiki.step + 1) % (int)page.steps.size();
-                }
-
-                // ---- Buehne -----------------------------------------------
-                const ImVec2 c0    = ImGui::GetCursorScreenPos();
-                const ImVec2 avail = ImGui::GetContentRegionAvail();
-                const float  canW  = std::max(avail.x, 120.0f);
-                const float  canH  = std::max(200.0f, avail.y - 104.0f);
-
-                ImGui::InvisibleButton("##buehne", ImVec2(canW, canH));
-
-                const ImVec2 c1(c0.x + canW, c0.y + canH);
-                dl->PushClipRect(c0, c1, true);
-                DrawAnimation(page, g_wiki.step, g_wiki.time, c0, c1);
-                dl->PopClipRect();
-
-                ImGui::Spacing();
-                DrawTimeline(page, canW);
-            }
-
-            ImGui::EndChild();
-
-            if (!verwandt.empty())
-            {
-                ImGui::SameLine();
-                ImGui::BeginChild("##verwandt", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);
-
-                ImGui::TextDisabled("Related");
-                ImGui::Spacing();
-
-                int springe = -1;
-                for (int i : verwandt)
-                {
-                    const WikiPage& z = book.pages[(std::size_t)i];
-
-                    // Klein und unaufdringlich: das ist ein Verweis, keine
-                    // zweite Hauptsache.
-                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.78f, 0.98f, 1.0f));
-                    if (ImGui::Selectable(z.title.c_str()))
-                        springe = i;
-                    ImGui::PopStyleColor();
-
-                    if (ImGui::IsItemHovered() && !z.shortText.empty())
-                        ImGui::SetTooltip("%s", z.shortText.c_str());
-                }
-
-                // Der Sprung darf auch in eine andere Kategorie gehen.
-                if (springe >= 0)
-                {
-                    g_wiki.category = book.pages[(std::size_t)springe].category;
-                    GoTo(springe, book, seen);
-                }
-
-                ImGui::EndChild();
-            }
-        }
+            DrawWikiCategoryBody(book, limits, *kat, sichtbar, seen);
     }
     ImGui::End();
 
