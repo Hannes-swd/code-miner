@@ -24,6 +24,7 @@ struct CraftStep;
 struct AlloyPlan;
 struct AlloyRecipe;
 struct Limits;
+struct Curios;  // curios.h - eigene Datei, siehe dort fuer den Grund
 
 // Die Welt. Aktuell: genau ein Block in der Mitte - aber jedes Mal ein anderer.
 struct World
@@ -469,7 +470,11 @@ struct World
     // Der Abbau gehoert zum laufenden Programm: er kommt nur voran, solange das
     // Programm laeuft. Sonst wuerde ein angehaltenes Programm weiter abbauen -
     // man druckt auf Pause und der Block geht trotzdem kaputt.
-    void tickMining(float dt, const OrePlan& ores, const CraftPlan& craft);
+    //
+    // curios bekommt hier eine Referenz und nicht einen eigenen Aufruf: ein
+    // Fund haengt am selben Augenblick wie das Fertigwerden des Blocks, und
+    // beides soll nicht auseinanderlaufen koennen.
+    void tickMining(float dt, const OrePlan& ores, const CraftPlan& craft, Curios& curios);
 
     // Abbau abbrechen, der Block bleibt ganz. Beim Stoppen des Programms.
     void cancelMining();

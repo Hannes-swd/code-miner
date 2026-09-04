@@ -2,6 +2,7 @@
 
 #include "alloy.h"
 #include "craft.h"
+#include "curios.h"
 #include "ore.h"
 #include "skilltree.h"
 #include "theme.h"
@@ -57,6 +58,10 @@ float OrePixel(float x, float y, float pattern, unsigned seed)
 
     return t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
 }
+
+// Wie unwahrscheinlich ein Fund je abgebautem Block ist. Fest, immer
+// gleich - siehe curios.h fuer die Begruendung.
+constexpr float kCuriosityChance = 1.0f / 6000.0f;
 
 }  // namespace
 
@@ -429,7 +434,7 @@ int World::sell(const OrePlan& ores, const CraftPlan& craft)
     return geld;
 }
 
-void World::tickMining(float dt, const OrePlan& ores, const CraftPlan& craft)
+void World::tickMining(float dt, const OrePlan& ores, const CraftPlan& craft, Curios& curios)
 {
     // Steht die Welt still, kommt auch ein angefangener Abbau nicht voran -
     // ausser er wurde von Hand begonnen und Handabbau ist erlaubt.
@@ -478,6 +483,25 @@ void World::tickMining(float dt, const OrePlan& ores, const CraftPlan& craft)
         stats.cleanStreak = 0;
     else
         ++stats.cleanStreak;
+
+    // ---- Kuriositaeten -----------------------------------------------------
+    // Eine feste, sehr kleine Chance je Block - siehe kCuriosityChance oben.
+    // Weder Erz noch Zustand noch irgendein Skill spielt hinein, und nichts
+    // hebt die Chance an: das ist mit Absicht der ganze Trick.
+    if ((int)curios.found.size() < Curios::kCount)
+    {
+        std::uniform_real_distribution<float> wuerfel(0.0f, 1.0f);
+        if (wuerfel(rng) < kCuriosityChance)
+        {
+            std::vector<int> frei;
+            for (int i = 0; i < Curios::kCount; ++i)
+                if (!curios.found.count(i))
+                    frei.push_back(i);
+
+            std::uniform_int_distribution<int> pick(0, (int)frei.size() - 1);
+            curios.found.insert(frei[(std::size_t)pick(rng)]);
+        }
+    }
 
     blockAlive   = false;
     mining       = false;

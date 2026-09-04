@@ -39,6 +39,7 @@ set(GAME_SOURCES
     src/skilltree.cpp
     src/skillfile.cpp
     src/prestige.cpp
+    src/curios.cpp
     src/save.cpp
     src/ore.cpp
     src/oregen.cpp

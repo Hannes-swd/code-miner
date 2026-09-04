@@ -14,6 +14,7 @@
 #include "ore.h"
 #include "oregen.h"
 #include "platform.h"
+#include "curios.h"
 #include "prestige.h"
 #include "round.h"
 #include "save.h"
@@ -122,7 +123,12 @@ enum class Page
 
     // Das Erbe: Erbe-Punkte gegen dauerhafte Boni, ueberlebt "Start over".
     // Siehe prestige.h.
-    Erbe
+    Erbe,
+
+    // Gefundene Kuriositaeten - siehe world.h. Der Reiter taucht erst auf,
+    // sobald es ueberhaupt eine gibt: vorher soll man von der Seite so wenig
+    // wissen wie von den Dingern selbst.
+    Kurios
 };
 
 // Reiter in der Menueleiste. Die offene Seite wird hervorgehoben.
@@ -324,6 +330,11 @@ int main(int, char**)
     if (!LoadPrestige(prestige))
         RerollOffers(prestige, prestigePlan);  // allererster Start: erste Angebote wuerfeln
 
+    // Kuriositaeten: aus demselben Grund in einer eigenen Datei - siehe
+    // curios.h.
+    Curios curios;
+    LoadCurios(curios);
+
     World world;
     world.money = kStartGeld + ComputePrestigeEffects(prestige, prestigePlan).startMoneyBonus;
 
@@ -485,7 +496,7 @@ int main(int, char**)
         if (world.byHand)
         {
             // Von Hand angeklickt: das laeuft immer, auch ohne Programm.
-            world.tickMining(dt, ores, crafts);
+            world.tickMining(dt, ores, crafts, curios);
         }
         else
         {
@@ -493,7 +504,9 @@ int main(int, char**)
             {
             case RunState::Paused: break;  // eingefroren
             case RunState::Idle: world.cancelMining(); break;
-            default: world.tickMining(dt, ores, crafts); break;  // laeuft oder gerade fertig
+            default:
+                world.tickMining(dt, ores, crafts, curios);
+                break;  // laeuft oder gerade fertig
             }
         }
 
@@ -533,6 +546,7 @@ int main(int, char**)
         {
             SaveGame(world, tree, consoles, ores, alloys);
             SavePrestige(prestige);  // Kaeufe auf der Legacy-Seite sollen auch ohne Verlieren bleiben
+            SaveCurios(curios);      // ueberlebt aus demselben Grund wie das Erbe
             saveTimer = 0.0f;
         }
 
@@ -641,6 +655,17 @@ int main(int, char**)
             if (CountTab("Legacy", prestige.points, page == Page::Erbe))
                 page = Page::Erbe;
 
+            // Taucht erst auf, wenn es die erste ueberhaupt gibt - kein Reiter
+            // fuer etwas, das man noch nie gesehen hat.
+            if (!curios.found.empty() &&
+                PageTab("Finds", page == Page::Kurios))
+                page = Page::Kurios;
+
+            // Wo die Reiter aufgehoert haben - falls es gerade so viele sind,
+            // dass der rechts angepinnte Knopf unten sonst mitten hineinragen
+            // wuerde (siehe dort).
+            const float tabsEndX = ImGui::GetCursorPosX();
+
             // Rechts stehen die Sachen, die zur Seite gehoeren - Geld ganz
             // aussen, davor der Knopf fuer eine weitere Konsole. Links die
             // Reiter, rechts das Handwerkszeug: so faellt beides auseinander.
@@ -651,8 +676,13 @@ int main(int, char**)
                 const char* label       = "+ New Console";
                 const float breit       = ImGui::CalcTextSize(label).x + 28.0f;
 
-                ImGui::SetCursorPosX(ImGui::GetWindowWidth() - MenuWidth() - 8.0f - 12.0f -
-                                     MoneyWidth(world) - 12.0f - breit);
+                // Normalerweise rechtsbuendig - aber steht gerade eine lange
+                // Reihe Reiter da (z. B. weil "Finds" dazugekommen ist), darf
+                // der Knopf sie nicht ueberdecken. Dann eben direkt dahinter,
+                // mit demselben Abstand wie zwischen zwei Reitern.
+                const float rechtsbuendig = ImGui::GetWindowWidth() - MenuWidth() - 8.0f - 12.0f -
+                                            MoneyWidth(world) - 12.0f - breit;
+                ImGui::SetCursorPosX(std::max(tabsEndX + 12.0f, rechtsbuendig));
 
                 ImGui::BeginDisabled(!moreAllowed);
                 ImGui::PushStyleColor(ImGuiCol_Button, ui::V(ui::kCard));
@@ -833,6 +863,10 @@ int main(int, char**)
         {
             DrawPrestigePage(prestige, prestigePlan);
         }
+        else if (page == Page::Kurios)
+        {
+            DrawCuriosityPage(curios);
+        }
         else
         {
             DrawSkillPage(world, tree);
@@ -896,6 +930,7 @@ int main(int, char**)
                 prestige.totalEarned += legacyPreview;
                 RerollOffers(prestige, prestigePlan);
                 SavePrestige(prestige);
+                SaveCurios(curios);  // unangetastet von resetAll(), aber sicher ist sicher
                 resetAll();
             }
             else
@@ -913,6 +948,7 @@ int main(int, char**)
 
     SaveGame(world, tree, consoles, ores, alloys);
     SavePrestige(prestige);
+    SaveCurios(curios);
 
     plat::Shutdown();
     return 0;

@@ -118,6 +118,48 @@ Der Markt ist aktuell ein einzelner schwankender Kurs pro Erz. Zusätzlich, addi
   (`market.demand(erz)`), baut direkt auf `world.marketSwing`/`marketFactor()` auf, nur mit
   einer zusätzlichen, befristeten Erz-spezifischen Komponente statt der globalen Sinuskurve.
 
+## 9. Kuriositäten — sehr seltene Funde ohne echten Nutzen (umgesetzt)
+
+Idee vom Spieler: Dinge, die man beim Abbau extrem selten findet und die (fast) nichts
+bringen — der Reiz ist allein, dass es sie gibt. Kein zweites Wirtschaftssystem, kein
+Grind-Ziel, nur ein stiller Bonus fürs Dabeibleiben.
+
+Umgesetzt in `world.h`/`world.cpp`: 20 Plätze (`World::kCuriosityCount`), 1-zu-6000-Chance
+je abgebautem Block (`kCuriosityChance` in `world.cpp`), Aussehen rein aus der Nummer
+generiert (`CuriosityColors`, goldener Winkel fürs Farbrad — keine Datei, kein Name nötig).
+Anzeige über `DrawCuriosityShelf`: kleine Kacheln unten links, immer im Vordergrund, leer
+und unsichtbar bis zum ersten Fund, die neueste fliegt kurz ein. Speicherung als eigene
+Zeile `kuriositaet` im Spielstand (`save.cpp`), alte Spielstände bleiben kompatibel.
+
+- **Fundmechanik**: bei jedem `block.mine()` eine feste, sehr kleine Chance (z. B. 1 zu
+  einigen Zehntausend) — reiner Zufall, nicht an Zeit, Level, Erz oder Skill gekoppelt.
+  Wichtig: nichts erhöht die Chance und nichts schaltet sie frei — man bekommt sie nicht,
+  *weil* man lange gespielt hat, sondern es ist einfach immer gleich unwahrscheinlich, und
+  wer lange spielt, hat rein rechnerisch mehr Versuche gehabt. Sobald ein Treffer da war,
+  ist genau diese eine Kuriosität dauerhaft freigeschaltet (im Sinne von: eingesammelt,
+  bleibt in der Sammlung).
+- **Aussehen erst nach Fund**: jede Kuriosität sieht anders aus (eigenes Icon/Farbe/Muster,
+  ähnlich `farbe1`/`farbe2`/`muster` bei den Erzen), aber man sieht das Aussehen nicht
+  vorher — kein Platzhaltersymbol, kein Umriss, keine Zähl-Anzeige ("3/20"), die verraten
+  würde, wie viele es gibt oder wie weit man ist. Vor dem Fund existiert der Slot einfach
+  nicht sichtbar; nach dem Fund taucht er auf, fertig gestaltet.
+- **Kein Name nötig**: keine Textzeile, kein Flavor-Text — nur das Bild selbst. Passt auch
+  besser dazu, dass man nicht erklärt bekommt, was man da eigentlich gefunden hat.
+- **Wirkung**: die meisten Kuriositäten tun schlicht nichts; ein paar könnten einen kaum
+  messbaren Dauereffekt haben. Keine darf eine Bau- oder Verkaufsentscheidung wirklich
+  beeinflussen, sonst wird aus der Sammlung eine Pflichtliste.
+- **Anzeige**: eigene Wiki-/Sammlungs-Seite nach demselben Prinzip wie `erze` (siehe
+  `data/wiki.json`, "Kategorie ist anders") — ein Eintrag entsteht erst, wenn das Ding
+  tatsächlich gefunden wurde.
+- **Inhalt aktuell nur Platzhalter**: erstmal ~20 visuell unterschiedliche, aber inhaltlich
+  leere Slots (Platzhalter-Icons). Später passend zum Thema "man gräbt nach Erzen" befüllbar
+  mit Fossilien, Knochen, alten Bildern/Gemälden o. Ä. — eher archäologischer Fund als
+  Schmuckstück, das passt besser zur Mine als Ring/Amulett-Fantasy-Loot.
+- **Datenhaltung**: eigene `data/kuriositaeten.json`, schlanker als `erze.json` — im
+  Wesentlichen nur Icon-Daten (Farben/Muster oder später ein Bildpfad) pro Slot, kein
+  `name`, kein `wert`, kein `seltenheit`-Verkaufsfeld, optional ein `effekt`-Feld, das in
+  den meisten Fällen fehlt.
+
 ---
 
 Keine dieser Ideen ist mit den bestehenden Dateien abgeglichen (`data/skills.txt`,

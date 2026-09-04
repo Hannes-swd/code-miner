@@ -390,6 +390,10 @@ bool LoadGame(World& world, SkillTree& tree, std::vector<std::unique_ptr<Console
                     neueWelt.assayed.insert(erz);
             }
         }
+        // "kuriositaet" gibt es hier bewusst nicht mehr: die Kuriositaeten
+        // leben jetzt in einer eigenen Datei (siehe curios.h) und ueberleben
+        // damit auch "Start over" - eine alte Zeile dieses Namens faellt
+        // einfach durch den Auffangzweig unten und wird ignoriert.
         else if (wort == "auftrag")
         {
             Quest q;
